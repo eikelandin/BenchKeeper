@@ -340,7 +340,7 @@ Usage: benchkeeper <command> [options]
 Exit codes, with and without --json: 0 clean, 1 findings of level error, a run that did not finish or a
 question answered no, 2 usage or read failure (an unknown command, option or name, such as a skill, pack, run or account).
 
-Agents: claude, codex, gemini, copilot (default: the installed ones; evals: claude or codex, default claude). Packs: see plugins/benchkeeper/library/README.md.
+Agents: claude, codex, gemini, copilot (default: the installed ones; evals: claude or codex, default claude). Packs: see plugins/cedarloom/library/README.md.
 Env (where the agent runs): container (default; host-agent or host when AGENTS.md says the agent runs on the host), host-agent, sandbox, host. Tier: quick, standard, full, research.`;
 
 const OPTIONS = {

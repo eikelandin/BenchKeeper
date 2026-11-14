@@ -255,7 +255,7 @@ test.describe('views', () => {
   test('Insights: the summary names the count and the first finding, findings are grouped by severity and area; errors are cards, warnings are one-line rows whose title opens the evidence and fix and whose More menu holds Dismiss and Snooze; a long path shows its last parts, in full on hover and in the opened row; a card names its action as the Doctor table does and links its fix source, the action opens the plan, Dismiss and Snooze hide a card and a reload keeps it, Show again brings it back; focus moves to the next finding or the list and the status says what happened; other evidence and an ended snooze show; no axe violations', async ({ page }) => {
     await nav(page, 'Insights').click();
     const card = (re) => page.getByRole('article', { name: re });
-    const market = card(/marketplace benchkeeper$/), deny = card(/No Read deny rule/), scrub = card(/SUBPROCESS_ENV_SCRUB/);
+    const market = card(/marketplace cedarloom$/), deny = card(/No Read deny rule/), scrub = card(/SUBPROCESS_ENV_SCRUB/);
     // The seeded dismissal belongs to other evidence and the seeded snooze has ended: both findings show.
     await expect(deny).toBeVisible();
     await expect(scrub).toBeVisible();
@@ -287,7 +287,7 @@ test.describe('views', () => {
     await page.getByRole('button', { name: await first.textContent(), exact: true }).click();
     await expect(first).toBeFocused();
     await noAxe(page);
-    await card(/plugin benchkeeper@benchkeeper$/).getByRole('link', { name: 'Plan fix' }).click();
+    await card(/plugin cedarloom@cedarloom$/).getByRole('link', { name: 'Plan fix' }).click();
     await expect(page).toHaveURL(/#\/agents\?plan=1$/);
     await expect(page.getByRole('region', { name: 'Changes' })).toBeVisible();
     await nav(page, 'Insights').click();
@@ -299,7 +299,7 @@ test.describe('views', () => {
     await page.keyboard.press('Enter');
     await expect(market).toHaveCount(0);
     await expect(page.locator(`[id="${next}"]`)).toBeFocused();
-    await expect(status).toHaveText(/^Dismissed: .*marketplace benchkeeper$/);
+    await expect(status).toHaveText(/^Dismissed: .*marketplace cedarloom$/);
     next = await nextHeading(scrub);
     await scrub.getByRole('button', { name: 'More' }).focus();
     await page.keyboard.press('Enter');

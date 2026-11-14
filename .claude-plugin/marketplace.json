@@ -1,11 +1,11 @@
 {
-  "name": "benchkeeper",
+  "name": "cedarloom",
   "owner": { "name": "ESchuderer", "url": "https://github.com/ESchuderer" },
-  "description": "BenchKeeper: workflow and setup skills for Claude Code and Codex.",
+  "description": "CedarLoom: workflow and setup skills for Claude Code and Codex.",
   "plugins": [
     {
-      "name": "benchkeeper",
-      "source": "./plugins/benchkeeper",
+      "name": "cedarloom",
+      "source": "./plugins/cedarloom",
       "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and sets up and maintains projects. Works next to other skill packs and plugins when they are installed.",
       "category": "development"
     }

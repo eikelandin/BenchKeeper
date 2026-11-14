@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('../../plugins/benchkeeper/hooks/rotation/restore.mjs', import.meta.url));
+const HOOK = fileURLToPath(new URL('../../plugins/cedarloom/hooks/rotation/restore.mjs', import.meta.url));
 const OWNED = '# Handoff\nTerminal: term-a\n\n## Next\nwatch #12\n';
 const RUNS = join('.cedarloom-app', 'runs');
 
@@ -44,7 +44,7 @@ test('restore hook: the drift counts from the edited stamp of the status line, w
   commit('backdated', '1999-01-01T00:00:00Z');
   writeFileSync(join(root, 'README.md'), 'b');
   mkdirSync(join(root, 'sub', RUNS), { recursive: true });
-  writeFileSync(join(root, 'sub', RUNS, 'handoff.md'), `${OWNED}\n<!-- benchkeeper:status -->\n2026-01-01T00:00:00.000Z compacting; context: 1 tokens; last clear: none; edited: 2000-01-01T00:00:00.000Z; text: ecc034a0\n<!-- /benchkeeper:status -->\n`);
+  writeFileSync(join(root, 'sub', RUNS, 'handoff.md'), `${OWNED}\n<!-- cedarloom-app:status -->\n2026-01-01T00:00:00.000Z compacting; context: 1 tokens; last clear: none; edited: 2000-01-01T00:00:00.000Z; text: ecc034a0\n<!-- /cedarloom-app:status -->\n`);
   const restored = restore(join(root, 'sub'));
   assert.match(restored, /\n## Drift since this file was written \(2000-01-01T00:00:00\.000Z, /);
   // git 2.39 prints %cI in UTC as +00:00, newer as Z.

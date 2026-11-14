@@ -32,7 +32,7 @@ export function skillEntry(text) {
 
 export function render(skills, manifest) {
   const out = [row(['Skill', 'What it is for', 'Started by', 'When it runs', 'What it writes']), row(['---', '---', '---', '---', '---'])];
-  for (const s of skills) out.push(row([`[${s.name}](../plugins/benchkeeper/skills/${s.name}/SKILL.md)`, s.purpose, s.start, s.when, s.writes]));
+  for (const s of skills) out.push(row([`[${s.name}](../plugins/cedarloom/skills/${s.name}/SKILL.md)`, s.purpose, s.start, s.when, s.writes]));
   const pack = manifest.packs.find((p) => p.pluginSkills);
   const { version, skills: theirs } = pack.pluginSkills;
   out.push('', `## ${pack.title}`, '', `The \`${pack.id}\` pack installs his plugin (skill list of version ${version}). Claude Code installs it from the official marketplace, which pins it to one commit ([marketplace.json](https://github.com/anthropics/claude-plugins-official/blob/main/.claude-plugin/marketplace.json)); the pin moves when that marketplace updates it. Skills you start run as \`/mattpocock-skills:<name>\` (Codex \`$mattpocock-skills:<name>\`); the agent starts the others on its own, and you can start them too.`, '');
@@ -49,9 +49,9 @@ export function update(page, skills, manifest) {
 }
 
 export function sources() {
-  const dir = `${root}/plugins/benchkeeper/skills`;
+  const dir = `${root}/plugins/cedarloom/skills`;
   const skills = readdirSync(dir).sort().map((n) => skillEntry(readFileSync(`${dir}/${n}/SKILL.md`, 'utf8')));
-  return [skills, JSON.parse(readFileSync(`${root}/plugins/benchkeeper/library/library.json`, 'utf8'))];
+  return [skills, JSON.parse(readFileSync(`${root}/plugins/cedarloom/library/library.json`, 'utf8'))];
 }
 
 if (isMain(import.meta.url)) {

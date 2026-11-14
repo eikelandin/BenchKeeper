@@ -12,8 +12,8 @@ test('the clone tag is the app tag with three parts; older setup-v pins are rewr
 });
 
 test('files under plugins/ are not rewritten: their pins name the major', () => {
-  assert.ok(SKIP.test('plugins/benchkeeper/skills/operating-benchkeeper/SKILL.md'));
-  assert.ok(SKIP.test('plugins/benchkeeper/content.json'));
+  assert.ok(SKIP.test('plugins/cedarloom/skills/operating-benchkeeper/SKILL.md'));
+  assert.ok(SKIP.test('plugins/cedarloom/content.json'));
   assert.ok(!SKIP.test('README.md'));
 });
 

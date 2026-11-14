@@ -67,7 +67,7 @@ test('the status line style: usage and Ponytail\'s level from the account folder
   const account = mkdtempSync(join(tmpdir(), 'bk-style-'));
   const dir = join(account, 'cedarloom-app');
   const env = { XDG_CONFIG_HOME: join(account, 'xdg') };
-  const style = (v) => writeFileSync(join(account, 'settings.json'), JSON.stringify({ pluginConfigs: { 'benchkeeper@benchkeeper': { options: { statusStyle: v } } } }));
+  const style = (v) => writeFileSync(join(account, 'settings.json'), JSON.stringify({ pluginConfigs: { 'cedarloom@cedarloom': { options: { statusStyle: v } } } }));
   const level = (v) => writeFileSync(join(account, '.ponytail-active'), `${v}\n`);
   const line = (text = JSON.stringify(windows(41.5, 7))) => hook('statusline', text, dir, T0, env);
   const written = () => { const f = join(dir, 'usage.json'); const r = existsSync(f); rmSync(f, { force: true }); return r; };

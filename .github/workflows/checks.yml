@@ -122,9 +122,9 @@ jobs:
         # No install scripts: the native binary of the runner's platform package goes on PATH instead of the postinstall copy.
         run: npm ci --ignore-scripts --no-audit --no-fund && echo "$PWD/node_modules/@anthropic-ai/claude-code-linux-x64" >> "$GITHUB_PATH"
       - name: Validate the plugin and the marketplace
-        run: claude plugin validate plugins/benchkeeper --strict && claude plugin validate .
+        run: claude plugin validate plugins/cedarloom --strict && claude plugin validate .
       - name: Plugin mod tests
-        run: claude plugin test plugins/benchkeeper
+        run: claude plugin test plugins/cedarloom
       # A broken manifest and a broken skill front matter must fail the validation (fixtures built from a valid scratch plugin).
       - name: Validation fixtures
         run: node --test .github/scripts/plugin-validate.test.mjs

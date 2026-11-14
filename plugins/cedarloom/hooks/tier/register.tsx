@@ -13,11 +13,11 @@ import { askUntil, lasting } from '../ask/window.mjs'
 
 export const TIER = /^Tier: (quick|standard|full|research)(?: \(([^)]+)\))?/gm
 const CHOICES = ['quick', 'standard', 'full', 'research']
-const tier = atom({ plugin: 'benchkeeper', key: 'tier' } as const, null)
-const override = atom({ plugin: 'benchkeeper', key: 'override' } as const, null)
-const where = atom({ plugin: 'benchkeeper', key: 'where' } as const, null)
-const tests = atom({ plugin: 'benchkeeper', key: 'tests' } as const, null)
-const lint = atom({ plugin: 'benchkeeper', key: 'lint' } as const, null)
+const tier = atom({ plugin: 'cedarloom', key: 'tier' } as const, null)
+const override = atom({ plugin: 'cedarloom', key: 'override' } as const, null)
+const where = atom({ plugin: 'cedarloom', key: 'where' } as const, null)
+const tests = atom({ plugin: 'cedarloom', key: 'tests' } as const, null)
+const lint = atom({ plugin: 'cedarloom', key: 'lint' } as const, null)
 // A command list as found anywhere in a command, and as the start of one part of a chain, also after a runner (npx vitest).
 const commands = (list: string) => ({
   any: new RegExp(`(?:^|[\\s;&|('"])${list}(?=$|[\\s;&|):'"])`),

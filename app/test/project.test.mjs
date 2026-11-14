@@ -486,7 +486,7 @@ test('a second plan reads the answers from the state file', () => {
 
 test('the state file records the commit of the BenchKeeper plugin Claude Code has installed for the project; the commit alone is no pending change', () => {
   const r = repo();
-  const installed = (commit) => writeFileSync(join(r.ctx.home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'benchkeeper@benchkeeper': [{ scope: 'user', gitCommitSha: 'a'.repeat(40) }, { scope: 'project', projectPath: r.dir, gitCommitSha: commit }] } }));
+  const installed = (commit) => writeFileSync(join(r.ctx.home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'cedarloom@cedarloom': [{ scope: 'user', gitCommitSha: 'a'.repeat(40) }, { scope: 'project', projectPath: r.dir, gitCommitSha: commit }] } }));
   mkdirSync(join(r.ctx.home, '.claude/plugins'), { recursive: true });
   installed('b'.repeat(40));
   apply(preview(plan(r, { agents: ['claude'], share: true }).changes), r.ctx, { scope: r.dir });

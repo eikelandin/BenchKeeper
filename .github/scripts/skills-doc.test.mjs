@@ -50,7 +50,7 @@ test('--check fails on a page that differs from its sources', () => {
   const tmp = realpathSync(mkdtempSync(join(tmpdir(), 'skills-doc-')));
   const dir = join(tmp, 'repo');
   try {
-    for (const p of ['.github/scripts', 'plugins/benchkeeper/skills', 'plugins/benchkeeper/library/library.json', 'docs/skills.md']) cpSync(join(root, p), join(dir, p), { recursive: true });
+    for (const p of ['.github/scripts', 'plugins/cedarloom/skills', 'plugins/cedarloom/library/library.json', 'docs/skills.md']) cpSync(join(root, p), join(dir, p), { recursive: true });
     symlinkSync(dir, join(tmp, 'link'), 'dir');
     const page = join(dir, 'docs/skills.md');
     writeFileSync(page, readFileSync(page, 'utf8').replace('| Skill |', '| Skills |'));
