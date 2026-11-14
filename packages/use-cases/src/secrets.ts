@@ -1,12 +1,12 @@
 import type { Result } from "@cedarloom/contracts";
 
-/** A secret by reference, never its value: `store` names an entry of the OS credential store (A37). */
+/** A secret by reference, never its value: `store` names an entry of the OS credential store. */
 export interface SecretRef {
   readonly kind: "store";
   readonly name: string;
 }
 
-/** The token of CedarLoom's own calls on hub issues: fine-grained, with Issues read and write on the hub only (H2). */
+/** The token of CedarLoom's own calls on hub issues: fine-grained, with Issues read and write on the hub only. */
 export const HUB_ISSUES: SecretRef = { kind: "store", name: "hub-issues" };
 
 /** The OS credential store under the service `cedarloom`; a call rejects when the store cannot be reached. */

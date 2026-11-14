@@ -84,7 +84,7 @@ const warned = new Set<string>();
 
 /**
  * Whether a file's `minApp` is above the release `app`. A development build (0.0.0) skips the check with a warning,
- * so a checkout loads packs and samples made for a release (hub issue 396).
+ * so a checkout loads packs and samples made for a release.
  */
 export const appTooOld = (minApp: string, app: string, what: string): boolean => {
   if (!semverAbove(minApp, app)) return false;
@@ -244,7 +244,7 @@ export const composedProfile = (profile: ProfileSelection["profile"]): Result<Pr
   return composed.ok ? { ok: true, value: composed.value.profile } : composed;
 };
 
-// An Orca part is on only while Orca is here, also when selected (hub issue 146); a dev container part still adds one.
+// An Orca part is on only while Orca is here, also when selected; a dev container part still adds one.
 const switchedOn = (parts: Map<string, Part>, select: Record<string, boolean>, probe: (when: Probe) => boolean) =>
   new Set(
     [...parts]
