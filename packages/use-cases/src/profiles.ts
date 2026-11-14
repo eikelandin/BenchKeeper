@@ -5,6 +5,7 @@ import {
   canonicalJson,
   type Finding,
   type Operation,
+  type PackRef,
   type PackSources,
   PLAN_SCHEMA_VERSION,
   type Plan,
@@ -26,6 +27,7 @@ import {
   type Level,
   LEVELS,
   onDisk,
+  packEntries,
   planMachine,
   planProject,
   projectWritten,
@@ -384,18 +386,20 @@ export const profileDoctor = async (
 };
 
 /**
- * One change of the selection: a part on, off or back to its default (null), one of this machine's bindings, or the
- * profile file it applies, by its absolute path.
+ * One change of the selection: a part on, off or back to its default (null), one of this machine's bindings, the
+ * profile file it applies, by its absolute path, or a pack's profile, which clears the parts switched by hand.
  */
 export type Choice =
   | { readonly part: string; readonly on: boolean | null }
   | { readonly hub: string }
   | { readonly memory: string }
   | { readonly gates: string }
-  | { readonly file: string };
+  | { readonly file: string }
+  | { readonly preset: PackRef };
 
 const chosen = (current: ProfileSelection, choice: Choice): unknown => {
   if ("file" in choice) return { ...current, profile: { file: choice.file } };
+  if ("preset" in choice) return { ...current, profile: choice.preset, select: {} };
   if (!("part" in choice)) return { ...current, bindings: { ...current.bindings, ...choice } };
   const select = Object.entries(current.select).filter(([part]) => part !== choice.part);
   return {
@@ -420,12 +424,16 @@ export const planChoice = (config: string, choice: Choice): Result<Plan> => {
   };
   const next = readDocument(ProfileSelection, SELECTION_SCHEMA_VERSION, chosen(current, choice));
   if (!next.ok) return next;
-  if ("part" in choice && choice.on !== null) {
+  // A preset the core pack lacks is refused here, before it is saved.
+  if ("preset" in choice || ("part" in choice && choice.on !== null)) {
     const resolved = resolveProfile(next.value);
     if (!resolved.ok) return resolved;
-    const unknown = resolved.value.problems.find(
-      (finding) => finding.code === "profile.part-unknown" && finding.params.part === choice.part,
-    );
+    const unknown =
+      "part" in choice
+        ? resolved.value.problems.find(
+            (finding) => finding.code === "profile.part-unknown" && finding.params.part === choice.part,
+          )
+        : undefined;
     if (unknown !== undefined) return { ok: false, finding: unknown };
   }
   const path = selectionPath(config);
@@ -434,4 +442,24 @@ export const planChoice = (config: string, choice: Choice): Result<Plan> => {
     ok: true,
     value: { schemaVersion: PLAN_SCHEMA_VERSION, operations: [{ kind: "write", path, before, content }] },
   };
+};
+
+const PRESET = /^profiles\/([a-z][a-z0-9-]*)\.json$/;
+
+/** The presets, the core pack's profiles by name, such as developer for `profiles/developer.json`. */
+export const presets = (): Result<string[]> => {
+  const paths = packEntries(DEFAULT_PROFILE.pack, "profile", undefined);
+  return paths.ok ? { ok: true, value: paths.value.flatMap((path) => PRESET.exec(path)?.[1] ?? []) } : paths;
+};
+
+/**
+ * Plans the selection naming a preset as it ships: the parts switched by hand are cleared and listed, the bindings
+ * stay.
+ */
+export const planPreset = (config: string, preset: string): Result<{ plan: Plan; cleared: string[] }> => {
+  const read = readSelection(config);
+  if (!read.ok) return read;
+  const plan = planChoice(config, { preset: { pack: DEFAULT_PROFILE.pack, path: `profiles/${preset}.json` } });
+  const cleared = Object.keys(read.value.selection?.select ?? {});
+  return plan.ok ? { ok: true, value: { plan: plan.value, cleared } } : plan;
 };

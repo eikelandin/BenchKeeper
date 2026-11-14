@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Commit, GitUrl, PackRef, WorkflowId } from "@cedarloom/contracts";
 import { Argument, Command, CommanderError, InvalidArgumentError, Option } from "@commander-js/extra-typings";
+import { presets } from "@cedarloom/use-cases";
 import {
   componentsSwitch,
   doctor,
@@ -17,6 +18,7 @@ import {
   profilesChoose,
   profilesDiff,
   profilesInit,
+  profilesUse,
   runsList,
   runsShow,
   runsUndo,
@@ -227,6 +229,13 @@ const componentsGroup = (program: Command, ctx: Ctx, done: Done): void => {
 
 const LEVELS = ["supervised", "checkpoint", "auto"] as const;
 
+// A preset by its name; an unreadable pack lists none, and the use case then names the problem.
+const preset = (value: string): string => {
+  const names = presets();
+  if (names.ok && !names.value.includes(value)) throw new InvalidArgumentError(`a preset: ${names.value.join(", ")}`);
+  return value;
+};
+
 const profilesGroup = (program: Command, ctx: Ctx, done: Done): void => {
   const profiles = program.command("profiles").description("this machine's CedarLoom profile");
   profiles
@@ -269,6 +278,11 @@ const profilesGroup = (program: Command, ctx: Ctx, done: Done): void => {
       const choices = { hub: { hub: repository }, memory: { memory: repository }, gates: { gates: repository } };
       done(profilesChoose(ctx(), choices[binding], options));
     });
+  profiles
+    .command("use")
+    .description("save a preset as this machine's profile as one run, then show its plan and the line that applies it")
+    .addArgument(new Argument("<preset>", "one of the core pack's presets, such as developer").argParser(preset))
+    .action(async (name) => done(await profilesUse(ctx(), name)));
   profileFiles(profiles, ctx, done);
 };
 

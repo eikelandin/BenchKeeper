@@ -4,7 +4,7 @@ import { type GitSource, type Result, skillFolder } from "@cedarloom/contracts";
 import { errorCode } from "@cedarloom/engine";
 import { BUNDLED } from "@cedarloom/packs";
 import type { Wanted } from "./owned.ts";
-import { entryFiles, entryOf, filesIn, type Folder, packVersion, type Resolved, skillEntries } from "./resolve.ts";
+import { entryFiles, entryOf, filesIn, type Folder, packEntries, packVersion, type Resolved } from "./resolve.ts";
 
 /** The folders fetched for a plan, by `sourceKey`: the profile's Git packs, and skills that come from Git. */
 export type Fetched = ReadonlyMap<string, Folder>;
@@ -42,7 +42,7 @@ const listed = (resolved: Resolved, fetched: Fetched, level: Level): Result<List
   const skills: Listed[] = [];
   for (const [id, part] of parts) {
     for (const pack of part.type === "packs" ? part.packs : []) {
-      const paths = skillEntries(pack, packFolder(resolved, pack, fetched));
+      const paths = packEntries(pack, "skill", packFolder(resolved, pack, fetched));
       if (!paths.ok) return paths;
       skills.push(...paths.value.map((path) => ({ part: `project.${id}`, source: { pack, path } })));
     }

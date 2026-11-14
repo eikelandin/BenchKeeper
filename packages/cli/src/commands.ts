@@ -428,6 +428,53 @@ export const profilesCheck = async (ctx: Context, { project }: { project?: strin
 export const profilesChoose = (ctx: Context, choice: useCases.Choice, { yes }: { yes?: true }): number =>
   configChange(ctx, useCases.planChoice(ctx.config, choice), yes);
 
+// The plugin parts the plan waits to approve by name, which the apply line names after --allow.
+const waitingParts = (findings: readonly Finding[]): string[] =>
+  findings.flatMap((finding) => (finding.code === "profile.approval-needed" ? [finding.params.part] : []));
+
+// The machine's plan and, unless an error holds it back, the line that applies it; the errors name the fix.
+const planLines = (preview: PlanPreview | null, held: boolean, allow: readonly string[]): string[] => {
+  if (preview === null) return held ? [] : ["Nothing to change in this machine's rules and settings."];
+  const named = allow.length === 0 ? "" : ` --allow ${allow.join(" ")}`;
+  return held ? [showPlan(preview)] : [showPlan(preview), `Apply it with: cedarloom profiles apply --yes${named}`];
+};
+
+// Saves the preset as the selection as one run; a number is the exit code of a refusal it reported.
+const savePreset = (ctx: Context, preset: string): { runId: string; cleared: string[] } | number => {
+  const planned = useCases.planPreset(ctx.config, preset);
+  if (!planned.ok) return refused(ctx, "plan", planned.finding);
+  const saved = useCases.applyPlan(ctx.state, planned.value.plan, { yes: true });
+  if (!saved.ok) return fail(ctx, "run", [saved.finding], EXIT.refused);
+  const { runId, status } = saved.value;
+  return status === "applied" && runId !== null ? { runId, cleared: planned.value.cleared } : result(ctx, saved.value);
+};
+
+/**
+ * Saves a preset as this machine's selection as one run, then shows the machine's plan and the line that applies it:
+ * the selection is CedarLoom's own file and the run undoes it, while Claude Code's home changes only at the apply.
+ */
+export const profilesUse = async (ctx: Context, preset: string): Promise<number> => {
+  const saved = savePreset(ctx, preset);
+  if (typeof saved === "number") return saved;
+  const { runId, cleared } = saved;
+  const options = { app: ctx.app, fetch: ctx.io.fetch };
+  const profile = await useCases.planProfile(ctx.config, ctx.state, machineOf(ctx), options);
+  if (!profile.ok) return refused(ctx, "plan", profile.finding);
+  const { plan, findings } = profile.value;
+  const held = useCases.heldBack(findings);
+  const allow = waitingParts(findings);
+  const preview = plan === null ? null : useCases.previewPlan(plan);
+  const human = [
+    `Saved the preset ${preset} as this machine's profile in run ${runId}; undo it with: cedarloom runs undo ${runId}`,
+    ...(cleared.length === 0 ? [] : [`Cleared the parts switched by hand: ${cleared.join(", ")}`]),
+    ...planLines(preview, held, allow),
+  ];
+  const data = { runId, preset, cleared, planHash: preview?.planHash ?? null, plan: preview?.plan ?? null };
+  emit(ctx, "profile-use", { ...data, findings, held, allow }, human.join("\n"));
+  report(ctx, findings);
+  return EXIT.ok;
+};
+
 /** Shows copying a pack's profile into a file that this machine's selection then names; with --yes, does it. */
 export const profilesInit = (ctx: Context, file: string, { from, yes }: { from: PackRef; yes?: true }): number =>
   configChange(ctx, useCases.planProfileCopy(ctx.config, from, file), yes);

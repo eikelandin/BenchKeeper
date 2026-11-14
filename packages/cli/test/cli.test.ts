@@ -225,6 +225,28 @@ test("a profile with a problem is refused, never shown as a machine with nothing
   ]);
 });
 
+test("profiles use saves a preset with no part switched by hand, keeps the bindings and names the parts to allow", async () => {
+  const { root, cli } = setup();
+  expect((await cli("profiles", "bind", "hub", "acme/hub", "--yes")).code).toBe(EXIT.ok);
+  expect((await cli("profiles", "select", "machine.plugin.ponytail", "off", "--yes")).code).toBe(EXIT.ok);
+  const used = await cli("--json", "profiles", "use", "developer");
+  expect([used.code, json(used.out)]).toMatchObject([
+    EXIT.ok,
+    {
+      format: "cedarloom.profile-use",
+      cleared: ["machine.plugin.ponytail"],
+      held: false,
+      allow: ["machine.plugin.cedarloom"],
+    },
+  ]);
+  expect(JSON.parse(readFileSync(join(root, "config", "profile.json"), "utf8"))).toMatchObject({
+    profile: { pack: "cedarloom.core", path: "profiles/developer.json" },
+    select: {},
+    bindings: { hub: "acme/hub" },
+  });
+  expect((await cli("profiles", "use", "profiles/developer.json")).code).toBe(EXIT.usage);
+});
+
 test("level shows the default and each project's level, and sets one of them by plan with --yes", async () => {
   const { root, cli } = setup();
   expect((await cli("level")).out).toBe("supervised  (default)\n");
