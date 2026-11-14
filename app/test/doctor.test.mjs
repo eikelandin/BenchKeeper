@@ -28,8 +28,8 @@ function machine({ engine = true } = {}) {
 // A registered project whose commands run in the dev container.
 function containerProject(ctx) {
   const dir = mkdtempSync(join(tmpdir(), 'bk-doc-dc-'));
-  mkdirSync(join(dir, '.benchkeeper'));
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ schemaVersion: 2, appVersion, contentVersion, agents: ['claude'], env: 'container' }));
+  mkdirSync(join(dir, '.cedarloom-app'));
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 2, appVersion, contentVersion, agents: ['claude'], env: 'container' }));
   mkdirSync(ctx.config, { recursive: true });
   writeFileSync(join(ctx.config, 'projects.json'), JSON.stringify({ projects: [{ path: dir }] }));
   return dir;
@@ -177,7 +177,7 @@ test('a rules file with an unmatched marker is an error of its own change; the r
   const ctx = { ...machine({ engine: false }), appVersion: '6.0.0' };
   apply(preview(globalPlan({ ctx, agents: ['codex'], devcontainerCli: '1.0.0' })), ctx);
   const file = join(ctx.home, '.codex/AGENTS.md');
-  writeFileSync(file, '<!-- benchkeeper:rules start -->\nbroken\n');
+  writeFileSync(file, '<!-- cedarloom-app:rules start -->\nbroken\n');
   const p = preview(globalPlan({ ctx, agents: ['codex'], devcontainerCli: '1.0.0' }));
   assert.ok(p.find((c) => c.step === 'rules:codex')?.error, 'the error is on the rules change');
   assert.equal(p.filter((c) => c.step === 'rulesKeep:codex').length, 0);
@@ -266,13 +266,13 @@ test('a container engine: docker alone is enough', () => {
 test('project state: unreadable, committed while local, older than this app, a container env without the Dev Containers CLI', () => {
   const home = mkdtempSync(join(tmpdir(), 'bk-doc-'));
   const ctx = context({ home, run: (argv) => {
-    if (argv[0] === 'git' && argv.includes('ls-files')) return { code: 0, stdout: '.benchkeeper/state.json\n', stderr: '' };
+    if (argv[0] === 'git' && argv.includes('ls-files')) return { code: 0, stdout: '.cedarloom-app/state.json\n', stderr: '' };
     if (argv[0] === 'devcontainer' || argv[0] === 'npm') return { code: 127, stdout: '', stderr: '' };
     return { code: 0, stdout: argv.includes('--json') ? '[]' : '1.0.0', stderr: '' };
   } });
   const dir = mkdtempSync(join(tmpdir(), 'bk-doc-state-'));
-  mkdirSync(join(dir, '.benchkeeper'));
-  const project = (s) => { writeFileSync(join(dir, '.benchkeeper/state.json'), typeof s === 'string' ? s : JSON.stringify({ schemaVersion: 2, agents: [], ...s })); return doctor(ctx, { agents: [], dir, env: {} }).filter((i) => ['project', 'tools'].includes(i.check)).map(({ level, check, message, fix }) => ({ level, check, message, fix })); };
+  mkdirSync(join(dir, '.cedarloom-app'));
+  const project = (s) => { writeFileSync(join(dir, '.cedarloom-app/state.json'), typeof s === 'string' ? s : JSON.stringify({ schemaVersion: 2, agents: [], ...s })); return doctor(ctx, { agents: [], dir, env: {} }).filter((i) => ['project', 'tools'].includes(i.check)).map(({ level, check, message, fix }) => ({ level, check, message, fix })); };
   const [bad] = project('not json');
   assert.equal(bad.level, 'error');
   assert.equal(bad.fix, 'fix or delete the file, then run benchkeeper projects apply (a newer schemaVersion needs a newer benchkeeper)');

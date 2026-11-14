@@ -184,7 +184,7 @@ test('Remove BenchKeeper setup keeps a hand-written CLAUDE.local.md and AGENTS.o
   assert.ok(['local-claude', 'local-codex'].every((s) => plan.changes.some((c) => c.step === s && c.kind === 'write')));
   removeSetup(p.ctx, p.dir);
   assert.equal(readFileSync(join(p.dir, 'CLAUDE.local.md'), 'utf8').trim().startsWith('my note'), true);
-  assert.doesNotMatch(readFileSync(join(p.dir, 'CLAUDE.local.md'), 'utf8'), /benchkeeper:project/);
+  assert.doesNotMatch(readFileSync(join(p.dir, 'CLAUDE.local.md'), 'utf8'), /cedarloom-app:project/);
   assert.equal(readFileSync(join(p.dir, 'AGENTS.override.md'), 'utf8'), '## Agent skills\n');
   // A project without any setup has nothing to remove.
   const empty = repo().dir;
@@ -213,7 +213,7 @@ test('Remove BenchKeeper setup leaves skills git tracks, and the exclude block a
   assert.ok(!setupRemoval(p.ctx, p.dir).changes.some((c) => c.step === 'exclude'));
   assert.equal(removeSetup(p.ctx, p.dir).status, 'removed');
   assert.ok(existsSync(join(p.dir, '.claude/skills/team/SKILL.md')) && existsSync(join(p.dir, 'skills-lock.json')));
-  assert.match(readFileSync(join(p.dir, '.git/info/exclude'), 'utf8'), /benchkeeper:local/);
+  assert.match(readFileSync(join(p.dir, '.git/info/exclude'), 'utf8'), /cedarloom-app:local/);
 });
 
 test('Update all stops at a project whose folder is gone', () => {
@@ -256,7 +256,7 @@ test('server routes: the removal plan lists the files, remove-setup runs it, His
   routes['POST /api/projects']({ path: p.dir });
   const plan = routes['GET /api/remove-setup-plan'](new URLSearchParams({ dir: p.dir }));
   assert.equal(plan.shared, false);
-  assert.ok(plan.changes.some((c) => c.path.endsWith('.benchkeeper') && c.destructive));
+  assert.ok(plan.changes.some((c) => c.path.endsWith('.cedarloom-app') && c.destructive));
   assert.throws(() => routes['GET /api/remove-setup-plan'](new URLSearchParams({ dir: join(p.dir, 'x') })), /register the project first/);
   const list = routes['POST /api/projects']({ action: 'rename', path: p.dir, name: 'Shop', notes: 'n' });
   assert.equal(list[0].name, 'Shop');
@@ -296,7 +296,7 @@ test('CLI: rename, relocate, and remove --setup listing every file before one qu
   assert.equal(listProjects(ctx)[0].name, undefined);
   assert.equal(await exec(['projects', 'remove', p.dir, '--setup'], 'n\n'), 1);
   assert.match(w.text, /local setup: removed in the checkout/);
-  assert.match(w.text, /remove \.benchkeeper\//);
+  assert.match(w.text, /remove \.cedarloom-app\//);
   assert.match(w.text, /Remove the BenchKeeper setup of 1 project /);
   assert.ok(existsSync(join(p.dir, STATE)));
   assert.equal(await exec(['projects', 'remove', p.dir, '--setup', '--yes']), 0);

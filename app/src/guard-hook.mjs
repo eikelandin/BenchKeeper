@@ -1,4 +1,4 @@
-// Written by project setup to .claude/hooks/benchkeeper-guard.mjs and run by Claude Code as a PreToolUse hook for Bash.
+// Written by project setup to .claude/hooks/cedarloom-app-guard.mjs and run by Claude Code as a PreToolUse hook for Bash.
 // It denies the commands the project rules forbid in the forms a deny rule's text pattern misses: combined short flags,
 // `git -C dir push`, a path to the program, `bash -c '...'`, `eval`, command substitution, heredocs for a shell.
 // It only denies (exit 2 and one line on stderr); it never approves and writes nothing. It reads its input and, since machine

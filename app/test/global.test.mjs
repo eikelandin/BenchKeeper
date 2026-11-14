@@ -63,7 +63,7 @@ function machine({ failCodexInstall = false } = {}) {
   writeFileSync(join(home, '.claude.json'), JSON.stringify({ mcpServers: { extra: { command: 'x' } } }));
   writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ hooks: { Stop: [{ hooks: [{ command: 'echo mine' }] }], SessionStart: [{ hooks: [{ command: 'ORCA_AGENT_HOOK_PORT=1 x' }] }], PreToolUse: [{ hooks: [{ command: 'ORCA_AGENT_HOOK_PORT=1 y' }] }, { hooks: [{ command: 'echo mine too' }] }], PostToolUse: [] }, model: 'opus', autoCompactWindow: 600000, modelSettings: { 'claude-opus-5-5': { autoCompactWindow: 800000, effortLevel: 'high' }, 'claude-fable-5-1': { autoCompactWindow: 'auto' } }, permissions: { ask: ['Bash(mine *)', 'Bash(gh pr merge *)'] } }, null, 2));
   mkdirSync(join(home, '.codex/rules'), { recursive: true });
-  writeFileSync(join(home, '.codex/rules/benchkeeper.rules'), 'prefix_rule(pattern = ["gh", "pr", "merge"], decision = "prompt")\n');
+  writeFileSync(join(home, '.codex/rules/cedarloom-app.rules'), 'prefix_rule(pattern = ["gh", "pr", "merge"], decision = "prompt")\n');
   writeFileSync(join(home, '.codex/config.toml'), '[analytics]\nenabled = false\n');
   writeFileSync(join(home, '.codex/AGENTS.md'), 'my codex rules\n');
   const ctx = context({ home, run, appVersion: '6.0.0' });
@@ -80,7 +80,7 @@ test('plan changes nothing, leaves rule files of the user alone and lists the ot
   assert.equal(plan.find((c) => c.step === 'settings:claude:tier-band').selected, false);
   assert.equal(plan.find((c) => c.step === 'settings:claude:effort-haiku').selected, false, 'the Haiku 5.5 effort is offered, not written by default');
   const ask = plan.filter((c) => c.step.startsWith('ask:'));
-  assert.deepEqual(ask.map((c) => c.step).sort(), ['ask:claude:Bash(gh pr merge *)', 'ask:claude:Bash(mine *)', 'ask:codex:benchkeeper.rules']);
+  assert.deepEqual(ask.map((c) => c.step).sort(), ['ask:claude:Bash(gh pr merge *)', 'ask:claude:Bash(mine *)', 'ask:codex:cedarloom-app.rules']);
   assert.ok(ask.every((c) => c.selected === false), 'ask rules are offered, not preselected');
   assert.ok(plan.every((c) => !c.title.includes('find-skills') || c.kind === 'command'));
 });
@@ -128,7 +128,7 @@ test('full apply: rules, removals, plugins, settings, tools; a second plan is em
   assert.equal(readFileSync(join(m.home, '.claude/rules/00-global.md'), 'utf8'), rules);
   const codexRules = readFileSync(join(m.home, '.codex/AGENTS.md'), 'utf8');
   assert.ok(codexRules.startsWith('my codex rules\n') && codexRules.includes(rules.trim()), 'Codex rules merged as a block');
-  assert.equal(existsSync(join(m.home, '.codex/rules/benchkeeper.rules')), false, 'old Codex ask rules removed');
+  assert.equal(existsSync(join(m.home, '.codex/rules/cedarloom-app.rules')), false, 'old Codex ask rules removed');
   for (const p of ['.claude/skills/following-dev-workflow', '.agents/skills/old-skill']) assert.equal(existsSync(join(m.home, p)), false, p);
   for (const p of ['.claude/CLAUDE.md', '.claude/rules/10-other.md']) assert.equal(existsSync(join(m.home, p)), true, `${p} is the user's: kept`);
   const backup = run.entries.find((e) => e.path?.endsWith('.claude/skills/following-dev-workflow')).backup;

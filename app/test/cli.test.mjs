@@ -42,18 +42,18 @@ test('projects plan and apply refuse a --skill name that is neither a library sk
   for (const verb of ['plan', 'apply']) await assert.rejects(c.exec(['projects', verb, dir, '--agents', 'claude', '--skill', 'nosuch', ...(verb === 'apply' ? ['--yes'] : [])]), /^Error: unknown skill nosuch, see benchkeeper skills list --library$/, verb);
   assert.equal(await c.exec(['projects', 'plan', dir, '--agents', 'claude', '--skill', 'nosuch', '--json']), 2);
   assert.equal(JSON.parse(c.text()).error, 'unknown skill nosuch, see benchkeeper skills list --library');
-  assert.equal(existsSync(join(dir, '.benchkeeper')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app')), false);
 });
 
 test('projects apply --paths writes the globs into the copied SKILL.md front matter and the state file, keeps other skills\' entries, and an empty value takes the entry out', async () => {
   const c = cli();
   const dir = join(c.home, 'p');
-  mkdirSync(join(dir, '.benchkeeper'), { recursive: true });
+  mkdirSync(join(dir, '.cedarloom-app'), { recursive: true });
   execFileSync('git', ['-C', dir, 'init', '-q']);
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ agents: ['claude'], env: 'host', paths: { other: 'x/**' } }));
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ agents: ['claude'], env: 'host', paths: { other: 'x/**' } }));
   const apply = (value) => c.exec(['projects', 'apply', dir, '--skill', 'designing-technical-uis', '--paths', value, '--yes']);
   const skillMd = () => readFileSync(join(dir, '.claude/skills/designing-technical-uis/SKILL.md'), 'utf8');
-  const statePaths = () => JSON.parse(readFileSync(join(dir, '.benchkeeper/state.json'), 'utf8')).paths;
+  const statePaths = () => JSON.parse(readFileSync(join(dir, '.cedarloom-app/state.json'), 'utf8')).paths;
   assert.equal(await apply('designing-technical-uis=app/ui/**,docs/**'), 0);
   assert.match(skillMd(), /^paths: "app\/ui\/\*\*,docs\/\*\*"$/m);
   assert.deepEqual(statePaths(), { other: 'x/**', 'designing-technical-uis': 'app/ui/**,docs/**' });
@@ -81,7 +81,7 @@ test('projects plan refuses a --paths without =, with an empty glob, for an unkn
   }
   assert.equal(await c.exec(['projects', 'plan', dir, '--agents', 'claude', '--paths', 'app/**', '--json']), 2);
   assert.ok(JSON.parse(c.text()).error.includes(usage));
-  assert.equal(existsSync(join(dir, '.benchkeeper')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app')), false);
 });
 
 test('a changing command with no answer refuses before any change; every change declined records no run', async () => {
@@ -163,8 +163,8 @@ test('a pack plugin BenchKeeper did not install: shown with its impact, never re
   const ctx = context({ home, run: (argv) => { calls.push(argv.join(' ')); return argv[0] === 'npm' ? { code: 1, stdout: '' } : { code: 0, stdout: argv.includes('--json') ? '[]' : '1.0.0' }; } });
   // A registered project with a setup that uses no pack.
   const dir = join(home, 'p');
-  mkdirSync(join(dir, '.benchkeeper'), { recursive: true });
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ packs: [] }));
+  mkdirSync(join(dir, '.cedarloom-app'), { recursive: true });
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ packs: [] }));
   addProject(ctx, dir);
   // Installed for selected projects; at the default scope (all projects) no removal is offered.
   writeFileSync(join(ctx.config, 'pack-scopes.json'), JSON.stringify({ scopes: { ponytail: 'projects' } }));

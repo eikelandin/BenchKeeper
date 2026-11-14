@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const HOOK = fileURLToPath(new URL('../../plugins/benchkeeper/hooks/rotation/restore.mjs', import.meta.url));
 const OWNED = '# Handoff\nTerminal: term-a\n\n## Next\nwatch #12\n';
-const RUNS = join('.benchkeeper', 'runs');
+const RUNS = join('.cedarloom-app', 'runs');
 
 // A folder holding the coordinator's handoff file, untracked in a git work tree unless `git` is false.
 const folder = ({ text = OWNED, git = true } = {}) => {

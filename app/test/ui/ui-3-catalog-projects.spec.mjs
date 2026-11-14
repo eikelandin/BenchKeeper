@@ -227,7 +227,7 @@ test.describe('views', () => {
     await expect(changes).toBeVisible();
     const skill = page.getByRole('region', { name: 'Skills' }).getByRole('switch').first();
     await skill.click();
-    await expect(changes).toContainText('.benchkeeper/disabled/');
+    await expect(changes).toContainText('.cedarloom-app/disabled/');
     await noAxe(page);
     await page.getByRole('link', { name: 'All projects' }).click();
     // After the last of the 2 projects the page reloads the list.
@@ -830,9 +830,9 @@ test.describe('views', () => {
 
   test('Projects: Remove BenchKeeper setup lists every file, removes a local setup and leaves the project registered', async ({ page }) => {
     const dir = folder('mv-local');
-    mkdirSync(join(dir, '.benchkeeper'));
-    writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ schemaVersion: 1, setupVersion: '6.0.0', agents: ['claude'], share: false, packs: [], skills: [] }));
-    writeFileSync(join(dir, 'CLAUDE.local.md'), '<!-- benchkeeper:project start -->\n- a rule\n<!-- benchkeeper:project end -->\n');
+    mkdirSync(join(dir, '.cedarloom-app'));
+    writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 1, setupVersion: '6.0.0', agents: ['claude'], share: false, packs: [], skills: [] }));
+    writeFileSync(join(dir, 'CLAUDE.local.md'), '<!-- cedarloom-app:project start -->\n- a rule\n<!-- cedarloom-app:project end -->\n');
     writeFileSync(join(dir, 'AGENTS.md'), '# Mine\n');
     await nav(page, 'Projects').click();
     const table = page.getByRole('table', { name: 'Projects' });
@@ -841,13 +841,13 @@ test.describe('views', () => {
     await bar(page).getByRole('button', { name: 'Remove setup' }).click();
     const ask = page.getByRole('dialog', { name: 'Remove the BenchKeeper setup of 1 project' });
     await expect(ask.getByRole('list', { name: /^Changes in / })).toContainText('remove CLAUDE.local.md');
-    await expect(ask.getByRole('list', { name: /^Changes in / })).toContainText('remove .benchkeeper/');
+    await expect(ask.getByRole('list', { name: /^Changes in / })).toContainText('remove .cedarloom-app/');
     await expect(ask).toContainText('AGENTS.md text, docs/agents/ and .devcontainer/ stay');
     await noAxe(page);
     await ask.getByRole('button', { name: 'Remove setup of 1 project' }).click();
     await expect(ask.getByRole('table', { name: 'Remove setup results' })).toContainText('removed');
     await expect(ask.getByRole('link', { name: 'Open report' })).toBeVisible();
-    expect(existsSync(join(dir, '.benchkeeper'))).toBe(false);
+    expect(existsSync(join(dir, '.cedarloom-app'))).toBe(false);
     expect(existsSync(join(dir, 'CLAUDE.local.md'))).toBe(false);
     expect(existsSync(join(dir, 'AGENTS.md'))).toBe(true);
     await ask.getByRole('button', { name: 'Close' }).click();
@@ -894,8 +894,8 @@ test.describe('views', () => {
     test.slow();
     const dir = folder('sk-proj');
     const skills = join(dir, '.claude/skills');
-    mkdirSync(join(dir, '.benchkeeper'));
-    writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ schemaVersion: 1, setupVersion: '6.0.0', agents: ['claude'], env: 'host', share: false, packs: [], singles: ['designing-technical-uis'], tier: null, paths: {}, disabled: [],
+    mkdirSync(join(dir, '.cedarloom-app'));
+    writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 1, setupVersion: '6.0.0', agents: ['claude'], env: 'host', share: false, packs: [], singles: ['designing-technical-uis'], tier: null, paths: {}, disabled: [],
       skills: [{ name: 'designing-technical-uis', source: 'own' }] }));
     for (const [name, text] of [['mine', 'my own skill\n'], ['mermaid-diagrams', 'a library skill put here by hand\n']]) {
       mkdirSync(join(skills, name), { recursive: true });
@@ -941,7 +941,7 @@ test.describe('views', () => {
     // Mantine's track covers the input, so Playwright's own pointer check refuses it.
     await own.getByRole('switch', { name: /^Active/ }).click({ force: true });
     const off = page.getByRole('dialog', { name: 'Deactivate designing-technical-uis in sk-proj' });
-    await expect(off).toContainText('.benchkeeper/disabled/');
+    await expect(off).toContainText('.cedarloom-app/disabled/');
     await noAxe(page);
     await off.getByRole('button', { name: 'Close' }).click();
     await expect(off).toBeHidden();

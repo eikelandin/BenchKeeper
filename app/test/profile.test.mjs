@@ -35,7 +35,7 @@ test('export holds choices only; import registers projects, saves packs, sets up
   assert.ok(!text.includes('TOKEN') && !text.includes('accessibility/SKILL'));
 
   // The other machine has the clone without the state file.
-  rmSync(join(proj, '.benchkeeper'), { recursive: true });
+  rmSync(join(proj, '.cedarloom-app'), { recursive: true });
   rmSync(join(proj, 'CLAUDE.local.md'));
   const b = machine();
   const file = join(tmp('bk-prof-file-'), 'profile.json');
@@ -91,7 +91,7 @@ test('a state file this app cannot read: export names the project, import skips 
   for (const [text, reason] of [['{"schemaVersion": 99}', /schemaVersion 99, this benchkeeper reads up to/], ['{ damaged', /JSON/]]) {
     const a = machine();
     const bad = tmp('bk-prof-bad-'), good = tmp('bk-prof-good-');
-    mkdirSync(join(bad, '.benchkeeper'));
+    mkdirSync(join(bad, '.cedarloom-app'));
     writeFileSync(join(bad, STATE), text);
     addProject(a, bad);
     addProject(a, good);
@@ -149,7 +149,7 @@ test('a round trip keeps guards and the pack scopes, which the import reports as
   assert.deepEqual(p.global.packs, ['ui']);
   assert.ok(p.projects[0].answers.guards === false);
 
-  rmSync(join(proj, '.benchkeeper'), { recursive: true });
+  rmSync(join(proj, '.cedarloom-app'), { recursive: true });
   const b = machine();
   const at = join(tmp('bk-prof-file-'), 'profile.json');
   writeFileSync(at, JSON.stringify(p));

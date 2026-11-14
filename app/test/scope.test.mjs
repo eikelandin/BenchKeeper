@@ -41,10 +41,10 @@ function machine({ outside = false } = {}) {
   const ctx = context({ home, run });
   // A registered project whose setup selects Ponytail and the frontend pack, with copies of the frontend skills.
   const dir = outside ? mkdtempSync(join(TMP, 'bk-scope-project-')) : join(home, 'p');
-  mkdirSync(join(dir, '.benchkeeper'), { recursive: true });
+  mkdirSync(join(dir, '.cedarloom-app'), { recursive: true });
   const skills = pack(ctx, 'frontend').skills;
   for (const s of skills) { mkdirSync(join(dir, '.claude/skills', s), { recursive: true }); writeFileSync(join(dir, '.claude/skills', s, 'SKILL.md'), 'x'); }
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name })) }));
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name })) }));
   addProject(ctx, dir);
   const installs = () => JSON.parse(readFileSync(file, 'utf8')).plugins['ponytail@ponytail'];
   return { home, ctx, dir, calls, installs };
@@ -146,7 +146,7 @@ test('a plugin pack for selected projects switched off in a project leaves that 
   const failing = { ...ctx, run: (argv, o) => (argv[2] === 'uninstall' ? { code: 1, stdout: '', stderr: 'refused' } : ctx.run(argv, o)) };
   const plan = preview(projectPlan({ ctx: failing, dir, answers: { packOff: ['ponytail'] } }).changes);
   apply(plan, failing, { scope: dir, select: plan.filter((c) => ['pack:ponytail:claude', 'state'].includes(c.step)).map((c) => c.id) });
-  assert.ok(JSON.parse(readFileSync(join(dir, '.benchkeeper/state.json'), 'utf8')).packs.includes('ponytail'));
+  assert.ok(JSON.parse(readFileSync(join(dir, '.cedarloom-app/state.json'), 'utf8')).packs.includes('ponytail'));
   assert.deepEqual(installs(), [{ scope: 'local', version: '5.2.0', projectPath: dir }]);
   // For all projects the plugin stays: other projects use it, and the global plan owns it.
   apply(preview(scopePlan(ctx, 'ponytail', 'global', ['claude'])), ctx);
@@ -190,7 +190,7 @@ test('a scope move preselects no removal of what the user owns and keeps held pr
   const skills = pack(ctx, 'frontend').skills;
   writeFileSync(scopeFile(ctx), JSON.stringify({ scopes: { frontend: 'global' } }));
   for (const s of skills) mkdirSync(join(home, '.claude/skills', s), { recursive: true });
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name, adopted: true })) }));
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name, adopted: true })) }));
   const plan = scopePlan(ctx, 'frontend', 'projects', ['claude']);
   const removals = plan.filter((c) => c.step === 'other:claude:skill');
   assert.equal(removals.length, skills.length);
@@ -202,7 +202,7 @@ test('a scope move preselects no removal of what the user owns and keeps held pr
 test('the Installs tab: scope hint, fixed scope and state per row; global items only in the global block; a toggle plans this project only and undo restores it', () => {
   const { ctx, home, dir } = machine();
   const skills = pack(ctx, 'frontend').skills;
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude', 'codex'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name })) }));
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude', 'codex'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name })) }));
   // Claude Code has Ponytail, Matt Pocock's skills (global, not selected here) and BenchKeeper's own plugin for the user.
   const ids = ['ponytail@ponytail', 'mattpocock-skills@claude-plugins-official', 'benchkeeper@benchkeeper'];
   writeFileSync(join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: Object.fromEntries(ids.map((id) => [id, [{ scope: 'user', version: '1.0.0' }]])) }));
@@ -227,12 +227,12 @@ test('the Installs tab: scope hint, fixed scope and state per row; global items 
   const off = plan([['pack-off', 'frontend']]);
   assert.ok(off.changes.length);
   assert.ok(off.changes.every((c) => [c.path, c.cwd].some((x) => x === dir || x?.startsWith(`${dir}/`))), off.changes.map((c) => c.path ?? c.cwd).join());
-  const before = readFileSync(join(dir, '.benchkeeper/state.json'), 'utf8');
+  const before = readFileSync(join(dir, '.cedarloom-app/state.json'), 'utf8');
   const run = apply(preview(projectPlan({ ctx, dir, answers: { packOff: ['frontend'] } }).changes), ctx);
   assert.equal(run.status, 'done');
-  assert.deepEqual(JSON.parse(readFileSync(join(dir, '.benchkeeper/state.json'), 'utf8')).packs, ['ponytail']);
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, '.cedarloom-app/state.json'), 'utf8')).packs, ['ponytail']);
   undo(run.id, ctx);
-  assert.equal(readFileSync(join(dir, '.benchkeeper/state.json'), 'utf8'), before);
+  assert.equal(readFileSync(join(dir, '.cedarloom-app/state.json'), 'utf8'), before);
 });
 
 test('packs scope prints the scope and each agent\'s offer, and applies a move', async () => {

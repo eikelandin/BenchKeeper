@@ -31,7 +31,7 @@ const SWITCH = 'rule-switch';
 const EDIT = 'rule-edit';
 // autoMemoryDirectory is an absolute path or one that starts with this and a slash.
 const TILDE = '~';
-const MARKER = /benchkeeper:[\w.-]+ start/;
+const MARKER = /cedarloom-app:[\w.-]+ start/;
 
 const sizeOf = (text) => Buffer.byteLength(text);
 

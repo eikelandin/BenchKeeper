@@ -194,7 +194,7 @@ test('doctor: on and complete is quiet, on and missing is a warning, off and pre
   // Off while present: an info; off and gone: quiet.
   const [info] = guardChecks(r.dir, { ...state, guards: false });
   assert.deepEqual([info.level, info.check], ['info', 'guards']);
-  assert.match(info.message, /13 deny rules, the PreToolUse hook, \.claude\/hooks\/benchkeeper-guard\.mjs/);
+  assert.match(info.message, /13 deny rules, the PreToolUse hook, \.claude\/hooks\/cedarloom-app-guard\.mjs/);
   writeFileSync(file, '{}\n');
   assert.equal(guardChecks(r.dir, { ...state, guards: false }).length, 1);
   rmSync(join(r.dir, GUARD_PATH));

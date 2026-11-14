@@ -1,6 +1,6 @@
 // Usage: node facts.mjs write --run <run folder, relative to the working directory> --repo <owner/name> [--repo ...] [--tracker <owner/name> --labels <label,...>] [--accounts]. Writes <run folder>/facts.md from the job files, gh and cswap, exit 0: a source that cannot be read shows "unread" in its section.
 // Usage: node facts.mjs costs --run <run folder, relative to the working directory> --repo <owner/name> [--repo ...] --since <YYYY-MM-DD> --until <YYYY-MM-DD> [--json]. Per pull request merged in the period: its jobs' summed cost and its fix rounds (changes verdicts), then totals and medians; exit 2 when gh cannot list the merged pull requests.
-// The run folder is .benchkeeper/runs/ of the working directory or a folder below it, given relative to the working directory (an absolute path passes only when no link lies on it), not a link; any other exits 2. The tracker is named on the command line only: a public repository must not name a private tracker.
+// The run folder is .cedarloom-app/runs/ of the working directory or a folder below it, given relative to the working directory (an absolute path passes only when no link lies on it), not a link; any other exits 2. The tracker is named on the command line only: a public repository must not name a private tracker.
 import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -40,10 +40,10 @@ const prOf = (meta) => (meta?.pr === undefined || meta?.pr === null ? null : Num
 // A job file names its project by name; a job without one counts for every repository.
 const inRepo = (meta, repo) => !meta?.project || [repo, repo.split('/')[1]].some((name) => name.toLowerCase() === String(meta.project).toLowerCase());
 
-// The run folder comes from a command line: one that is a link, or resolves outside .benchkeeper/runs of the working directory, is refused, as approval.mjs refuses a file there.
+// The run folder comes from a command line: one that is a link, or resolves outside .cedarloom-app/runs of the working directory, is refused, as approval.mjs refuses a file there.
 export function runFolder(path) {
   try {
-    const cwd = realpathSync('.'), runs = join(cwd, '.benchkeeper', 'runs');
+    const cwd = realpathSync('.'), runs = join(cwd, '.cedarloom-app', 'runs');
     const full = resolve(cwd, path), real = realpathSync(full);
     // A link anywhere on the path, above or below the working directory, makes the real path differ.
     if (real !== full || (real !== runs && !real.startsWith(runs + sep))) return null;
@@ -228,7 +228,7 @@ function main(argv) {
   const labels = v.labels ? v.labels.split(',').map((l) => l.trim()).filter(Boolean) : [];
   if (v.tracker && !labels.length) throw new Error(USAGE);
   const run = runFolder(v.run);
-  if (!run) throw new Error(`refused: ${v.run} is no folder in .benchkeeper/runs/ of the working directory, or a link lies on its path: pass it relative to the working directory`);
+  if (!run) throw new Error(`refused: ${v.run} is no folder in .cedarloom-app/runs/ of the working directory, or a link lies on its path: pass it relative to the working directory`);
   const exec = (cmd, args) => sh(process.cwd(), cmd, args);
   if (mode === 'costs') {
     const found = costs({ run, repos, since: v.since, until: v.until, exec });

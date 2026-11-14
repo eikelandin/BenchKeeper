@@ -4,7 +4,7 @@ What earlier passes learned about this project, so a repeated pass skips finishe
 
 ## Where
 
-`.benchkeeper/knowledge/` at the repository root, local only: before the first write run `git check-ignore -q .benchkeeper/knowledge/verdicts.json`, else append `.benchkeeper/` to `$(git rev-parse --git-path info/exclude)`. No committed file (`.gitignore`, docs, CI) mentions it. Folder mode 0700, files 0600.
+`.cedarloom-app/knowledge/` at the repository root, local only: before the first write run `git check-ignore -q .cedarloom-app/knowledge/verdicts.json`, else append `.cedarloom-app/` to `$(git rev-parse --git-path info/exclude)`. No committed file (`.gitignore`, docs, CI) mentions it. Folder mode 0700, files 0600.
 
 One file per kind, each `{ "entries": [ { "id": "...", ... } ] }` and nothing else:
 

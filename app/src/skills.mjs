@@ -11,7 +11,7 @@ import { KEEP_SKILLS } from './steps/global.mjs';
 import { editedHere, lockedSkills, tryState, unfinishedHere } from './steps/project.mjs';
 
 // The SKILL.md files in a project's agent skill folders; a skill several agents read can appear once per folder.
-// Turned-off skills sit in .benchkeeper/disabled/ and are not among them.
+// Turned-off skills sit in .cedarloom-app/disabled/ and are not among them.
 export function skillFiles(dir) {
   return ['.claude/skills', '.agents/skills', '.github/skills', '.gemini/skills'].map((x) => join(dir, x))
     .flatMap((d) => listDir(d).map((name) => ({ name, file: join(d, name, 'SKILL.md') })))

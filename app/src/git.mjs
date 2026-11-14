@@ -73,8 +73,8 @@ function localSetupPaths(ctx, dir) {
   const paths = [];
   let inside = false;
   for (const l of text.split('\n')) {
-    if (/^# benchkeeper:local.* start$/.test(l)) inside = true;
-    else if (/^# benchkeeper:local.* end$/.test(l)) inside = false;
+    if (/^# cedarloom-app:local.* start$/.test(l)) inside = true;
+    else if (/^# cedarloom-app:local.* end$/.test(l)) inside = false;
     else if (inside && l.startsWith('/')) paths.push(l.slice(1).replace(/\/$/, ''));
   }
   return paths.filter((p) => existsSync(join(dir, p)));

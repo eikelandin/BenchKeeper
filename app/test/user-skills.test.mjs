@@ -163,7 +163,7 @@ test('a library skill named like an own skill: doctor and the catalog name the c
   const copy = join(dir, '.claude/skills', name, 'SKILL.md');
   // Written by a run, as the copy of the user's skill was: not an edit made in the project.
   apply(preview([{ id: 'copy', step: 'copy', title: 'copy', kind: 'write', path: copy, after: mine }]), ctx, { scope: dir });
-  const statePath = join(dir, '.benchkeeper/state.json'), st = readState(dir);
+  const statePath = join(dir, '.cedarloom-app/state.json'), st = readState(dir);
   writeFileSync(statePath, JSON.stringify({ ...st, skills: st.skills.map((x) => (x.name === name ? { name, source: 'user' } : x)) }));
   mkdirSync(userSkillDir(ctx, name), { recursive: true });
   writeFileSync(join(userSkillDir(ctx, name), 'SKILL.md'), mine);

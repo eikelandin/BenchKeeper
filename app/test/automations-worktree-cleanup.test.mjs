@@ -112,29 +112,29 @@ test('worktree-cleanup: an ignored file keeps its worktree unless a rebuildable 
 test('worktree-cleanup: a folder Git ignores as a whole counts as copied when every file in it is an unchanged .worktreeinclude entry', sh, () => {
   const f = fixture();
   // As a local project setup leaves it: the exclude list ignores the folder, the include list names its state file.
-  writeFileSync(join(f.repo, '.git', 'info', 'exclude'), '/.benchkeeper/\n/.claude/skills/a/\n/.worktreeinclude\n');
-  writeFileSync(join(f.repo, '.worktreeinclude'), '# benchkeeper:worktrees start\n.benchkeeper/state.json\n.claude/skills/a\n.worktreeinclude\n# benchkeeper:worktrees end\n');
-  mkdirSync(join(f.repo, '.benchkeeper')); writeFileSync(join(f.repo, '.benchkeeper', 'state.json'), '{}');
+  writeFileSync(join(f.repo, '.git', 'info', 'exclude'), '/.cedarloom-app/\n/.claude/skills/a/\n/.worktreeinclude\n');
+  writeFileSync(join(f.repo, '.worktreeinclude'), '# cedarloom-app:worktrees start\n.cedarloom-app/state.json\n.claude/skills/a\n.worktreeinclude\n# cedarloom-app:worktrees end\n');
+  mkdirSync(join(f.repo, '.cedarloom-app')); writeFileSync(join(f.repo, '.cedarloom-app', 'state.json'), '{}');
   mkdirSync(join(f.repo, '.claude', 'skills', 'a'), { recursive: true }); writeFileSync(join(f.repo, '.claude', 'skills', 'a', 'SKILL.md'), 'a');
   const wt = {};
   for (const b of ['copy', 'handoff', 'edited']) {
     wt[b] = f.worktree(b);
     f.merged(b, git(f.repo, 'rev-parse', 'main'));
-    for (const p of ['.benchkeeper/state.json', '.claude/skills/a/SKILL.md', '.worktreeinclude']) { mkdirSync(join(wt[b], p, '..'), { recursive: true }); writeFileSync(join(wt[b], p), readFileSync(join(f.repo, p))); }
+    for (const p of ['.cedarloom-app/state.json', '.claude/skills/a/SKILL.md', '.worktreeinclude']) { mkdirSync(join(wt[b], p, '..'), { recursive: true }); writeFileSync(join(wt[b], p), readFileSync(join(f.repo, p))); }
   }
   // A handoff note is per worktree and not copied: it keeps the worktree, as does an edited state file.
-  writeFileSync(join(wt.handoff, '.benchkeeper', 'handoff.md'), 'next steps');
-  writeFileSync(join(wt.edited, '.benchkeeper', 'state.json'), '{"x":1}');
+  writeFileSync(join(wt.handoff, '.cedarloom-app', 'handoff.md'), 'next steps');
+  writeFileSync(join(wt.edited, '.cedarloom-app', 'state.json'), '{"x":1}');
   assert.deepEqual(f.sweep('report').out.slice(1).sort(), [`keep worktree ${wt.edited} edited ignored-files`, `keep worktree ${wt.handoff} handoff ignored-files`, `removable worktree ${wt.copy} copy`].sort());
   // A folder that cannot be listed fails the scan instead of reading as all copied (root can still list it: no check then).
-  chmodSync(join(wt.copy, '.benchkeeper'), 0o000);
+  chmodSync(join(wt.copy, '.cedarloom-app'), 0o000);
   try {
     let listable = true;
-    try { readdirSync(join(wt.copy, '.benchkeeper')); } catch { listable = false; }
+    try { readdirSync(join(wt.copy, '.cedarloom-app')); } catch { listable = false; }
     if (!listable) assert.ok(f.sweep('report').out.includes(`keep worktree ${wt.copy} copy ignored-scan`));
-  } finally { chmodSync(join(wt.copy, '.benchkeeper'), 0o755); }
+  } finally { chmodSync(join(wt.copy, '.cedarloom-app'), 0o755); }
   // A name with a line break cannot be read back from a list, so it keeps the worktree, even beside an unchanged copy.
-  writeFileSync(join(wt.copy, '.benchkeeper', 'state.json\n'), 'other');
+  writeFileSync(join(wt.copy, '.cedarloom-app', 'state.json\n'), 'other');
   assert.ok(f.sweep('report').out.includes(`keep worktree ${wt.copy} copy ignored-files`));
 });
 
