@@ -6,7 +6,7 @@ import { PlainText } from "./text.ts";
 
 /**
  * An issue of the hub, the only tracker: its repository as `owner/name` and its number. The hub's name comes from
- * local config and never from CedarLoom's code (ARW1-2). `.` and `..` are no repository, so no name climbs the API path.
+ * local config and never from CedarLoom's code. `.` and `..` are no repository, so no name climbs the API path.
  */
 export const IssueRef = z.strictObject({
   repo: z.string().regex(/^[A-Za-z0-9-]{1,39}\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/),

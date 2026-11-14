@@ -14,7 +14,7 @@ const ComponentId = z.string().regex(/^[a-z][a-z0-9-]{0,63}(\.[a-z][a-z0-9-]{0,6
 
 /**
  * The switch of each first-party part by its id (core, components, adapters and
- * extensions"); a part not listed is `auto`. A bundled extension is listed by its extension id.
+ * extensions); a part not listed is `auto`. A bundled extension is listed by its extension id.
  */
 export const Components = z
   .strictObject({

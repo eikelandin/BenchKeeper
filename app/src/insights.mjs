@@ -58,7 +58,7 @@ export function insights({ sessions = [], skills = [], doctorFindings = [], proj
       });
     }
   }
-  // Friction (#322): one proxy, a session whose last test run failed. Per project, among its
+  // Friction: one proxy, a session whose last test run failed. Per project, among its
   // sessions without dispatched workers and research tier; Claude Code and Codex both count. Nothing below minSamples of them.
   // Grouped by the canonical path (two projects can share a folder name); the finding carries only the folder name and a hash of the path.
   const byPath = new Map();
@@ -81,7 +81,7 @@ export function insights({ sessions = [], skills = [], doctorFindings = [], proj
       fix: 'open the listed sessions in the sessions board and look at why the tests failed: a missing check in the project, a rule the agent skipped or a task too large for one session',
     });
   }
-  // Skill proposals (#480): each one a fix command whose plan, diff and undo are those of the skills command; Insights only lists them.
+  // Skill proposals: each one a fix command whose plan, diff and undo are those of the skills command; Insights only lists them.
   // dir is the project path the fix needs; the narrative carries only the folder name.
   for (const p of projects) {
     const folder = folderOf(p.dir);
