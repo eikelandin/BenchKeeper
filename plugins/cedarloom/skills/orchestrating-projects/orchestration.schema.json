@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BenchKeeper orchestrator policy (docs/agents/orchestration.json)",
+  "title": "CedarLoom orchestrator policy (docs/agents/orchestration.json)",
   "type": "object",
   "additionalProperties": false,
   "patternProperties": { "^//": {} },

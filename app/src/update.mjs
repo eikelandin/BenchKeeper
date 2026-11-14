@@ -9,6 +9,6 @@ export async function updateNotice(current, env = process.env, get = fetch) {
     const r = await get('https://registry.npmjs.org/benchkeeper', { signal: AbortSignal.timeout(3000) });
     const { time, versions } = r.ok ? await r.json() : {};
     const version = cooled(time, Object.keys(versions ?? {})).sort((a, b) => (newer(a, b) ? 1 : -1)).at(-1);
-    return version && newer(version, current) ? `benchkeeper ${version} is available (this is ${current}): npx benchkeeper@${version}` : null;
+    return version && newer(version, current) ? `benchkeeper ${version} is available (this is ${current}): npx @cedarloom/app@${version}` : null;
   } catch { return null; }
 }

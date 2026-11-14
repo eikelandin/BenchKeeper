@@ -1,8 +1,8 @@
 // Optional tier band (userConfig tierBand, off by default): a row with the project, its branch and Ponytail's level (when that
 // plugin is on), a row with the last test run, the last lint or type check and whether the tier's checks passed since the
-// last edit, a row with the tier line of the last answer and buttons for /benchkeeper:tier, the sessions board and the
+// last edit, a row with the tier line of the last answer and buttons for /cedarloom:tier, the sessions board and the
 // doctor, and the session's override kept in the system prompt and the plugin's store, so it outlasts compaction and resume.
-// It also shows ASK while /benchkeeper:ask or /benchkeeper:questions allows terminal questions.
+// It also shows ASK while /cedarloom:ask or /cedarloom:questions allows terminal questions.
 // It reads the working folder, git, one flag file of Ponytail and the commands and edits of the main loop; it writes only
 // that override to the plugin's store and sends nothing.
 import { atom, read, update } from 'claude-code'
@@ -27,7 +27,7 @@ const commands = (list: string) => ({
 const TEST = commands('(?:(?:npm|pnpm|yarn|bun) (?:run )?test(?::\\S+)?|node --test|playwright test|pytest|go test|cargo test|vitest|jest)')
 const LINT = commands('(?:eslint|npm run lint|tsc|ruff|mypy|pyright|go vet|cargo clippy|biome)')
 const EDITS = ['Edit', 'Write', 'NotebookEdit'] as const
-// The window /benchkeeper:ask or /benchkeeper:questions opened, as the plugin's hook (ask/ask.mjs) keeps it per process: a module variable outlives /clear too.
+// The window /cedarloom:ask or /cedarloom:questions opened, as the plugin's hook (ask/ask.mjs) keeps it per process: a module variable outlives /clear too.
 let asking: number | null = null
 
 // The commands of a chain joined by && only, else none: with ||, ;, | or & the exit code can come from another command, and a
@@ -105,18 +105,18 @@ async function refresh($: EngineInterface) {
   await update($, where, () => ({ project: cwd.split(/[\\/]/).filter(Boolean).pop() || cwd, branch: branch || null, ponytail: /^[a-z-]{1,12}$/.test(level) ? level : null }))
 }
 
-// The board the app writes on each scan of its Sessions view, and on benchkeeper sessions board; the band only opens it.
+// The board the app writes on each scan of its Sessions view, and on cedarloom-app sessions board; the band only opens it.
 async function openBoard($: EngineInterface) {
   const home = (await $.env.get('CEDARLOOM_APP_HOME')) ?? (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE'))
   const file = `${home}/.config/cedarloom-app/board.html`
-  if (!(await $.fs.exists(file))) return $.ui.toast('No sessions board yet: open Sessions in the BenchKeeper app, or run benchkeeper sessions board')
+  if (!(await $.fs.exists(file))) return $.ui.toast('No sessions board yet: open Sessions in the CedarLoom app, or run cedarloom-app sessions board')
   const windows = (await $.env.get('OS')) === 'Windows_NT'
   const mac = !windows && (await $.process.run(['uname'])).stdout.trim() === 'Darwin'
   // explorer takes the path as one argument; cmd would read & or % in a home folder name as its own syntax.
   await $.process.run(windows ? ['explorer.exe', file.replaceAll('/', '\\')] : [mac ? 'open' : 'xdg-open', file])
 }
 
-const HELP = 'BenchKeeper band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit, and ready when the checks the tier asks for passed since the last edit. quick, standard, full set the tier of this session, auto lets each task choose. board opens the sessions board. doctor asks the agent to run benchkeeper doctor. ASK until a time or for this session: terminal questions are allowed until then (/benchkeeper:ask, /benchkeeper:questions). Nothing leaves this machine. Turn off: set Tier band to false in the plugin options.'
+const HELP = 'CedarLoom band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit, and ready when the checks the tier asks for passed since the last edit. quick, standard, full set the tier of this session, auto lets each task choose. board opens the sessions board. doctor asks the agent to run cedarloom-app doctor. ASK until a time or for this session: terminal questions are allowed until then (/cedarloom:ask, /cedarloom:questions). Nothing leaves this machine. Turn off: set Tier band to false in the plugin options.'
 
 export const register: Register = (on, options) => {
   const on_ = options.tierBand === true
@@ -167,12 +167,12 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
-    if (on_ && e.command?.name === 'benchkeeper:tier') await setOverride($, e.command.args)
-    if (on_ && e.command?.name === 'benchkeeper:ask') {
+    if (on_ && e.command?.name === 'cedarloom:tier') await setOverride($, e.command.args)
+    if (on_ && e.command?.name === 'cedarloom:ask') {
       const end = askUntil(e.command.args, await $.clock.now())
       if (end !== undefined) asking = end
     }
-    if (on_ && e.command?.name === 'benchkeeper:questions') asking = Infinity
+    if (on_ && e.command?.name === 'cedarloom:questions') asking = Infinity
     return next(e)
   }).catch(($, e, next) => next(e))
 
@@ -180,8 +180,8 @@ export const register: Register = (on, options) => {
     const result = await next(e)
     const v = on_ ? await current($) : null
     if (!v) return result
-    const text = `Tier override for this session (set with /benchkeeper:tier): ${v}. Run each task at this tier and write its tier line as \`Tier: ${v} (override)\`, unless the user names a tier for the task or the change is risky.`
-    return { sections: [...result.sections, { id: 'benchkeeper:tier', text, scope: 'session' }] }
+    const text = `Tier override for this session (set with /cedarloom:tier): ${v}. Run each task at this tier and write its tier line as \`Tier: ${v} (override)\`, unless the user names a tier for the task or the change is risky.`
+    return { sections: [...result.sections, { id: 'cedarloom:tier', text, scope: 'session' }] }
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -197,7 +197,7 @@ export const register: Register = (on, options) => {
     const now = asking === null ? null : await $.clock.now()
     const ask = asking !== null && now !== null && asking > now ? `ASK ${lasting(asking, now)}` : null
     const pick = async (level: string) => {
-      await $.command.run({ command: 'benchkeeper:tier', args: level })
+      await $.command.run({ command: 'cedarloom:tier', args: level })
       await setOverride($, level)
     }
     const { Box, Text, Button } = $.ui.resolve(e)
@@ -218,7 +218,7 @@ export const register: Register = (on, options) => {
           <Button key={level} plain label={level} onPress={() => pick(level)} />
         ))}
         <Button key="board" plain label="board" onPress={() => openBoard($).catch(() => $.ui.toast('Could not open the sessions board'))} />
-        <Button key="doctor" plain label="doctor" onPress={() => $.command.run({ command: 'benchkeeper:operating-benchkeeper', args: 'run benchkeeper doctor for this project and list the findings' }).catch(() => $.ui.toast('Could not start the doctor'))} />
+        <Button key="doctor" plain label="doctor" onPress={() => $.command.run({ command: 'cedarloom:operating-cedarloom-app', args: 'run cedarloom-app doctor for this project and list the findings' }).catch(() => $.ui.toast('Could not start the doctor'))} />
         <Button key="help" plain label="?" onPress={() => $.ui.toast(HELP)} />
       </Box>
       </Box>

@@ -18,7 +18,7 @@ test('update check: shown when newer, silent when off, offline or older', async 
   assert.equal(newer('5.9.9', '6.0.0'), false);
   const old = '2020-01-01T00:00:00Z', fresh = new Date(Date.now() - 864e5).toISOString();
   const reply = (version, ok = true, at = old) => async () => ({ ok, json: async () => ({ time: { '6.0.0': old, [version]: at }, versions: { '6.0.0': {}, [version]: {} } }) });
-  assert.match(await updateNotice('6.0.0', {}, reply('6.1.0')), /benchkeeper 6\.1\.0 is available .*npx benchkeeper@6\.1\.0/);
+  assert.match(await updateNotice('6.0.0', {}, reply('6.1.0')), /benchkeeper 6\.1\.0 is available .*npx @cedarloom\/app@6\.1\.0/);
   assert.equal(await updateNotice('6.0.0', {}, reply('6.0.0')), null);
   assert.equal(await updateNotice('6.0.0', {}, reply('7.0.0', false)), null);
   assert.equal(await updateNotice('6.0.0', {}, reply('7.0.0-rc.1')), null);

@@ -74,7 +74,7 @@ test('a Tier line naming the Default tier line ahead of the workflow skill fails
 test('a skill naming a skills CLI version fails, inside a code block too', () => {
   for (const body of ['Run `npx -y skills@npm:skills@1.7.2 find x`.', '```sh\nnpx skills@1.8.0 add a/b\n```'])
     assert.match(lintSkill(skill('a', { body })).join(), /names a skills CLI version/);
-  assert.deepEqual(lintSkill(skill('a', { body: 'Run `<skills> find x` with the line `npx benchkeeper@6 skills cli` prints.' })), []);
+  assert.deepEqual(lintSkill(skill('a', { body: 'Run `<skills> find x` with the line `npx @cedarloom/app@0.1 skills cli` prints.' })), []);
 });
 
 // isMain (main.mjs) guards the command line of every script here; this file runs in CI, so its tests are here.

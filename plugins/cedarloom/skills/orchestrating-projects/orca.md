@@ -98,7 +98,7 @@ How the coordinator waits, by its agent:
   - To replace it: at the first wake within 2 days of that date, or when `CronList` no longer shows it, `CronDelete` it and create it again as at run start, with the same schedule and a new expiry date. A run that only waits for new issues (`keepRunning`) then keeps waking with no owner restart.
   - Delete it (`CronDelete`) when the run closes.
   - Without session crons (`CronCreate` missing, or `CLAUDE_CODE_DISABLE_CRON` set), wait as an agent with no background wake does.
-- **An agent with no background wake** (wake mode `unsupported` in BenchKeeper's agent registry, for example Codex). It has no such cron: it runs the `check --wait` in the foreground with a timeout of `stallMinutes` / 2, never looped faster than once a minute, and runs the wake-up checks when it returns.
+- **An agent with no background wake** (wake mode `unsupported` in the CedarLoom app's agent registry, for example Codex). It has no such cron: it runs the `check --wait` in the foreground with a timeout of `stallMinutes` / 2, never looped faster than once a minute, and runs the wake-up checks when it returns.
 - **A waker terminal** (a second terminal that waits and then wakes this session) is opt-in, and only for an agent whose wake mode in that registry is `waker`.
 
 A wait's deadline ([SKILL.md](SKILL.md#waiting)) is checked at a wake: it is a point to report at and ends no run.
@@ -158,7 +158,7 @@ A worker on another agent stays `block` (unverified: which key declines its dial
 
 ## Resume
 
-The BenchKeeper plugin hands the handoff file back after a `/clear` or compaction only in the Orca terminal its `Terminal:` line names, for a Claude Code or a Codex coordinator (Codex once its hook is trusted).
+The CedarLoom plugin hands the handoff file back after a `/clear` or compaction only in the Orca terminal its `Terminal:` line names, for a Claude Code or a Codex coordinator (Codex once its hook is trusted).
 
 - When that Claude Code coordinator ends a turn idle (no background task; a session cron does not count) above the plugin option `rotateAtTokens`, 200,000 tokens by default, the plugin clears it with `/clear` and submits a prompt to run the Resume steps.
 - `rotateAtPercent` above 0 sets a percent of the context window instead, and both at 0 turn it off.
@@ -181,7 +181,7 @@ ORCA orchestration worker-release --dispatch <dispatch id> --json
 ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 ```
 
-`--run-hooks` runs the project's `orca.yaml` archive script before the removal; the one BenchKeeper's project setup writes removes the worktree's dev containers and exits 0 even when that fails, so the removal goes ahead. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
+`--run-hooks` runs the project's `orca.yaml` archive script before the removal; the one the CedarLoom app's project setup writes removes the worktree's dev containers and exits 0 even when that fails, so the removal goes ahead. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
 A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that no `send` carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 

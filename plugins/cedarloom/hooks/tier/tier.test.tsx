@@ -10,9 +10,9 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 100, scroll: { offset: 0, bodyRows: 12 }, view: {} },
 } as const
 const ON = { options: { tierBand: true } }
-// /benchkeeper:tier as the person types it at the prompt.
+// /cedarloom:tier as the person types it at the prompt.
 const tierCommand = (args: string) =>
-  ({ text: `/benchkeeper:tier ${args}`, command: { name: 'benchkeeper:tier', args }, wait: false, origin: { kind: 'composer' } }) as const
+  ({ text: `/cedarloom:tier ${args}`, command: { name: 'cedarloom:tier', args }, wait: false, origin: { kind: 'composer' } }) as const
 const COMPOSE = { model: 'claude-sonnet-5-5', promptModel: 'claude-sonnet-5-5', surfaces: ['terminal'], tools: [], outputStyle: null, traits: [] } as const
 
 // The engine beneath: a session id, a store, an empty system prompt, another mod's band, and a step that answers text.
@@ -36,7 +36,7 @@ async function step($: Engine, agentId?: string) {
   for await (const _ of s) { /* chunks */ }
   return s.result
 }
-const sections = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.filter(x => x.id === 'benchkeeper:tier')
+const sections = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.filter(x => x.id === 'cedarloom:tier')
 
 test('reads the last tier line and its change type', () => {
   expect(lastTier('Reading.\nTier: quick (docs, typo)\nTier: full (feature)\ndone')).toEqual({ tier: 'full', changeType: 'feature' })
@@ -83,7 +83,7 @@ test('on: the band shows the tier of the main loop, above the other mods', ON, a
   await desktop.unmount()
 })
 
-test('on: /benchkeeper:tier sets a session override that every prompt carries, also after compaction and resume', ON, async ($, on) => {
+test('on: /cedarloom:tier sets a session override that every prompt carries, also after compaction and resume', ON, async ($, on) => {
   engine(on)
   await $.prompt.submit(tierCommand('full'))
   expect((await sections($))[0]?.text).toMatch(/Tier override for this session .*: full/)
@@ -101,7 +101,7 @@ test('on: a resumed session finds its override in the store', ON, async ($, on) 
   expect((await sections($))[0]?.text).toMatch(/: standard\./)
 })
 
-test('on: the buttons run /benchkeeper:tier as a person types it', ON, async ($, on) => {
+test('on: the buttons run /cedarloom:tier as a person types it', ON, async ($, on) => {
   engine(on)
   const sent: string[] = []
   on('command.run', (_, e) => {
@@ -110,7 +110,7 @@ test('on: the buttons run /benchkeeper:tier as a person types it', ON, async ($,
   })
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   await ui.press({ key: 'full' })
-  expect(sent).toEqual(['/benchkeeper:tier full'])
+  expect(sent).toEqual(['/cedarloom:tier full'])
   expect(await ui.find({ type: 'Text', text: /override: full/ })).toBeDefined()
   await ui.press({ key: 'auto' })
   expect(await ui.find({ type: 'Text', text: /override: none/ })).toBeDefined()
@@ -134,7 +134,7 @@ test('on: the board button opens the board the app wrote, or says how to get one
   })
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   await ui.press({ key: 'board' })
-  expect(toasts).toEqual(['No sessions board yet: open Sessions in the BenchKeeper app, or run benchkeeper sessions board'])
+  expect(toasts).toEqual(['No sessions board yet: open Sessions in the CedarLoom app, or run cedarloom-app sessions board'])
   expect(ran).toEqual([])
   written = true
   await ui.press({ key: 'board' })
@@ -257,7 +257,7 @@ test('on: doctor asks the agent to run the doctor, ? explains the band and how t
   })
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
   await ui.press({ key: 'doctor' })
-  expect(sent).toEqual(['/benchkeeper:operating-benchkeeper run benchkeeper doctor for this project and list the findings'])
+  expect(sent).toEqual(['/cedarloom:operating-cedarloom-app run cedarloom-app doctor for this project and list the findings'])
   await ui.press({ key: 'help' })
   expect(toasts[0]).toMatch(/Nothing leaves this machine\. Turn off: set Tier band to false/)
   await ui.unmount()

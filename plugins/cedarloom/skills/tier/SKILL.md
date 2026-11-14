@@ -11,7 +11,7 @@ writes: "Nothing on disk: one line with the tier now in force. The override live
 
 Tier asked for: $ARGUMENTS (Codex: the word after the skill name).
 
-- `quick`, `standard`, `full` or `research`: every task from now on in this session runs at that tier, with that tier's steps in `benchkeeper:workflow`. Its tier line reads `Tier: <tier> (override)`.
+- `quick`, `standard`, `full` or `research`: every task from now on in this session runs at that tier, with that tier's steps in `cedarloom:workflow`. Its tier line reads `Tier: <tier> (override)`.
 - `auto`: the override ends, and the workflow picks each task's tier again.
 - Anything else, or nothing: name the five choices and ask which one.
 

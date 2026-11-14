@@ -49,7 +49,7 @@ test('the URL token works once and becomes an HttpOnly SameSite=Strict cookie', 
   const wrong = await req('GET', '/?token=wrong');
   assert.equal(wrong.status, 401);
   assert.match(wrong.headers['content-type'], /^text\/html/);
-  assert.match(wrong.body, /works once and for 10 minutes.*http:\/\/127\.0\.0\.1:\d+\/.*npx benchkeeper/s);
+  assert.match(wrong.body, /works once and for 10 minutes.*http:\/\/127\.0\.0\.1:\d+\/.*npx @cedarloom\/app/s);
   assert.ok(!wrong.body.includes('<script'));
   assert.match(wrong.headers['content-security-policy'], /default-src 'self'/);
   const r = await req('GET', '/?token=secret-token-123');
@@ -448,13 +448,13 @@ test('evals: the plan names targets and sessions; the job runs them and stores r
   try {
     const { routes } = fixture();
     const plan = routes['GET /api/eval-plan'](new URLSearchParams('agents=claude&level=full'));
-    assert.deepEqual(plan.targets.map((t) => t.target).sort(), ['skill:designing-technical-uis', 'skill:operating-benchkeeper', 'skill:workflow']);
+    assert.deepEqual(plan.targets.map((t) => t.target).sort(), ['skill:designing-technical-uis', 'skill:operating-cedarloom-app', 'skill:workflow']);
     assert.equal(plan.sessions, plan.targets.reduce((n, t) => n + t.cases, 0));
     const { job, total } = routes['POST /api/eval']({ agents: 'claude' });
     assert.equal(total, plan.sessions);
     const s = await jobDone(routes, job);
     assert.equal(s.error, null);
-    assert.deepEqual(s.results.map((r) => r.target).sort(), ['skill:designing-technical-uis', 'skill:operating-benchkeeper', 'skill:workflow']);
+    assert.deepEqual(s.results.map((r) => r.target).sort(), ['skill:designing-technical-uis', 'skill:operating-cedarloom-app', 'skill:workflow']);
     assert.ok(s.results.every((r) => !('details' in r)));
     assert.equal(routes['GET /api/evals']().length, 3);
     assert.equal(routes['GET /api/eval-plan'](new URLSearchParams('agents=claude&level=full')).sessions, 0);

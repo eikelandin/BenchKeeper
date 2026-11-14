@@ -21,7 +21,7 @@ Every tier:
    | full | several behaviors, a new capability, an uncertain approach, or a risky change |
 
    - Risky: authentication, permissions, secrets, input validation, production data, deploy or production configuration, an irreversible action.
-   - Which tier wins, first match: the user's explicit tier for the task; a session override from `/benchkeeper:tier` (a risky change still names the full tier and asks); the [change-type table](#change-types); a `Default tier:` line in `AGENTS.md`.
+   - Which tier wins, first match: the user's explicit tier for the task; a session override from `/cedarloom:tier` (a risky change still names the full tier and asks); the [change-type table](#change-types); a `Default tier:` line in `AGENTS.md`.
    - Several requests in one prompt: tier each.
    - Before the first edit or command, write the tier line `Tier: <tier> (<change type>)`, with the change type's name from that table or a few words when none fits (`Tier: research` and `Tier: <tier> (override)` stay as they are).
    - The work grows past its tier: say so, write a new tier line, and run the skipped steps before the next edit.
@@ -49,7 +49,7 @@ Every tier:
    - The full suite, end-to-end and browser tests and builds run once, after the last edit, in a subagent that returns only failures and key lines.
    - Reviews start then and follow the tier playbook, including its remediation and re-review rounds.
    - A long check writes to a log file and is read by its failures and last lines.
-   - Read-only lookups and mechanical reading (file searches, log and CI output, inventories, pull request status) run in a subagent on `sonnet` at `medium` that edits no file (Claude Code: `benchkeeper:gather`), on `haiku` only for a bounded lookup whose whole input stays under 100,000 tokens.
+   - Read-only lookups and mechanical reading (file searches, log and CI output, inventories, pull request status) run in a subagent on `sonnet` at `medium` that edits no file (Claude Code: `cedarloom:gather`), on `haiku` only for a bounded lookup whose whole input stays under 100,000 tokens.
    - Fixes follow the project's commit convention, and failed checks rerun.
    - Waiting for pull request checks: watch them in the background (GitHub: `gh pr checks --watch --interval 30`; a host without a watch command: one until-loop Monitor, 30 seconds or slower), never a leading `sleep`. Load a deferred tool's schema (ToolSearch) before the first call.
 6. **Report done** with each check's command and result, a "steps skipped" line naming the checklist steps not run (or "none") and what was not checked. After a merge or when the next task is unrelated, suggest a new session (`/clear` in Claude Code).
