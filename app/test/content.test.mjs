@@ -12,7 +12,7 @@ import { status } from '../src/projects.mjs';
 
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
 const contentAt = (dir, minApp) => { mkdirSync(dir, { recursive: true }); writeFileSync(join(dir, 'content.json'), JSON.stringify({ schemaVersion: 1, contentVersion: '9.0.0', minApp })); return dir; };
-const stateAt = (state) => { const dir = tmp('bk-state-'); mkdirSync(join(dir, '.benchkeeper')); writeFileSync(join(dir, STATE), JSON.stringify(state)); return dir; };
+const stateAt = (state) => { const dir = tmp('bk-state-'); mkdirSync(join(dir, '.cedarloom-app')); writeFileSync(join(dir, STATE), JSON.stringify(state)); return dir; };
 
 test('content that needs a newer app is refused with the command to run; older, equal, absent or unreadable requirements are not', () => {
   assert.match(contentRefusal(contentAt(tmp('bk-content-'), '7.0.0'), '6.25.0'), /needs benchkeeper 7\.0\.0 or newer, this is 6\.25\.0.*npx benchkeeper@7/);

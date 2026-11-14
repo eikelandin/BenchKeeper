@@ -1,5 +1,5 @@
 # Mine
 
-<!-- benchkeeper:rules start -->
+<!-- cedarloom-app:rules start -->
 R
-<!-- benchkeeper:rules end -->
+<!-- cedarloom-app:rules end -->

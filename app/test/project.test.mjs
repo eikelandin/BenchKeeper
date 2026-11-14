@@ -66,10 +66,10 @@ test('local (the default): CLAUDE.local.md imports AGENTS.md, AGENTS.override.md
   const local = read(join(r.dir, 'CLAUDE.local.md'));
   assert.ok(local.startsWith('@AGENTS.md\n\n') && local.includes('- Default tier: quick'), local);
   const override = read(join(r.dir, 'AGENTS.override.md'));
-  assert.ok(override.startsWith('<!-- benchkeeper:override start -->\n# Project\n\nmy notes\n') && override.includes('- Default tier: quick'), override);
+  assert.ok(override.startsWith('<!-- cedarloom-app:override start -->\n# Project\n\nmy notes\n') && override.includes('- Default tier: quick'), override);
   assert.equal(readState(r.dir).share, false);
   const exclude = read(join(r.dir, '.git/info/exclude'));
-  for (const p of ['/.benchkeeper/', '/CLAUDE.local.md', '/AGENTS.override.md', '/.claude/skills/designing-technical-uis/', '/.agents/skills/designing-technical-uis/']) assert.ok(exclude.includes(`\n${p}\n`), p);
+  for (const p of ['/.cedarloom-app/', '/CLAUDE.local.md', '/AGENTS.override.md', '/.claude/skills/designing-technical-uis/', '/.agents/skills/designing-technical-uis/']) assert.ok(exclude.includes(`\n${p}\n`), p);
   assert.equal(r.git('status', '--porcelain').toString(), '?? docs/\n', 'only the coordinator\'s files, which are committed');
 
   apply(preview(plan(r, { share: true }).changes), r.ctx, { scope: r.dir });
@@ -79,7 +79,23 @@ test('local (the default): CLAUDE.local.md imports AGENTS.md, AGENTS.override.md
   assert.ok(!existsSync(join(r.dir, 'AGENTS.override.md')));
   // Only the personal files stay ignored: a hand-written CLAUDE.local.md stays out of the commit and in new worktrees.
   assert.deepEqual(read(join(r.dir, '.git/info/exclude')).split('\n').filter((l) => l.startsWith('/')), ['/CLAUDE.local.md', '/AGENTS.override.md']);
-  assert.match(r.git('status', '--porcelain').toString(), /\.benchkeeper\//);
+  assert.match(r.git('status', '--porcelain').toString(), /\.cedarloom-app\//);
+});
+
+test('local: one cedarloom-app:local block in info/exclude ignores .cedarloom-app/ and leaves the committed .cedarloom/ tracked', () => {
+  const r = repo();
+  mkdirSync(join(r.dir, '.cedarloom'));
+  writeFileSync(join(r.dir, '.cedarloom/profile-files.json'), '{}\n');
+  r.git('add', '-A');
+  r.git('commit', '-qm', 'profile');
+  const { changes } = plan(r, { agents: ['claude'], env: 'host-agent' });
+  assert.equal(apply(preview(changes), r.ctx, { scope: r.dir, select: changes.filter((c) => c.kind !== 'command').map((c) => c.id) }).status, 'done');
+  const lines = read(join(r.dir, '.git/info/exclude')).split('\n');
+  assert.deepEqual(lines.filter((l) => l.startsWith('# cedarloom-app:')), ['# cedarloom-app:local:/ start', '# cedarloom-app:local:/ end']);
+  assert.ok(lines.slice(lines.indexOf('# cedarloom-app:local:/ start'), lines.indexOf('# cedarloom-app:local:/ end')).includes('/.cedarloom-app/'));
+  assert.ok(existsSync(join(r.dir, '.cedarloom-app/state.json')));
+  assert.equal(r.git('ls-files', '.cedarloom').toString(), '.cedarloom/profile-files.json\n');
+  assert.throws(() => r.git('check-ignore', '--no-index', '-q', '.cedarloom/profile-files.json'), { status: 1 });
 });
 
 test('--share keeps an AGENTS.override.md with your own lines as a copy of AGENTS.md above them, since Codex reads it instead', () => {
@@ -94,8 +110,8 @@ test('--share keeps an AGENTS.override.md with your own lines as a copy of AGENT
   const { changes, warnings } = plan(r, { share: true });
   assert.equal(apply(preview(changes), r.ctx, { scope: r.dir }).status, 'done');
   const text = read(at);
-  assert.ok(text.startsWith('<!-- benchkeeper:override start -->\n# Project\n\nmine\n\n<!-- benchkeeper:project start -->\n') && text.endsWith('<!-- benchkeeper:override end -->\n\n## Notes\n\n- my note\n'), text);
-  assert.match(read(join(r.dir, 'AGENTS.md')), /^# Project\n\nmine\n\n<!-- benchkeeper:project start -->/);
+  assert.ok(text.startsWith('<!-- cedarloom-app:override start -->\n# Project\n\nmine\n\n<!-- cedarloom-app:project start -->\n') && text.endsWith('<!-- cedarloom-app:override end -->\n\n## Notes\n\n- my note\n'), text);
+  assert.match(read(join(r.dir, 'AGENTS.md')), /^# Project\n\nmine\n\n<!-- cedarloom-app:project start -->/);
   assert.ok(warnings.some((w) => w.startsWith('Codex reads AGENTS.override.md instead of AGENTS.md')), warnings.join('\n'));
 });
 
@@ -117,7 +133,7 @@ test('AGENTS.override.md keeps the user\'s own lines: a re-apply follows AGENTS.
   assert.equal(change.selected, true);
   assert.equal(go().status, 'done');
   const text = read(at);
-  assert.ok(text.startsWith('my note above\n\n<!-- benchkeeper:override start -->\n# Project\n\nsecond\n') && text.endsWith('<!-- benchkeeper:override end -->\n\n## Agent skills\n\n- mine\n'), text);
+  assert.ok(text.startsWith('my note above\n\n<!-- cedarloom-app:override start -->\n# Project\n\nsecond\n') && text.endsWith('<!-- cedarloom-app:override end -->\n\n## Agent skills\n\n- mine\n'), text);
   assert.doesNotMatch(text, /^first$/m);
 
   // Removing the setup takes out BenchKeeper's block only; the file goes when nothing else is in it.
@@ -136,14 +152,14 @@ test('an AGENTS.override.md an older version wrote is converted on apply: lines 
   const at = join(r.dir, 'AGENTS.override.md');
   const answers = { agents: ['codex'], env: 'host', share: false };
   // The case of the report: no AGENTS.md, so the old file was the rules block alone, and the user appended a section.
-  const old = '<!-- benchkeeper:project start -->\n- old rule\n<!-- benchkeeper:project end -->\n\n## Agent skills\n\n- mine\n';
+  const old = '<!-- cedarloom-app:project start -->\n- old rule\n<!-- cedarloom-app:project end -->\n\n## Agent skills\n\n- mine\n';
   writeFileSync(at, old);
   let [change] = preview(plan(r, answers).changes).filter((c) => c.step === 'local-codex');
   assert.equal(change.selected, true);
   assert.equal(apply(preview(plan(r, answers).changes), r.ctx, { scope: r.dir }).status, 'done');
   let text = read(at);
-  assert.match(text, /^<!-- benchkeeper:override start -->\n<!-- benchkeeper:project start -->\n/);
-  assert.ok(text.endsWith('<!-- benchkeeper:override end -->\n\n## Agent skills\n\n- mine\n') && !text.includes('- old rule'), text);
+  assert.match(text, /^<!-- cedarloom-app:override start -->\n<!-- cedarloom-app:project start -->\n/);
+  assert.ok(text.endsWith('<!-- cedarloom-app:override end -->\n\n## Agent skills\n\n- mine\n') && !text.includes('- old rule'), text);
   // Converted once: the next plan has nothing for the file.
   assert.ok(!preview(plan(r, answers).changes).some((c) => c.step === 'local-codex'));
 
@@ -154,7 +170,7 @@ test('an AGENTS.override.md an older version wrote is converted on apply: lines 
   assert.match(change.diff, /-stale/);
   apply([change], r.ctx, { scope: r.dir });
   text = read(at);
-  assert.ok(text.startsWith('<!-- benchkeeper:override start -->\n# Project\n\nnew\n') && text.endsWith('\n## Agent skills\n\n- mine\n') && !text.includes('stale'), text);
+  assert.ok(text.startsWith('<!-- cedarloom-app:override start -->\n# Project\n\nnew\n') && text.endsWith('\n## Agent skills\n\n- mine\n') && !text.includes('stale'), text);
   // Removing an older version's file keeps its appended lines too.
   writeFileSync(at, `# Project\n\nnew\n\n${old}`);
   const removal = preview(localSetup(r.ctx, r.dir)).filter((c) => c.step === 'local-codex');
@@ -164,7 +180,7 @@ test('an AGENTS.override.md an older version wrote is converted on apply: lines 
   [change] = preview(plan(r, answers).changes).filter((c) => c.step === 'local-codex');
   assert.deepEqual([change.selected, change.title.endsWith('(above your own text)')], [false, true]);
   apply([change], r.ctx, { scope: r.dir, select: [change.id] });
-  assert.match(read(at), /^<!-- benchkeeper:override start -->\n# Project\n\nnew\n[^]*<!-- benchkeeper:override end -->\n\n## Agent skills\n\n- mine\n$/);
+  assert.match(read(at), /^<!-- cedarloom-app:override start -->\n# Project\n\nnew\n[^]*<!-- cedarloom-app:override end -->\n\n## Agent skills\n\n- mine\n$/);
 });
 
 test('exclude lines use forward slashes for Windows paths: a backslash escapes the next character in Git', () => {
@@ -210,18 +226,18 @@ test('the dev container wrapper and the worktree files: offered by what the proj
 test('.worktreeinclude: every setup gives new worktrees the local files; shared lists the personal ones; your lines stay; undo and removal', () => {
   const r = repo();
   const lines = () => read(join(r.dir, '.worktreeinclude')).split('\n');
-  const listed = () => { const t = read(join(r.dir, '.worktreeinclude')); return t.slice(t.indexOf('# benchkeeper:worktrees start'), t.indexOf('# benchkeeper:worktrees end')).split('\n').slice(2).filter(Boolean); };
+  const listed = () => { const t = read(join(r.dir, '.worktreeinclude')); return t.slice(t.indexOf('# cedarloom-app:worktrees start'), t.indexOf('# cedarloom-app:worktrees end')).split('\n').slice(2).filter(Boolean); };
   // An earlier setup's whole offered file (Orca workers only, off by default) is BenchKeeper's: it becomes the block.
-  writeFileSync(join(r.dir, '.worktreeinclude'), '# Local files Orca copies into each new worktree when they exist and Git ignores them.\n.benchkeeper\n');
+  writeFileSync(join(r.dir, '.worktreeinclude'), '# Local files Orca copies into each new worktree when they exist and Git ignores them.\n.cedarloom-app\n');
   const shown = preview(plan(r, { agents: ['claude', 'codex'], env: 'host', packs: ['frontend'] }).changes);
   const inc = shown.find((c) => c.step === 'worktree-include');
   assert.ok(inc.selected && !shown.some((c) => c.step === 'worktrees'), 'on by default, without Orca workers');
   const run = apply(shown, r.ctx, { scope: r.dir, select: shown.filter((c) => c.kind !== 'command').map((c) => c.id) });
   assert.equal(run.status, 'done');
   // The state file, not its folder: handoff and knowledge files there are per worktree. Literal paths, no leading slash, no trailing one.
-  assert.deepEqual(listed(), ['.benchkeeper/state.json', 'skills-lock.json', 'CLAUDE.local.md', 'AGENTS.override.md', '.claude/settings.local.json', '.claude/hooks/benchkeeper-guard.mjs',
+  assert.deepEqual(listed(), ['.cedarloom-app/state.json', 'skills-lock.json', 'CLAUDE.local.md', 'AGENTS.override.md', '.claude/settings.local.json', '.claude/hooks/cedarloom-app-guard.mjs',
     '.claude/skills/designing-technical-uis', '.agents/skills/designing-technical-uis', '.claude/skills/frontend-design', '.agents/skills/frontend-design', '.claude/skills/accessibility', '.agents/skills/accessibility', '.worktreeinclude']);
-  assert.ok(!lines().includes('.benchkeeper') && !lines().some((l) => /^[^#].*[*?!]|^\//.test(l)));
+  assert.ok(!lines().includes('.cedarloom-app') && !lines().some((l) => /^[^#].*[*?!]|^\//.test(l)));
   assert.ok(read(join(r.dir, '.git/info/exclude')).split('\n').includes('/.worktreeinclude'));
   assert.equal(r.git('status', '--porcelain').toString(), '?? docs/\n');
   // Git ignores every entry here, so a worktree tool copies each one (Orca and Claude Code copy ignored files only).
@@ -332,7 +348,7 @@ test('local: two projects in one repository keep their own exclude blocks; a dro
     assert.equal(apply(preview(projectPlan({ ctx, dir, answers: { agents: ['claude', 'codex'], env: 'host-agent' } }).changes), ctx, { scope: dir }).status, 'done');
   }
   const exclude = () => read(join(r.dir, '.git/info/exclude'));
-  for (const p of ['/web/CLAUDE.local.md', '/api/CLAUDE.local.md', '/web/.benchkeeper/', '/api/AGENTS.override.md']) assert.ok(exclude().includes(`\n${p}\n`), p);
+  for (const p of ['/web/CLAUDE.local.md', '/api/CLAUDE.local.md', '/web/.cedarloom-app/', '/api/AGENTS.override.md']) assert.ok(exclude().includes(`\n${p}\n`), p);
   // The coordinator reads its files at the root only, so a project in a subfolder gets none.
   assert.equal(r.git('status', '--porcelain').toString(), '');
 
@@ -676,7 +692,7 @@ test('skill names from a state file never reach paths outside the project', () =
   const r = repo();
   const outside = join(r.ctx.home, 'outside');
   mkdirSync(join(outside, 'x'), { recursive: true });
-  mkdirSync(join(r.dir, '.benchkeeper'));
+  mkdirSync(join(r.dir, '.cedarloom-app'));
   writeFileSync(join(r.dir, STATE), JSON.stringify({ agents: ['claude'], env: 'host', skills: [{ name: `../../../${basename(r.ctx.home)}/outside` }] }));
   mkdirSync(join(r.dir, '.claude/skills'), { recursive: true });
   const changes = preview(plan(r, {}).changes);
@@ -687,7 +703,7 @@ test('skill names from a state file never reach paths outside the project', () =
 
 test('a skill the library no longer lists is offered for removal, not preselected', () => {
   const r = repo();
-  mkdirSync(join(r.dir, '.benchkeeper'));
+  mkdirSync(join(r.dir, '.cedarloom-app'));
   writeFileSync(join(r.dir, STATE), JSON.stringify({ agents: ['claude', 'codex'], env: 'host', skills: [{ name: 'docx' }] }));
   mkdirSync(join(r.dir, '.agents/skills/docx'), { recursive: true });
   const gone = plan(r, {}).changes.filter((c) => c.step === 'remove:docx');
@@ -712,7 +728,7 @@ test('a session started in a subfolder records and undoes paths from the reposit
 
 test('a broken state file is reported, not thrown at listings', () => {
   const r = repo();
-  mkdirSync(join(r.dir, '.benchkeeper'));
+  mkdirSync(join(r.dir, '.cedarloom-app'));
   writeFileSync(join(r.dir, STATE), '{ broken');
   assert.throws(() => readState(r.dir), /state\.json: /);
   assert.equal(tryState(r.dir), null);
@@ -728,7 +744,7 @@ test('only a missing state file means no saved setup: an unreadable one throws w
 
 test('a dangling state link is unreadable, not a missing setup', () => {
   const r = repo();
-  mkdirSync(join(r.dir, '.benchkeeper'));
+  mkdirSync(join(r.dir, '.cedarloom-app'));
   symlinkSync(join(r.dir, 'gone.json'), join(r.dir, STATE));
   assert.throws(() => readState(r.dir), /state\.json: a link to a missing file/);
 });

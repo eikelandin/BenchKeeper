@@ -241,7 +241,7 @@ test('a project with changes, without a state file or outside git stops alone; t
   const res = updateAll(ctx, { paths: [dirty.dir, plain, ok.dir] });
   assert.deepEqual(res.map((r) => r.status), ['stopped', 'stopped', 'committed']);
   assert.match(res[0].reason, /working tree has changes/);
-  assert.match(res[1].reason, /no \.benchkeeper\/state\.json/);
+  assert.match(res[1].reason, /no \.cedarloom-app\/state\.json/);
   assert.equal(readFileSync(join(dirty.dir, 'README.md'), 'utf8'), 'edited\n');
 });
 
@@ -256,7 +256,7 @@ test('a project without a state file is set up on the branch from answers; the c
   writeFileSync(join(dir, 'README.md'), '# Fresh\n');
   git('add', '-A');
   git('commit', '-qm', 'init');
-  assert.match(updateAll(ctx, { paths: [dir] })[0].reason, /no \.benchkeeper\/state\.json: set the project up first/);
+  assert.match(updateAll(ctx, { paths: [dir] })[0].reason, /no \.cedarloom-app\/state\.json: set the project up first/);
   const [r] = updateAll(ctx, { paths: [dir], answers: { [dir]: { agents: ['claude'], env: 'host-agent', tier: 'standard', share: true } } });
   assert.equal(r.status, 'committed');
   const state = JSON.parse(git('show', `${r.branch}:${STATE}`));
@@ -323,7 +323,7 @@ test('an untracked local setup with a newer shared one on origin: Update all app
   // This checkout keeps an older setup local: its state file is untracked and ignored.
   p.git('rm', '-q', '--cached', STATE);
   p.git('commit', '-qm', 'local setup');
-  writeFileSync(join(p.dir, '.git/info/exclude'), '.benchkeeper/\n');
+  writeFileSync(join(p.dir, '.git/info/exclude'), '.cedarloom-app/\n');
   writeFileSync(join(p.dir, STATE), JSON.stringify({ ...state, share: false }));
   const calls = [];
   const base = context({ home: h });
@@ -386,12 +386,12 @@ test('projects update with directories updates only those, honours --dry-run and
 
 test('status counts the skills each chosen agent reads in the project; turned-off ones and folders without SKILL.md not', () => {
   const dir = mkdtempSync(join(TMP, 'bk-skills-'));
-  for (const d of ['.claude/skills/a', '.agents/skills/a', '.agents/skills/b', '.benchkeeper/disabled/c']) {
+  for (const d of ['.claude/skills/a', '.agents/skills/a', '.agents/skills/b', '.cedarloom-app/disabled/c']) {
     mkdirSync(join(dir, d), { recursive: true });
     writeFileSync(join(dir, d, 'SKILL.md'), '---\nname: x\n---\n');
   }
   mkdirSync(join(dir, '.agents/skills/no-skill-file'));
-  writeFileSync(join(dir, '.benchkeeper/state.json'), JSON.stringify({ agents: ['claude', 'codex'] }));
+  writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ agents: ['claude', 'codex'] }));
   assert.deepEqual(status(context({ home: home() }), dir).skills, { claude: 1, codex: 2 });
 });
 
@@ -534,7 +534,7 @@ test('projects unshare: a commit without the committed setup on a local branch; 
   const [r] = updateAll(ctx, { paths: [p.dir]});
   assert.equal(r.status, 'applied', r.reason);
   assert.equal(JSON.parse(readFileSync(join(p.dir, STATE), 'utf8')).share, false);
-  assert.match(readFileSync(join(p.dir, 'CLAUDE.local.md'), 'utf8'), /benchkeeper:project start/);
+  assert.match(readFileSync(join(p.dir, 'CLAUDE.local.md'), 'utf8'), /cedarloom-app:project start/);
   assert.equal(p.git('status', '--porcelain'), '');
   assert.equal(listProjects(ctx)[0].state, undefined);
   assert.equal(status(ctx, p.dir).committed, false);

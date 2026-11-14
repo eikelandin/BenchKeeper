@@ -125,7 +125,7 @@ Usage: benchkeeper <command> [options]
   restore <name>                    restores a setup.sh backup (~/.config/cedarloom-app/backup/<name>)
   projects plan|apply [dir] [--project dir] [--agents a,b] [--env e] [--sandbox] [--guards|--no-guards] [--machine on|off|none] [--workflow-load|--no-workflow-load] [--pack p] [--skill s] [--tier t] [--yes]
                     [--share|--local] [--caller lint-js|lint-python|sonar] [--paths 'skill=glob,glob']
-                                    project setup in dir (--project names it too; both must name the same folder); answers default to the project's .benchkeeper/state.json;
+                                    project setup in dir (--project names it too; both must name the same folder); answers default to the project's .cedarloom-app/state.json;
                                     local (the default): CLAUDE.local.md, AGENTS.override.md and skills that git
                                     ignores (.git/info/exclude), listed in .worktreeinclude for new worktrees;
                                     --share commits them (AGENTS.md block, CLAUDE.md);
@@ -162,7 +162,7 @@ Usage: benchkeeper <command> [options]
                                     skill edited here goes back to the library's (the edit is backed up, the diff shown);
                                     remove: a single pick leaves the project; adopt: an untracked library skill becomes a pick;
                                     add: a library skill the project lacks becomes a pick (names required);
-                                    disable moves a skill to .benchkeeper/disabled/, enable moves it back (names required)
+                                    disable moves a skill to .cedarloom-app/disabled/, enable moves it back (names required)
   skills list --library             the library's skills with the number of registered projects that have each
   skills show <name>                the SKILL.md of a library skill BenchKeeper ships or of yours; any other names its source
   skills new <name> [--file path | --description text] [--yes]
@@ -258,8 +258,8 @@ Usage: benchkeeper <command> [options]
                                     opt-in rotation (accounts limits --rotate-claude handover): when the account is below its
                                     minimum and another account of its pool is at or above it, shows both accounts and a
                                     handover (task, done, open, worktree and branch, uncommitted file names, next step; from
-                                    git and .benchkeeper/handoff.md, no transcript text, no credential), asks (--yes or
-                                    --continue-below on: no question), writes .benchkeeper/handover.md and starts the agent as
+                                    git and .cedarloom-app/handoff.md, no transcript text, no credential), asks (--yes or
+                                    --continue-below on: no question), writes .cedarloom-app/handover.md and starts the agent as
                                     the other account with it as the first prompt. run does the same after the agent exits, in
                                     a terminal. No login or credential moves between accounts
   accounts login <name> [--token] [--email address] [--no-browser] [--project dir]
@@ -295,7 +295,7 @@ Usage: benchkeeper <command> [options]
                                     doctor findings, versions behind; the session signal needs 20 sessions
                                     of the last 90 days and reports nothing below that; nothing is written, except with --narrative --yes: the
                                     findings go to the agent in one session and its answer is cached on this machine
-  knowledge show [dir]              what the maintaining-repos skill stored for the project (.benchkeeper/knowledge/,
+  knowledge show [dir]              what the maintaining-repos skill stored for the project (.cedarloom-app/knowledge/,
                                     ignored by git): entries per file; a file that does not parse is listed as ignored
   knowledge clear [dir] [--yes]
                                     removes that folder after a question and nothing else of the project
@@ -1570,7 +1570,7 @@ async function knowledgeCommand({ o, positionals, out, ask }) {
   if (!['show', 'clear'].includes(sub)) { out.write('knowledge needs show or clear\n'); return 2; }
   if (positionals.length > 3) { out.write(`unexpected argument ${positionals[3]}\n`); return 2; }
   const dir = resolve(where ?? '.');
-  if (sub === 'clear' && linkedParent(dir)) { out.write(`${join(dir, '.benchkeeper')} is a link: nothing removed\n`); return 1; }
+  if (sub === 'clear' && linkedParent(dir)) { out.write(`${join(dir, '.cedarloom-app')} is a link: nothing removed\n`); return 1; }
   let found;
   try { found = readKnowledge(dir); } catch (e) { out.write(`cannot read ${knowledgeDir(dir)}: ${e.code ?? e.message}\n`); return 2; }
   const { path, present, files, ignored } = found;

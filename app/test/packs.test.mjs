@@ -140,7 +140,7 @@ test('a project turns a skill off and on, uses an own pack, and drops a pack it 
     return { ...p, run: apply(preview(p.changes), ctx, { scope: dir }) };
   };
   const skill = join(dir, '.claude/skills/designing-technical-uis/SKILL.md');
-  const parked = join(dir, '.benchkeeper/disabled/.claude/skills/designing-technical-uis/SKILL.md');
+  const parked = join(dir, '.cedarloom-app/disabled/.claude/skills/designing-technical-uis/SKILL.md');
   let r = run({ agents: ['claude'], env: 'host', packs: ['mine'] });
   assert.deepEqual(r.skills, { added: ['designing-technical-uis'], removed: [] });
   assert.ok(existsSync(skill));

@@ -78,14 +78,14 @@ export function mergeJson(text, edits, file) {
   return out.endsWith('\n') ? out : `${out}\n`;
 }
 
-export const marks = (id, comment) => (comment === '#' ? [`# benchkeeper:${id} start`, `# benchkeeper:${id} end`] : [`<!-- benchkeeper:${id} start -->`, `<!-- benchkeeper:${id} end -->`]);
+export const marks = (id, comment) => (comment === '#' ? [`# cedarloom-app:${id} start`, `# cedarloom-app:${id} end`] : [`<!-- cedarloom-app:${id} start -->`, `<!-- cedarloom-app:${id} end -->`]);
 
-// Replaces or appends the block between benchkeeper markers; text outside it stays. block null removes the block.
+// Replaces or appends the block between cedarloom-app markers; text outside it stays. block null removes the block.
 export function setBlock(text, id, block, comment) {
   const [start, end] = marks(id, comment);
   const src = text ?? '';
   const a = src.indexOf(start), b = src.indexOf(end);
-  if ((a < 0) !== (b < 0) || b < a) throw new MergeError(`unbalanced benchkeeper:${id} markers`);
+  if ((a < 0) !== (b < 0) || b < a) throw new MergeError(`unbalanced cedarloom-app:${id} markers`);
   const inner = block == null ? '' : `${start}\n${block.trimEnd()}\n${end}`;
   if (a < 0) {
     if (!inner) return src;

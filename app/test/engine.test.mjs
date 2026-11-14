@@ -29,12 +29,12 @@ test('JSON merge pulls list entries and prunes what is left empty', () => {
 
 test('marked block: append, replace, remove, text outside kept', () => {
   const a = setBlock('# Mine\n\nkeep this\n', 'rules', 'one');
-  assert.equal(a, '# Mine\n\nkeep this\n\n<!-- benchkeeper:rules start -->\none\n<!-- benchkeeper:rules end -->\n');
+  assert.equal(a, '# Mine\n\nkeep this\n\n<!-- cedarloom-app:rules start -->\none\n<!-- cedarloom-app:rules end -->\n');
   const b = setBlock(a, 'rules', 'two');
   assert.equal(getBlock(b, 'rules'), 'two');
   assert.equal(setBlock(b, 'rules', null), '# Mine\n\nkeep this\n');
-  assert.equal(setBlock(null, 'x', 'y', '#'), '# benchkeeper:x start\ny\n# benchkeeper:x end\n');
-  assert.throws(() => setBlock('<!-- benchkeeper:rules start -->', 'rules', 'x'), MergeError);
+  assert.equal(setBlock(null, 'x', 'y', '#'), '# cedarloom-app:x start\ny\n# cedarloom-app:x end\n');
+  assert.throws(() => setBlock('<!-- cedarloom-app:rules start -->', 'rules', 'x'), MergeError);
 });
 
 test('TOML: root key above tables, existing table updated, profiles untouched', () => {

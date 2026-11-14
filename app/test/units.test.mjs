@@ -57,7 +57,7 @@ test('a project plan describes its installs as units: undo of the skill unit lea
   assert.deepEqual(run.units.map((u) => u.id), units.map((u) => u.id));
   assert.equal(undo(run.id, ctx, { unit: 'skill:designing-technical-uis' }).status, 'done');
   assert.equal(existsSync(join(dir, '.claude/skills/designing-technical-uis/SKILL.md')), false);
-  assert.match(readFileSync(join(dir, LOCAL_CLAUDE), 'utf8'), /benchkeeper:project start/);
+  assert.match(readFileSync(join(dir, LOCAL_CLAUDE), 'utf8'), /cedarloom-app:project start/);
 });
 
 test('the source gate refuses a step that fetches code through npm without the signature check or the cooldown', () => {

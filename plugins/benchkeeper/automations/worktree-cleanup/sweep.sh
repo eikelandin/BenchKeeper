@@ -50,7 +50,7 @@ copy() {
 
 # Prints the ignored paths of worktree $1 that cannot be rebuilt: outside every folder named in $rebuildable and not a
 # copy. A folder Git ignores as a whole counts as a copy when every file in it is one: project setup lists the state file
-# .benchkeeper/state.json, not the folder, whose other files are per worktree. git worktree remove deletes them.
+# .cedarloom-app/state.json, not the folder, whose other files are per worktree. git worktree remove deletes them.
 # Fails when Git cannot list them. Only a folder counts as rebuildable: Git marks one with a trailing slash, so the last
 # path component of a file is never checked.
 ignored() {

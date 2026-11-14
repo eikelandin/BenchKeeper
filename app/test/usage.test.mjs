@@ -711,16 +711,16 @@ test('rotation: none, notice or rotate from the assessment, the pool, the settin
 // A worktree with a commit, an uncommitted change, a new file and a worker's handoff block that names a token.
 function worktree(m) {
   const dir = join(m.root, 'work-tree');
-  mkdirSync(join(dir, '.benchkeeper'), { recursive: true });
+  mkdirSync(join(dir, '.cedarloom-app'), { recursive: true });
   const g = (...args) => assert.equal(runCommand(['git', '-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', ...args], { env: m.env }).code, 0, args.join(' '));
   g('init', '-q', '-b', 'feat/thing');
   writeFileSync(join(dir, 'a.txt'), 'one\n');
-  writeFileSync(join(dir, '.gitignore'), '.benchkeeper/\n');
+  writeFileSync(join(dir, '.gitignore'), '.cedarloom-app/\n');
   g('add', '.');
   g('commit', '-q', '-m', 'feat: first part');
   writeFileSync(join(dir, 'a.txt'), 'two\n');
   writeFileSync(join(dir, 'new.txt'), 'x\n');
-  writeFileSync(join(dir, '.benchkeeper', 'handoff.md'), `Outcome: DONE\nWhat changed: commit 1, a.txt\nChecks and results: npm test passed\nOpen risks: the second part\n  is not started, token ${CLAUDE_TOKEN}\nNext step: write the second part\n`);
+  writeFileSync(join(dir, '.cedarloom-app', 'handoff.md'), `Outcome: DONE\nWhat changed: commit 1, a.txt\nChecks and results: npm test passed\nOpen risks: the second part\n  is not started, token ${CLAUDE_TOKEN}\nNext step: write the second part\n`);
   return dir;
 }
 const pooled = async (m, agent, ...names) => {
@@ -741,12 +741,12 @@ test('handover with rotation off (the default): nothing is read, written or star
   assert.equal(await c.exec(['accounts', 'handover', 'work', '--project', dir, '--yes']), 0);
   assert.match(c.text(), /rotation is off for claude: accounts limits --rotate-claude handover turns it on/);
   assert.equal(m.calls().length, before, 'no status read, no agent started');
-  assert.equal(existsSync(join(dir, '.benchkeeper', 'handover.md')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app', 'handover.md')), false);
   // run: after the session nothing follows.
   const r = cli(m);
   assert.equal(await r.exec(['run', '--project', dir, '--yes', '--', 'claude', '--go']), 0);
   assert.equal(m.calls().filter((x) => x.me === 'claude' && x.args[0] !== 'auth').length, 1);
-  assert.equal(existsSync(join(dir, '.benchkeeper', 'handover.md')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app', 'handover.md')), false);
   // The setting is per agent, validated, and for all accounts only.
   const file = join(m.ctx.config, 'accounts.json'), doc = JSON.parse(readFileSync(file, 'utf8'));
   writeFileSync(file, JSON.stringify({ ...doc, settings: { rotate: { toString: 'handover' } } }));
@@ -787,10 +787,10 @@ test('handover (Claude Code): shows both accounts and the text, declining starts
   assert.match(no.text(), /section 3\)\. The risk is yours; this is not legal advice\.\nwarning: ANTHROPIC_API_KEY is set in this environment; .*\nwarning: CLAUDE_CODE_OAUTH_TOKEN is set .*\nWrite .*start claude as most with it as the first prompt\? \[y\/N\] not started/);
   assert.doesNotMatch(no.text(), /dummy-api-key|inherited-oauth-token/);
   assert.equal(starts().length, 0);
-  assert.equal(existsSync(join(dir, '.benchkeeper', 'handover.md')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app', 'handover.md')), false);
   const yes = cli(m, ['y\n']);
   assert.equal(await yes.exec(['accounts', 'handover', 'work', '--project', dir]), 0, yes.text());
-  const text = readFileSync(join(dir, '.benchkeeper', 'handover.md'), 'utf8');
+  const text = readFileSync(join(dir, '.cedarloom-app', 'handover.md'), 'utf8');
   assert.equal(starts().length, 1);
   assert.deepEqual(starts()[0].args, [text], 'the handover is the first prompt');
   assert.equal(starts()[0].env.CLAUDE_CONFIG_DIR, most.dir);
@@ -801,11 +801,11 @@ test('handover (Claude Code): shows both accounts and the text, declining starts
   assert.match(text, /## Open\n\nthe second part is not started, token \*\*\*/);
   assert.match(text, /## Next step\n\nwrite the second part/);
   assert.doesNotMatch(text, /TRANSCRIPT-LINE|sk-ant-/);
-  assert.deepEqual(grep(dir, CLAUDE_TOKEN), [join(dir, '.benchkeeper', 'handoff.md')], 'only the file the worker wrote');
-  // In a worktree that does not ignore .benchkeeper/, an earlier handover is not listed as work.
+  assert.deepEqual(grep(dir, CLAUDE_TOKEN), [join(dir, '.cedarloom-app', 'handoff.md')], 'only the file the worker wrote');
+  // In a worktree that does not ignore .cedarloom-app/, an earlier handover is not listed as work.
   rmSync(join(dir, '.gitignore'));
   const again = handover(m.ctx, dir, { from: work, to: most }).text;
-  assert.match(again, /## Uncommitted changes\n\n- \.gitignore\n- a\.txt\n- \.benchkeeper\/handoff\.md\n- new\.txt\n\n/);
+  assert.match(again, /## Uncommitted changes\n\n- \.gitignore\n- a\.txt\n- \.cedarloom-app\/handoff\.md\n- new\.txt\n\n/);
 });
 
 test('run: after the session the handover is offered in a terminal only, for the account that ran', skip, async () => {
@@ -818,7 +818,7 @@ test('run: after the session the handover is offered in a terminal only, for the
   const piped = cli(m, ['y\n']);
   assert.equal(await piped.exec(['run', '--project', dir, '--yes', '--', 'claude', '--go']), 0);
   assert.match(piped.text(), /account work is below its minimum: benchkeeper accounts handover work hands the work to spare/);
-  assert.equal(existsSync(join(dir, '.benchkeeper', 'handover.md')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app', 'handover.md')), false);
   const tty = cli(m, ['y\n']);
   tty.input.isTTY = true;
   assert.equal(await tty.exec(['run', '--project', dir, '--yes', '--', 'claude', '--go']), 0, tty.text());
@@ -851,5 +851,5 @@ test('handover (Codex): rotation is not available, through the flag or a stored 
   assert.equal(await c.exec(['accounts', 'handover', 'dev', '--project', dir, '--yes']), 0);
   assert.match(c.text(), /rotation is not available for codex/);
   assert.equal(m.calls().length, before, 'no app-server read, no agent started');
-  assert.equal(existsSync(join(dir, '.benchkeeper', 'handover.md')), false);
+  assert.equal(existsSync(join(dir, '.cedarloom-app', 'handover.md')), false);
 });
