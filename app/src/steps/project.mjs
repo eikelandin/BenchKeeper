@@ -23,7 +23,7 @@ import { checkPlan, unit } from '../units.mjs';
 import { workerRepos } from '../sessions.mjs';
 import * as orca from '../orca/index.mjs';
 
-export const STATE = '.benchkeeper/state.json';
+export const STATE = '.cedarloom-app/state.json';
 // A local setup's files: Claude Code's personal instructions and settings, and Codex's override of AGENTS.md.
 export const LOCAL_CLAUDE = 'CLAUDE.local.md';
 const OVERRIDE = 'AGENTS.override.md', LOCAL_SETTINGS = '.claude/settings.local.json';
@@ -144,7 +144,7 @@ function installedFiles(dir, state, add, skip = () => false) {
     for (const n of names) if (exists(join(d, n)) && !skip(join(d, n))) add(`skill:${n}`, `remove ${relative(dir, join(d, n))}`, { kind: 'remove', path: join(d, n) });
   }
   if (exists(join(dir, LOCK)) && !skip(join(dir, LOCK))) add('lock', `remove ${LOCK}`, { kind: 'remove', path: join(dir, LOCK) });
-  if (exists(join(dir, '.benchkeeper')) && !skip(join(dir, '.benchkeeper'))) add('state', 'remove .benchkeeper/', { kind: 'remove', path: join(dir, '.benchkeeper') });
+  if (exists(join(dir, '.cedarloom-app')) && !skip(join(dir, '.cedarloom-app'))) add('state', 'remove .cedarloom-app/', { kind: 'remove', path: join(dir, '.cedarloom-app') });
 }
 
 // A list of changes that take a setup out, all selected, and the function that adds one.
@@ -565,8 +565,8 @@ export function projectPlan({ ctx, dir, answers, plugins = {} }) {
   if (machine) add('machine', `${LOCAL_SETTINGS}: agents ${a.machine === 'on' ? 'commit, push and use gh as your machine account' : 'commit, push and use gh as you, also with machine enable --global'}`, { kind: 'write', path: at(LOCAL_SETTINGS), edit: (t) => withVars(t, a.machine === 'on' ? machineEnv(ctx) : ownEnv(ctx), LOCAL_SETTINGS) });
   else if (prev?.machine && editsJson((t) => withVars(t, null), readText(at(LOCAL_SETTINGS)))) add('machine', `${LOCAL_SETTINGS} without the machine account setting`, { kind: 'write', path: at(LOCAL_SETTINGS), edit: (t) => withVars(t, null, LOCAL_SETTINGS) });
 
-  // A skill turned off moves to .benchkeeper/disabled/<skill folder>/<name>; turned on, it moves back.
-  const parked = (d, name) => join(dir, '.benchkeeper/disabled', rel(d), name);
+  // A skill turned off moves to .cedarloom-app/disabled/<skill folder>/<name>; turned on, it moves back.
+  const parked = (d, name) => join(dir, '.cedarloom-app/disabled', rel(d), name);
   const moveDir = (step, from, to, installUnit) => {
     add(step, `copy ${rel(from)} to ${rel(to)}`, { kind: 'write', path: to, from, unit: `move:${from}`, installUnit });
     add(step, `remove ${rel(from)} (copied to ${rel(to)})`, { kind: 'remove', path: from, selected: true, unit: `move:${from}`, installUnit });

@@ -69,7 +69,7 @@ Needs replan: if the spec does not fit the issue (a path you must change is not 
 
 No change needed: if the issue does not apply, comment why with the evidence on the issue, report DONE with "no change needed", and end.
 
-Report: once, through the runner's report command, then stop; in a batch after the last issue, with DONE when you worked through every issue. Outcome DONE, BLOCKED or NEEDS_REPLAN, and this handoff block in .benchkeeper/handoff.md of your worktree (in the report body instead when `git check-ignore -q .benchkeeper/handoff.md` fails; in a batch one block per issue, and in the report each issue with its outcome and pull request):
+Report: once, through the runner's report command, then stop; in a batch after the last issue, with DONE when you worked through every issue. Outcome DONE, BLOCKED or NEEDS_REPLAN, and this handoff block in .cedarloom-app/handoff.md of your worktree (in the report body instead when `git check-ignore -q .cedarloom-app/handoff.md` fails; in a batch one block per issue, and in the report each issue with its outcome and pull request):
 Issue: <tracker>#<number>
 Outcome: <DONE|BLOCKED|NEEDS_REPLAN>
 What changed: <pull request number, commits, files>

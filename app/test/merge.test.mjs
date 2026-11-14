@@ -48,22 +48,22 @@ test('mergeJson: an add after or a removal next to a one-line object or list lea
 });
 
 test('setBlock and getBlock: HTML and # markers, text around the block, removal', () => {
-  assert.equal(setBlock('', 'r', 'x'), '<!-- benchkeeper:r start -->\nx\n<!-- benchkeeper:r end -->\n');
-  assert.equal(setBlock('  \n', 'r', 'x  \n'), '<!-- benchkeeper:r start -->\nx\n<!-- benchkeeper:r end -->\n');
+  assert.equal(setBlock('', 'r', 'x'), '<!-- cedarloom-app:r start -->\nx\n<!-- cedarloom-app:r end -->\n');
+  assert.equal(setBlock('  \n', 'r', 'x  \n'), '<!-- cedarloom-app:r start -->\nx\n<!-- cedarloom-app:r end -->\n');
   assert.equal(setBlock('mine', 'r', null), 'mine');
   assert.equal(setBlock(undefined, 'r', null), '');
-  const mid = 'top\n\n# benchkeeper:r start\nold\n# benchkeeper:r end\n\n\nbottom\n';
-  assert.equal(setBlock(mid, 'r', 'new', '#'), 'top\n\n# benchkeeper:r start\nnew\n# benchkeeper:r end\n\n\nbottom\n');
+  const mid = 'top\n\n# cedarloom-app:r start\nold\n# cedarloom-app:r end\n\n\nbottom\n';
+  assert.equal(setBlock(mid, 'r', 'new', '#'), 'top\n\n# cedarloom-app:r start\nnew\n# cedarloom-app:r end\n\n\nbottom\n');
   assert.equal(setBlock(mid, 'r', null, '#'), 'top\n\nbottom\n');
-  assert.equal(setBlock('# benchkeeper:r start\nold\n# benchkeeper:r end\n\nbottom\n', 'r', null, '#'), 'bottom\n');
-  assert.equal(setBlock('top  \n# benchkeeper:r start\nold\n# benchkeeper:r end', 'r', null, '#'), 'top\n');
-  assert.equal(setBlock('# benchkeeper:r start\nold\n# benchkeeper:r end\n', 'r', null, '#'), '');
-  assert.throws(() => setBlock('<!-- benchkeeper:r end -->\n<!-- benchkeeper:r start -->', 'r', 'x'), /^Error: unbalanced benchkeeper:r markers$/);
-  assert.throws(() => setBlock('<!-- benchkeeper:r end -->', 'r', 'x'), MergeError);
+  assert.equal(setBlock('# cedarloom-app:r start\nold\n# cedarloom-app:r end\n\nbottom\n', 'r', null, '#'), 'bottom\n');
+  assert.equal(setBlock('top  \n# cedarloom-app:r start\nold\n# cedarloom-app:r end', 'r', null, '#'), 'top\n');
+  assert.equal(setBlock('# cedarloom-app:r start\nold\n# cedarloom-app:r end\n', 'r', null, '#'), '');
+  assert.throws(() => setBlock('<!-- cedarloom-app:r end -->\n<!-- cedarloom-app:r start -->', 'r', 'x'), /^Error: unbalanced cedarloom-app:r markers$/);
+  assert.throws(() => setBlock('<!-- cedarloom-app:r end -->', 'r', 'x'), MergeError);
   assert.equal(getBlock(mid, 'r', '#'), 'old');
   assert.equal(getBlock(mid, 'r'), null);
   assert.equal(getBlock(null, 'r'), null);
-  assert.equal(getBlock('<!-- benchkeeper:r end --><!-- benchkeeper:r start -->', 'r'), null);
+  assert.equal(getBlock('<!-- cedarloom-app:r end --><!-- cedarloom-app:r start -->', 'r'), null);
 });
 
 test('setToml: tables, quoted keys, comments that stay, values of every kind', () => {

@@ -16,7 +16,7 @@
       "ready": true,
       "reason": "3 changes",
       "changes": [
-        { "id": "project:state", "step": "project", "title": "write .benchkeeper/state.json", "kind": "write" }
+        { "id": "project:state", "step": "project", "title": "write .cedarloom-app/state.json", "kind": "write" }
       ]
     }
   ]

@@ -151,7 +151,7 @@ function Installs({ project, others, onDone, onSetup }) {
   if (project.missing) return <Text>The folder is not found: relocate the project first.</Text>;
   if (!project.setupVersion) return (
     <Stack gap="xs" align="flex-start">
-      <Text>Not set up yet: no <Code>.benchkeeper/state.json</Code>.</Text>
+      <Text>Not set up yet: no <Code>.cedarloom-app/state.json</Code>.</Text>
       <Button leftSection={icon(IconListNumbers)} onClick={onSetup}>Set up this project</Button>
     </Stack>
   );
@@ -172,7 +172,7 @@ function Installs({ project, others, onDone, onSetup }) {
               <Section title="Skills">
                 <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="xs">
                   {p.chosen.map((s) => <InstallRow key={s.name} label={s.name} checked={!s.disabled} onChange={() => flip(s)} busy={locked} hint={s.hint} state={s.state}
-                    facts={{ summary: s.pickWhen ?? s.name, eli5: 'one instruction file the agent loads when a task fits it', impact: 'off moves it to .benchkeeper/disabled/ when the plan is applied', default: 'on, with its pack or as a single pick', current: s.disabled ? 'off' : 'on' }} />)}
+                    facts={{ summary: s.pickWhen ?? s.name, eli5: 'one instruction file the agent loads when a task fits it', impact: 'off moves it to .cedarloom-app/disabled/ when the plan is applied', default: 'on, with its pack or as a single pick', current: s.disabled ? 'off' : 'on' }} />)}
                 </SimpleGrid>
               </Section>
             )}

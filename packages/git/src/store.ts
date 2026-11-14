@@ -11,7 +11,7 @@ import { environment, flags, hookNames, hooksOff } from "./git.ts";
 export type Commit = { commit: string; at: string; author: string; message: string };
 
 /**
- * The workflow store (P3 a): one bare repository, whose branch `STORE_REF` holds the export layout. It is read and
+ * The workflow store: one bare repository, whose branch `STORE_REF` holds the export layout. It is read and
  * written with plumbing only, so nothing is checked out and no hook runs; every call waits for git, as apply does.
  */
 export interface Store {

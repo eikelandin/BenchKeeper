@@ -12,7 +12,7 @@ const copyrights = [
 ];
 
 /**
- * elkjs is used under EPL-2.0 (the owner's choice). The minifier drops the comments of elk-api.js, so its chunk gets
+ * elkjs is used under EPL-2.0. The minifier drops the comments of elk-api.js, so its chunk gets
  * the copyright notices back as a first line, and licenses/elkjs.txt next to the page holds them with the license
  * text and where the source is (section 3.1).
  */

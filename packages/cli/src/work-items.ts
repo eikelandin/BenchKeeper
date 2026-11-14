@@ -177,7 +177,7 @@ const writes = (group: Command, ctx: () => Context, done: Done): void => {
 
 /**
  * The work-items commands, the owner's: nothing in them tells who asks, so a session's own sandbox or permission rules
- * keep it from the hub-issues token they send with. CedarLoom's own calls on hub issues use that token (A37).
+ * keep it from the hub-issues token they send with. CedarLoom's own calls on hub issues use that token.
  */
 export const workItemsGroup = (program: Command, ctx: () => Context, done: Done): void => {
   const group = program.command("work-items").description("hub issues as work items: the owner's outbox and token");

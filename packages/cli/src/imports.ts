@@ -34,7 +34,7 @@ const reviewText = ({ source, units, risks }: ImportReview): string => {
   ].join("\n");
 };
 
-// Shows an import's review and plan; with --yes stores the workflows as one run, which runs undo takes back (P6 a).
+// Shows an import's review and plan; with --yes stores the workflows as one run, which runs undo takes back.
 export const importCommand = async (ctx: Context, from: useCases.From, yes?: true): Promise<number> => {
   const planned = await useCases.planImport(ctx.state, from, ctx.io.fetch);
   if (!planned.ok) return refused(ctx, "plan", planned.finding);

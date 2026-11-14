@@ -69,7 +69,7 @@ export const unstorable = (workflow: WorkflowDefinition): Finding | undefined =>
 export type SavePlan = { plan: Plan; version: string; stored: string | null };
 
 /**
- * Plans storing a draft as a new version (P3 a). Its commit is made now and stays inert; the plan moves the branch to
+ * Plans storing a draft as a new version. Its commit is made now and stays inert; the plan moves the branch to
  * it, only while the branch is where it was, and makes the stored blob the draft's base. A draft opened from another
  * stored version than the one there now is refused (`store.conflict`) unless `onTop`, and the version must rise.
  */
@@ -181,7 +181,7 @@ const writeOf = (folder: string, [path, content]: [string, string]): Result<Plan
 };
 
 /**
- * Plans writing stored workflows into `folder` in the export layout (P4 a: the user commits and pushes it with their
+ * Plans writing stored workflows into `folder` in the export layout (the user commits and pushes it with their
  * own Git): the index and each workflow's stored file byte for byte. Files already there are replaced under the plan's
  * checks; others stay.
  */

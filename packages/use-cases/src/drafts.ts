@@ -33,7 +33,7 @@ const pathOf = (state: string, id: string): string => {
   return path;
 };
 
-// The draft's base beside it: the stored blob it was opened from or last saved as, so a save sees a newer one (P3 a).
+// The draft's base beside it: the stored blob it was opened from or last saved as, so a save sees a newer one.
 export const basePathOf = (state: string, id: string): string => pathOf(state, id).replace(/\.json$/, ".base");
 
 const tooLarge = (id: string, bytes: number): Result<never> => ({

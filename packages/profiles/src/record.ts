@@ -78,7 +78,7 @@ const versionOf = (pack: string): [string, string] => [
   pack.slice(pack.lastIndexOf("@") + 1),
 ];
 
-// Wanted files whose record came from a newer pack version: an older clone leaves them as they are (hub issue 160).
+// Wanted files whose record came from a newer pack version: an older clone leaves them as they are.
 export const newerRecorded = (record: FilesRecord, wanted: ReadonlyMap<string, Wanted>) =>
   [...wanted].flatMap(([path, { pack: local }]) => {
     const recorded = record.get(path)?.pack;

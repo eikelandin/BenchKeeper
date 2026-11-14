@@ -590,7 +590,7 @@ test('AGENTS.override.md when Codex goes: the user\'s own text stays, an older v
   // lines, which is current already.
   assert.deepEqual(share(), []);
   // An older version's file: the copy before the rules block is no longer AGENTS.md's text (here: a line of the user's).
-  writeFileSync(path, `my own notes\n\n${written.replace(/<!-- benchkeeper:override (start|end) -->\n/g, '')}`);
+  writeFileSync(path, `my own notes\n\n${written.replace(/<!-- cedarloom-app:override (start|end) -->\n/g, '')}`);
   const [legacy] = share();
   assert.deepEqual([legacy.kind, legacy.selected], ['remove', false]);
   assert.match(legacy.title, /differs from AGENTS\.md/);

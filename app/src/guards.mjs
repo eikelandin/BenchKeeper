@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { readText } from './fsx.mjs';
 import { mergeJson, parseJson } from './merge.mjs';
 
-export const GUARD_PATH = '.claude/hooks/benchkeeper-guard.mjs';
+export const GUARD_PATH = '.claude/hooks/cedarloom-app-guard.mjs';
 export const guardScript = () => readFileSync(new URL('./guard-hook.mjs', import.meta.url), 'utf8');
 
 // Text patterns for the usual form of each command; `*` after the flag also covers a cluster (-nm, -fu). The hook covers the rest.

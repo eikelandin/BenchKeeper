@@ -71,7 +71,7 @@ test('the level found: the highest of plugin, project setup, global rules', () =
   assert.equal(lite.level, 'lite');
   assert.match(lite.adds, /standard adds the local project block.*full adds the global rules/);
   const dir = mkdtempSync(join(tmpdir(), 'bk-level-proj-'));
-  mkdirSync(join(dir, '.benchkeeper'));
+  mkdirSync(join(dir, '.cedarloom-app'));
   writeFileSync(join(dir, STATE), JSON.stringify({ schemaVersion: 1, setupVersion: '6.5.0', agents: ['claude'], skills: [] }));
   assert.equal(detectLevel(m.ctx, ['claude'], dir).level, 'standard');
   addProject(m.ctx, dir);
@@ -84,7 +84,7 @@ test('the level found: the highest of plugin, project setup, global rules', () =
 test('without --level the level found counts: a standard machine is not grown to full, and doctor names the level in its fix', async () => {
   const m = machine();
   const dir = mkdtempSync(join(tmpdir(), 'bk-level-proj-'));
-  mkdirSync(join(dir, '.benchkeeper'));
+  mkdirSync(join(dir, '.cedarloom-app'));
   writeFileSync(join(dir, STATE), JSON.stringify({ schemaVersion: 1, setupVersion: '6.5.0', agents: ['claude'], skills: [] }));
   addProject(m.ctx, dir);
   const found = doctor(m.ctx, { agents: ['claude'], env: {}, devcontainerCli: '1.0.0' });

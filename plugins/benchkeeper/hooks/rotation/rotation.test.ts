@@ -8,7 +8,7 @@ import { withStatus } from './register'
 // The session's folder sits below the repository's top level, where git's status paths start.
 const TOP = '/work'
 const ROOT = `${TOP}/coord`
-const PATH = `${ROOT}/.benchkeeper/runs/handoff.md`
+const PATH = `${ROOT}/.cedarloom-app/runs/handoff.md`
 const HANDOFF = '# Handoff\nrun r1\nTerminal: term-a\n\n## Next\nwatch #12\n'
 const IDLE = { stop_hook_active: false, background_tasks: [] }
 // Each test loads the plugin afresh, so its module state (running, lastEnd, noted) starts empty.
@@ -37,7 +37,7 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
     // The log call lists the commits after its --since; the time is the second field of a line.
     const since = e.argv.find((arg) => arg.startsWith('--since-as-filter='))?.slice('--since-as-filter='.length)
     const log = () => changed.log.split('\n').filter((line) => line !== '' && Date.parse(line.split(' ')[1] ?? '') > Date.parse(since ?? '')).map((line) => `${line}\n`).join('')
-    const stdout = since !== undefined ? log() : e.argv.includes('status') ? changed.status : e.argv.includes('rev-parse') ? `${TOP}\n` : tracked ? '.benchkeeper/runs/handoff.md\n' : ''
+    const stdout = since !== undefined ? log() : e.argv.includes('status') ? changed.status : e.argv.includes('rev-parse') ? `${TOP}\n` : tracked ? '.cedarloom-app/runs/handoff.md\n' : ''
     return { value: { exitCode: git, stdout, stderr: '' } } as never
   })
   on('fs.read', (_, e) => {
@@ -93,11 +93,11 @@ test('a clear or compaction hands the file back after the other hooks, and nothi
 })
 
 test('the restored file is followed by the commits and the files changed since it was written', async ($, on) => {
-  engine(on, { changed: { log: 'abc1234 2026-01-01T00:00:00+00:00 add a\n', status: ' M src/a.ts\0?? .benchkeeper/\0 M coord/.benchkeeper/runs/state.json\0' } })
+  engine(on, { changed: { log: 'abc1234 2026-01-01T00:00:00+00:00 add a\n', status: ' M src/a.ts\0?? .cedarloom-app/\0 M coord/.cedarloom-app/runs/state.json\0' } })
   const restored = (await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1] ?? ''
   expect(restored).toContain('\nabc1234 2026-01-01T00:00:00+00:00 add a\n')
   expect(restored).toContain('\n- `src/a.ts`')
-  expect(restored).not.toContain('- `.benchkeeper/`')
+  expect(restored).not.toContain('- `.cedarloom-app/`')
   expect(restored).not.toContain('state.json')
 })
 

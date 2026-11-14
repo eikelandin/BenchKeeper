@@ -122,7 +122,7 @@ test.describe('views', () => {
       { id: 'market', step: 'plugin', unit: 'plugin', kind: 'command', title: 'Claude Code marketplace demo', argv: ['claude', 'plugin', 'marketplace', 'add', 'demo/market'], undoArgv: ['claude', 'plugin', 'marketplace', 'remove', 'demo'], state: null, selected: true },
       { id: 'plugin', step: 'plugin', unit: 'plugin', kind: 'command', title: 'Claude Code plugin demo@demo', argv: ['claude', 'plugin', 'install', 'demo@demo'], undoArgv: ['claude', 'plugin', 'uninstall', 'demo@demo'], state: null, selected: true },
       write('rules', 'outdated'), write('agents', 'modified'),
-      { id: 'old', step: 'state', kind: 'remove', title: 'remove .benchkeeper/old', path: '/p/.benchkeeper/old', destructive: true, state: 'foreign', selected: false },
+      { id: 'old', step: 'state', kind: 'remove', title: 'remove .cedarloom-app/old', path: '/p/.cedarloom-app/old', destructive: true, state: 'foreign', selected: false },
       { id: 'mcp', step: 'other:claude:mcp', kind: 'command', title: 'remove the Claude user MCP server demo', argv: ['claude', 'mcp', 'remove', '--scope', 'user', 'demo'], destructive: true, state: 'foreign', selected: false },
       write('settings', 'outdated', { title: 'Claude default model opusplan', settings: { agent: 'claude', keys: ['model'] } }),
       { id: 'off', step: 'off', kind: 'command', title: 'Codex plugin demo@demo: turn on by hand', argv: ['codex', 'plugin', 'add', 'demo@demo'], error: 'demo@demo is installed but turned off', state: null, selected: false },
@@ -149,7 +149,7 @@ test.describe('views', () => {
     await expect(agents.getByRole('link', { name: 'History' })).toHaveAttribute('href', '#/history');
     await expect(card('Remove')).toContainText('installed by you');
     await expect(card('Remove')).toContainText('installed by BenchKeeper');
-    await expect(card('Remove')).toContainText('What it does: Deletes /p/.benchkeeper/old.');
+    await expect(card('Remove')).toContainText('What it does: Deletes /p/.cedarloom-app/old.');
     await expect(card('Remove')).toContainText('Undo: History puts the file back.');
     await expect(card('Settings').getByRole('group', { name: 'About model' })).toBeVisible();
     await expect(card('Needs your action')).toContainText('Not applied: demo@demo is installed but turned off');

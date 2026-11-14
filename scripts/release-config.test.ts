@@ -12,7 +12,7 @@ const Manifest = z.record(z.string(), z.string());
 
 const json = async (path: string): Promise<unknown> => JSON.parse(await readFile(path, "utf8"));
 
-// Released on their own, with a version of their own (A54 a): the extension SDK, which extension authors depend on.
+// Released on their own, with a version of their own: the extension SDK, which extension authors depend on.
 const OWN_VERSION = ["extension-sdk"];
 
 await test("every CedarLoom package is in the release config and its manifest, and in the linked application group unless it has a version of its own", async () => {

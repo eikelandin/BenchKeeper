@@ -391,8 +391,8 @@ export const ROTATE_WARNING = {
 const LOGIN_VARS = { claude: ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'CLAUDE_CODE_OAUTH_TOKEN'], codex: ['OPENAI_API_KEY', 'CODEX_API_KEY'] };
 export const loginVars = (ctx, agent) => LOGIN_VARS[agent].filter((k) => where(ctx)[k]);
 
-const HANDOFF = '.benchkeeper/handoff.md';
-const HANDOVER = '.benchkeeper/handover.md';
+const HANDOFF = '.cedarloom-app/handoff.md';
+const HANDOVER = '.cedarloom-app/handover.md';
 const FIELDS = ['Outcome', 'What changed', 'Checks and results', 'Open risks', 'Next step'];
 // The fields of the handoff block a dispatched worker writes (its worker spec), each up to the next field.
 function handoffFields(text) {

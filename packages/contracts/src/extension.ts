@@ -46,7 +46,7 @@ const LanguageTag = z.string().regex(/^[a-z]{2,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]
 
 // An origin is canonical when it is its own URL origin: lower case, no default port, path, user or password.
 const isOrigin = (value: string): boolean => URL.canParse(value) && new URL(value).origin === value;
-// An https origin an extension reaches through the host; it has no network of its own (P7 a).
+// An https origin an extension reaches through the host; it has no network of its own.
 const Origin = z
   .string()
   .max(300)
@@ -86,7 +86,7 @@ const CredentialScheme = z
   ])
   .describe("The host refuses a request in which the extension sets this header itself");
 
-// The host fetches for the extension and adds its credentials, which the extension never sees (P8 a).
+// The host fetches for the extension and adds its credentials, which the extension never sees.
 const Credential = z.strictObject({
   description,
   scheme: CredentialScheme,
@@ -293,7 +293,7 @@ const ExtensionPin = z.strictObject({
 
 /**
  * The extensions installed on this machine, each pinned to a commit and the digest of its files, with the ref an update follows and the
- * capabilities the user approved. Git is the only source in 0.1.0 (P2 a), so each is a community
+ * capabilities the user approved. Git is the only source in 0.1.0, so each is a community
  * extension: its trust comes from where its code came from, never from a field of its manifest or of this file.
  */
 export const InstalledExtensions = z
@@ -348,7 +348,7 @@ export const formatInstalled = (installed: InstalledExtensions): string =>
 
 /**
  * The index of an export folder: each workflow at `workflows/workflow-<id in lower case>.json`, named like a draft so
- * no id becomes a Windows device name. The workflow store keeps the same layout (P3 a).
+ * no id becomes a Windows device name. The workflow store keeps the same layout.
  */
 export const ExportIndex = z
   .strictObject({

@@ -612,7 +612,7 @@ test('dashboard: the numbers equal the inventory and the project status; one rea
   const tctx = { ...ctx, roots: [tracked] };
   execFileSync('git', ['init', '-q', '-b', 'main', tracked]);
   apply(preview(projectPlan({ ctx: tctx, dir: tracked, answers: { agents: ['claude'], packs: ['frontend'] } }).changes).filter((c) => c.kind !== 'command'), tctx, { scope: tracked });
-  execFileSync('git', ['-C', tracked, 'add', '-f', '.benchkeeper/state.json']);
+  execFileSync('git', ['-C', tracked, 'add', '-f', '.cedarloom-app/state.json']);
   routes['POST /api/projects']({ action: 'add', path: tracked });
   const t = routes['GET /api/dashboard']().projects.find((x) => x.path === tracked);
   assert.deepEqual([t.setup, t.packs, t.states, /committed/.test(t.error)], [true, ['frontend'], null, true]);
@@ -653,7 +653,7 @@ test('dashboard: a community skill in place is current; an unknown agent in the 
   writeFileSync(join(dir, '.claude/skills/frontend-design/SKILL.md'), '---\nname: frontend-design\n---\n');
   const after = row();
   assert.deepEqual([after.states.current, after.untracked], [before.current + 1, 0]);
-  const file = join(dir, '.benchkeeper/state.json');
+  const file = join(dir, '.cedarloom-app/state.json');
   const state = JSON.parse(readFileSync(file, 'utf8'));
   writeFileSync(file, JSON.stringify({ ...state, agents: ['claude', 'nobody'] }));
   const odd = row();

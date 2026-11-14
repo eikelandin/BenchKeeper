@@ -497,7 +497,7 @@ export function unshare(ctx, path) {
       branch: 'chore/agent-setup-local',
       work: (tree) => apply(preview(committedSetup(tree)), projectCtx(ctx, tree), { scope: tree, note: { updateAll: path, branch: 'chore/agent-setup-local' } }),
       title: 'chore: keep the agent setup local',
-      body: 'BenchKeeper now keeps the per-project agent setup on each machine, in files git ignores (`.git/info/exclude`): `CLAUDE.local.md`, `AGENTS.override.md`, `.claude/settings.local.json`, the installed skills and `.benchkeeper/`. This removes the committed copies: the BenchKeeper block in `AGENTS.md`, a `CLAUDE.md` that only imported `AGENTS.md`, the sandbox keys BenchKeeper set, the skills BenchKeeper or the skills CLI installed with `skills-lock.json`, and `.benchkeeper/`. The project\'s own `AGENTS.md` text, its own skills, `docs/agents/` and the dev container stay.\n\nAfter merging, pull, then run Update all in BenchKeeper (`npx benchkeeper projects update`): it writes the local setup from the answers it kept. Other machines: `npx benchkeeper projects apply --agents ...` once.',
+      body: 'BenchKeeper now keeps the per-project agent setup on each machine, in files git ignores (`.git/info/exclude`): `CLAUDE.local.md`, `AGENTS.override.md`, `.claude/settings.local.json`, the installed skills and `.cedarloom-app/`. This removes the committed copies: the BenchKeeper block in `AGENTS.md`, a `CLAUDE.md` that only imported `AGENTS.md`, the sandbox keys BenchKeeper set, the skills BenchKeeper or the skills CLI installed with `skills-lock.json`, and `.cedarloom-app/`. The project\'s own `AGENTS.md` text, its own skills, `docs/agents/` and the dev container stay.\n\nAfter merging, pull, then run Update all in BenchKeeper (`npx benchkeeper projects update`): it writes the local setup from the answers it kept. Other machines: `npx benchkeeper projects apply --agents ...` once.',
     });
   } catch (e) {
     result.status = 'stopped';
@@ -541,7 +541,7 @@ export function removeSetup(ctx, path) {
         branch: REMOVAL_BRANCH,
         work: (tree) => apply(preview(committedSetup(tree)), projectCtx(ctx, tree), { scope: tree, note: { updateAll: path, branch: REMOVAL_BRANCH } }),
         title: 'chore: remove the BenchKeeper agent setup',
-        body: 'Removes the BenchKeeper setup of this repository: the BenchKeeper block in `AGENTS.md`, a `CLAUDE.md` that only imported `AGENTS.md`, the sandbox keys BenchKeeper set, the skills BenchKeeper or the skills CLI installed with `skills-lock.json`, and `.benchkeeper/`. The project\'s own `AGENTS.md` text, its own skills, `docs/agents/` and the dev container stay.',
+        body: 'Removes the BenchKeeper setup of this repository: the BenchKeeper block in `AGENTS.md`, a `CLAUDE.md` that only imported `AGENTS.md`, the sandbox keys BenchKeeper set, the skills BenchKeeper or the skills CLI installed with `skills-lock.json`, and `.cedarloom-app/`. The project\'s own `AGENTS.md` text, its own skills, `docs/agents/` and the dev container stay.',
       });
     } else result.status = 'removed';
     // The answers kept for a later local setup would bring the setup back with the next Update all.
