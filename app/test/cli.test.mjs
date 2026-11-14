@@ -176,7 +176,7 @@ test('a pack plugin BenchKeeper did not install: shown with its impact, never re
   assert.match(text, /add ponytail to a project: benchkeeper projects apply <dir> --pack ponytail\n  removing runs claude plugin uninstall ponytail@ponytail, which deletes the plugin and its data from Claude Code; claude plugin install ponytail@ponytail brings it back/);
   await exec(['apply', '--agents', 'claude', '--level', 'full', '--yes', '--all']);
   await exec(['apply', '--agents', 'claude', '--level', 'full', '--all'], 'y\n');
-  assert.ok(calls.includes('claude plugin install benchkeeper@benchkeeper') && !calls.includes('claude plugin uninstall ponytail@ponytail'));
+  assert.ok(calls.includes('claude plugin install cedarloom@cedarloom') && !calls.includes('claude plugin uninstall ponytail@ponytail'));
   await exec(['apply', '--agents', 'claude', '--level', 'full'], 'n\n'.repeat(80));
   assert.match(text, /remove it\? \[y\/N\]/);
   // packs disable --global is the user's own request: it removes the plugin.

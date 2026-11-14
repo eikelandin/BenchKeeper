@@ -108,7 +108,7 @@ export function lintAgent(file) {
 }
 
 // Claude Code loads a plugin's agents from agents/ and its subfolders.
-export const ownAgents = () => markdownFiles(join(root, 'plugins/benchkeeper/agents'));
+export const ownAgents = () => markdownFiles(join(root, 'plugins/cedarloom/agents'));
 
 // Copied unchanged from another repository: its conventions, not ours.
 const VENDORED = ['packages/packs/bundled/cedarloom.mantine/skills/mantine-form'].map((d) => join(root, d));
@@ -123,7 +123,7 @@ function packSkills() {
 }
 
 export function ownSkills() {
-  const dirs = ['plugins/benchkeeper/skills', 'plugins/benchkeeper/library'].map((d) => join(root, d));
+  const dirs = ['plugins/cedarloom/skills', 'plugins/cedarloom/library'].map((d) => join(root, d));
   const own = dirs.flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
   return [...own, ...packSkills().filter((dir) => !VENDORED.includes(dir))];
 }

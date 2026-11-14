@@ -34,15 +34,15 @@ test('an installed plugin whose content needs a newer app is an error in doctor 
   const home = tmp('bk-inst-');
   const dir = contentAt(join(home, 'cache/cedarloom-app'), '99.0.0');
   mkdirSync(join(home, '.claude/plugins'), { recursive: true });
-  writeFileSync(join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'benchkeeper@benchkeeper': [{ scope: 'user', version: '99.0.0', installPath: dir }] } }));
-  writeFileSync(join(home, '.claude/plugins/known_marketplaces.json'), JSON.stringify({ benchkeeper: {} }));
+  writeFileSync(join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'cedarloom@cedarloom': [{ scope: 'user', version: '99.0.0', installPath: dir }] } }));
+  writeFileSync(join(home, '.claude/plugins/known_marketplaces.json'), JSON.stringify({ cedarloom: {} }));
   const ctx = context({ home, appVersion: '6.25.0', run: () => ({ code: 0, stdout: '[]', stderr: '' }) });
   assert.match(installedRefusal(ctx, ['claude']), /needs benchkeeper 99\.0\.0 or newer/);
   assert.deepEqual(doctor(ctx, { agents: ['claude'] }).filter((i) => i.check === 'content').map((i) => i.level), ['error']);
   assert.equal(installedRefusal({ ...ctx, appVersion: '99.0.0' }, ['claude']), null);
   // An agent without plugins is not read as Codex.
-  contentAt(join(home, '.codex/plugins/cache/benchkeeper/benchkeeper/99.0.0'), '99.0.0');
-  writeFileSync(join(home, '.codex/config.toml'), '[plugins."benchkeeper@benchkeeper"]\nenabled = true\n');
+  contentAt(join(home, '.codex/plugins/cache/cedarloom/cedarloom/99.0.0'), '99.0.0');
+  writeFileSync(join(home, '.codex/config.toml'), '[plugins."cedarloom@cedarloom"]\nenabled = true\n');
   assert.match(installedRefusal(ctx, ['codex']), /needs benchkeeper 99\.0\.0 or newer/);
   assert.equal(installedRefusal(ctx, ['gemini']), null);
 });
@@ -50,9 +50,9 @@ test('an installed plugin whose content needs a newer app is an error in doctor 
 test('an installed plugin is refused when the agent state files are unreadable and the CLI lists it', () => {
   const home = tmp('bk-cli-');
   const dir = contentAt(join(home, 'cache/cedarloom-app'), '99.0.0');
-  contentAt(join(home, '.codex/plugins/cache/benchkeeper/benchkeeper/99.0.0'), '99.0.0');
-  const out = { 'claude plugin list --json': JSON.stringify([{ id: 'benchkeeper@benchkeeper', version: '99.0.0', enabled: true, scope: 'user', installPath: dir }]),
-    'codex plugin list --json': JSON.stringify({ installed: [{ pluginId: 'benchkeeper@benchkeeper', version: '99.0.0', enabled: true }] }) };
+  contentAt(join(home, '.codex/plugins/cache/cedarloom/cedarloom/99.0.0'), '99.0.0');
+  const out = { 'claude plugin list --json': JSON.stringify([{ id: 'cedarloom@cedarloom', version: '99.0.0', enabled: true, scope: 'user', installPath: dir }]),
+    'codex plugin list --json': JSON.stringify({ installed: [{ pluginId: 'cedarloom@cedarloom', version: '99.0.0', enabled: true }] }) };
   const ctx = context({ home, appVersion: '6.25.0', run: (argv) => ({ code: 0, stdout: out[argv.join(' ')] ?? '[]', stderr: '' }) });
   for (const a of ['claude', 'codex']) assert.match(installedRefusal(ctx, [a]), /needs benchkeeper 99\.0\.0 or newer/, a);
 });

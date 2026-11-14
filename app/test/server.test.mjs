@@ -193,8 +193,8 @@ function fixture(extra = () => null) {
     if (r) return r;
     if (argv[1]?.endsWith('verify.mjs')) return ok();
     if (cmd === 'claude --version') return ok('2.1.0 (Claude Code)');
-    if (cmd === 'claude plugin list --json') return ok(JSON.stringify([{ id: 'benchkeeper@benchkeeper', enabled: true, scope: 'user' }, { id: 'ponytail@ponytail', enabled: true, scope: 'user' }]));
-    if (cmd === 'claude plugin marketplace list --json') return ok(JSON.stringify([{ name: 'benchkeeper' }, { name: 'ponytail' }]));
+    if (cmd === 'claude plugin list --json') return ok(JSON.stringify([{ id: 'cedarloom@cedarloom', enabled: true, scope: 'user' }, { id: 'ponytail@ponytail', enabled: true, scope: 'user' }]));
+    if (cmd === 'claude plugin marketplace list --json') return ok(JSON.stringify([{ name: 'cedarloom' }, { name: 'ponytail' }]));
     if (argv[0] === 'claude') return ok('[]');
     return { code: 127, stdout: '', stderr: 'not installed' };
   };
@@ -212,7 +212,7 @@ test('inventory: an edited rules file is modified, enabled plugins current, no D
   const state = (step) => items.filter((i) => i.step === step).map((i) => i.state);
   assert.deepEqual(state('rules:claude'), ['modified']);
   assert.deepEqual(state('settings:claude'), ['current']);
-  assert.deepEqual(state('plugin:claude:benchkeeper@benchkeeper'), ['current']);
+  assert.deepEqual(state('plugin:claude:cedarloom@cedarloom'), ['current']);
   assert.deepEqual(state('tools:devcontainer'), []);
   assert.ok(items.every((i) => i.agent === (i.step.split(':')[1] === 'claude' ? 'claude' : 'machine')));
 });
@@ -224,7 +224,7 @@ test('level: the overview names the level found, the global plan takes a level a
   const full = routes['GET /api/global-plan'](new URLSearchParams('agents=claude&level=full'));
   assert.ok(full.changes.some((c) => c.step === 'rules:claude' || c.step.startsWith('settings:')));
   const lite = routes['GET /api/global-plan'](new URLSearchParams('agents=claude&level=lite'));
-  assert.ok(lite.changes.every((c) => c.kind === 'command' && c.step.endsWith('benchkeeper@benchkeeper')));
+  assert.ok(lite.changes.every((c) => c.kind === 'command' && c.step.endsWith('cedarloom@cedarloom')));
   assert.equal(status(() => routes['GET /api/global-plan'](new URLSearchParams('level=tiny'))), 400);
 });
 
@@ -1052,7 +1052,7 @@ test('the tier strip switch: off by default; on and off are plans in the Claude 
   mkdirSync(join(ctx.home, '.claude'), { recursive: true });
   writeFileSync(file, JSON.stringify({ pluginConfigs: { 'other@x': { options: { a: 1 } } } }));
   const band = () => routes['GET /api/tier-band']();
-  assert.deepEqual(band(), { key: 'pluginConfigs.benchkeeper@benchkeeper.options.tierBand', on: false });
+  assert.deepEqual(band(), { key: 'pluginConfigs.cedarloom@cedarloom.options.tierBand', on: false });
   const keys = [];
   const set = async (on) => {
     const plan = routes['POST /api/settings-plan']({ agent: 'claude', layer: 'user', edits: { [band().key]: on } });
@@ -1066,7 +1066,7 @@ test('the tier strip switch: off by default; on and off are plans in the Claude 
   assert.deepEqual(keys, ['new', 'changed']);
   assert.equal(routes['POST /api/settings-plan']({ agent: 'claude', layer: 'user', edits: { [band().key]: null } }).changes[0].keyState, 'removed');
   assert.equal(band().on, false);
-  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pluginConfigs, { 'other@x': { options: { a: 1 } }, 'benchkeeper@benchkeeper': { options: { tierBand: false } } });
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pluginConfigs, { 'other@x': { options: { a: 1 } }, 'cedarloom@cedarloom': { options: { tierBand: false } } });
   routes['POST /api/undo']({ run: off.id });
   assert.equal(band().on, true);
 });
@@ -1074,7 +1074,7 @@ test('the tier strip switch: off by default; on and off are plans in the Claude 
 test('the status line style: per tracked host account, planned in the settings.json its status line reads', async () => {
   const { ctx, routes } = fixture();
   const style = () => routes['GET /api/status-style']();
-  assert.deepEqual(style(), { key: 'pluginConfigs.benchkeeper@benchkeeper.options.statusStyle', accounts: [] });
+  assert.deepEqual(style(), { key: 'pluginConfigs.cedarloom@cedarloom.options.statusStyle', accounts: [] });
   const account = (name, tracked) => hostAccount(ctx, name, tracked);
   const work = account('work', true);
   mkdirSync(ctx.config, { recursive: true });
@@ -1085,7 +1085,7 @@ test('the status line style: per tracked host account, planned in the settings.j
   assert.deepEqual(plan.changes.map((c) => [c.path, c.keyState]), [[file, 'new']]);
   const { run } = await jobDone(routes, routes['POST /api/apply']({ planId: plan.planId }).job);
   assert.equal(style().accounts[0].value, 'plugin');
-  assert.equal(JSON.parse(readFileSync(file, 'utf8')).pluginConfigs['benchkeeper@benchkeeper'].options.statusStyle, 'plugin');
+  assert.equal(JSON.parse(readFileSync(file, 'utf8')).pluginConfigs['cedarloom@cedarloom'].options.statusStyle, 'plugin');
   assert.equal(existsSync(join(ctx.home, '.claude/settings.json')), false);
   routes['POST /api/undo']({ run: run.id });
   assert.equal(style().accounts[0].value, 'merged');

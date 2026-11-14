@@ -6,7 +6,7 @@ set -u
 here=$(cd "$(dirname "$0")" && pwd)
 agent=$1 model=${2:-} record=${3:-}
 [[ "$model" = --record ]] && model= record=--record
-prompt=$(sed -n '/^```text$/,/^```$/{//!p}' "$here/../../../../plugins/benchkeeper/skills/reviewing-rules/SKILL.md")
+prompt=$(sed -n '/^```text$/,/^```$/{//!p}' "$here/../../../../plugins/cedarloom/skills/reviewing-rules/SKILL.md")
 answers='{}' pass=0 total=0
 for f in "$here"/*.md; do
   name=$(basename "$f")

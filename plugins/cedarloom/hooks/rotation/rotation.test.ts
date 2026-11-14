@@ -76,7 +76,7 @@ async function clears($: Engine, e: ReturnType<typeof engine>, size: string) {
 }
 
 test('withStatus replaces the status block or appends one', () => {
-  const block = (line: string) => `<!-- benchkeeper:status -->\n${line}\n<!-- /benchkeeper:status -->`
+  const block = (line: string) => `<!-- cedarloom-app:status -->\n${line}\n<!-- /cedarloom-app:status -->`
   expect(withStatus('# Handoff\n\n## Next\nx\n', 'one')).toBe(`# Handoff\n\n## Next\nx\n\n${block('one')}\n`)
   expect(withStatus(`# Handoff\n\n${block('one')}\n`, 'two')).toBe(`# Handoff\n\n${block('two')}\n`)
 })
@@ -159,7 +159,7 @@ const lax: [string, string][] = [
 ]
 for (const [name, line] of lax) {
   test(`an edited stamp ${name} falls back to the mtime`, async ($, on) => {
-    engine(on, { file: `${HANDOFF}\n<!-- benchkeeper:status -->\n1970-01-01T00:00:00.700Z compacting; context: 1 tokens; last clear: none; ${line}\n<!-- /benchkeeper:status -->\n`, changed: { log: 'abc1234 1970-01-01T00:30:00+00:00 add a\n', status: '' } })
+    engine(on, { file: `${HANDOFF}\n<!-- cedarloom-app:status -->\n1970-01-01T00:00:00.700Z compacting; context: 1 tokens; last clear: none; ${line}\n<!-- /cedarloom-app:status -->\n`, changed: { log: 'abc1234 1970-01-01T00:30:00+00:00 add a\n', status: '' } })
     expect((await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1]).toContain('\n## Drift since this file was written (1970-01-01T00:00:01.000Z,')
   })
 }
@@ -175,7 +175,7 @@ test('a file name cannot start a heading or a line of its own, or hide text', as
 test('an idle Stop above 200000 tokens clears, then submits the resume prompt, once in 10 minutes', async ($, on) => {
   const e = engine(on)
   await clears($, e, '250000 tokens')
-  expect(e.files[PATH]).toMatch(/clearing at 250000 tokens; context: 250000 tokens; last clear: none; edited: 1970-01-01T00:00:01\.000Z; text: [0-9a-f]{8}\n<!-- \/benchkeeper:status -->\n$/)
+  expect(e.files[PATH]).toMatch(/clearing at 250000 tokens; context: 250000 tokens; last clear: none; edited: 1970-01-01T00:00:01\.000Z; text: [0-9a-f]{8}\n<!-- \/cedarloom-app:status -->\n$/)
   await e.clock.advance(9 * 60_000)
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)

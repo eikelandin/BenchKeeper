@@ -21,7 +21,7 @@ const CONFIG = '.config/ponytail/config.json';
 function machine({ band = true, ponytail = true, benchkeeper = true, flag } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'bk-pony-'));
   mkdirSync(join(home, '.claude'), { recursive: true });
-  writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { ...(ponytail ? { 'ponytail@ponytail': true } : {}), ...(benchkeeper ? { 'benchkeeper@benchkeeper': true } : {}) }, pluginConfigs: { 'benchkeeper@benchkeeper': { options: { tierBand: band } } } }));
+  writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { ...(ponytail ? { 'ponytail@ponytail': true } : {}), ...(benchkeeper ? { 'cedarloom@cedarloom': true } : {}) }, pluginConfigs: { 'cedarloom@cedarloom': { options: { tierBand: band } } } }));
   if (flag) writeFileSync(join(home, FLAG), flag);
   return context({ home, run });
 }
@@ -34,7 +34,7 @@ test('status line style: one info per host account with the usage script, none w
   const work = account('work', true);
   mkdirSync(ctx.config, { recursive: true });
   writeFileSync(join(ctx.config, 'accounts.json'), JSON.stringify({ schemaVersion: 1, accounts: [work, account('spare', false)] }));
-  const style = (v) => writeFileSync(join(work.dir, 'settings.json'), JSON.stringify({ pluginConfigs: { 'benchkeeper@benchkeeper': { options: { statusStyle: v } } } }));
+  const style = (v) => writeFileSync(join(work.dir, 'settings.json'), JSON.stringify({ pluginConfigs: { 'cedarloom@cedarloom': { options: { statusStyle: v } } } }));
   const [unset] = styleChecks(ctx);
   assert.equal(unset.level, 'info');
   assert.match(unset.message, /^account work: status line style merged \(the default\), prints the usage windows and Ponytail's level/);

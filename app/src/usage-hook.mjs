@@ -37,7 +37,7 @@ const parsed = (t) => { try { return JSON.parse(t); } catch { return null; } };
 // The plugin option is a plain string (an option list stops older Claude Code versions from loading the plugin): any other value is merged.
 const STYLES = ['merged', 'plugin', 'cedarloom-app', 'none'];
 const styleOf = (account) => {
-  const v = parsed(read(join(account, 'settings.json')))?.pluginConfigs?.['benchkeeper@benchkeeper']?.options?.statusStyle;
+  const v = parsed(read(join(account, 'settings.json')))?.pluginConfigs?.['cedarloom@cedarloom']?.options?.statusStyle;
   return STYLES.includes(v) ? v : 'merged';
 };
 // Ponytail's hide switch as its own scripts read it: the variable wins, else hideStatus in its config file.

@@ -8,7 +8,7 @@
       "component": "app",
       "include-component-in-tag": true
     },
-    "plugins/benchkeeper": {
+    "plugins/cedarloom": {
       "release-type": "simple",
       "component": "setup",
       "include-component-in-tag": true,

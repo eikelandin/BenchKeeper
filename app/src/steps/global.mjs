@@ -49,7 +49,7 @@ const packPlugins = (a) => library().packs.filter((p) => p.plugins?.[a]).map((p)
   const x = p.plugins[a];
   return { id: x.id, marketplace: x.id.split('@')[1], ...(x.marketplace ? { source: x.marketplace } : {}), pack: p.id };
 });
-const OWN = { id: 'benchkeeper@benchkeeper', marketplace: 'benchkeeper', source: 'ESchuderer/BenchKeeper', ref: 'stable', version: 'app', sparse: ['.claude-plugin', 'plugins'] };
+const OWN = { id: 'cedarloom@cedarloom', marketplace: 'cedarloom', source: 'ESchuderer/BenchKeeper', ref: 'stable', version: 'app', sparse: ['.claude-plugin', 'plugins'] };
 export const PLUGINS = Object.fromEntries(['claude', 'codex'].map((a) => [a, [OWN, ...packPlugins(a)]]));
 // The ref and version a plugin is pinned to, for this app version.
 // BenchKeeper installed the plugin a removal argv names: the newest done, not undone command of the ledger on it installs it.
@@ -212,8 +212,8 @@ function claudeAccounts(ctx) {
 
 // The BenchKeeper plugin of an agent: the installed version (null when not installed) and the one this app sets up.
 // claude also lists the registered accounts with their own installed version, and the marketplace ref when it is not stable.
-export function benchkeeperPlugin(ctx, a) {
-  const p = PLUGINS[a].find((x) => x.id === 'benchkeeper@benchkeeper');
+export function cedarloomPlugin(ctx, a) {
+  const p = PLUGINS[a].find((x) => x.id === 'cedarloom@cedarloom');
   const available = pin(p, ctx.appVersion).version;
   const installedIn = (account) => pluginState(ctx, a, account).listed.find((x) => x.id === p.id)?.version ?? null;
   const account = (x) => {
@@ -226,7 +226,7 @@ export function benchkeeperPlugin(ctx, a) {
 // The first installed BenchKeeper plugin whose content needs a newer app than this one, as a message; null when none does.
 export function installedRefusal(ctx, agents = ['claude', 'codex']) {
   for (const a of agents.filter((x) => PLUGINS[x])) {
-    const dir = pluginState(ctx, a).listed.find((p) => p.id === 'benchkeeper@benchkeeper')?.dir;
+    const dir = pluginState(ctx, a).listed.find((p) => p.id === 'cedarloom@cedarloom')?.dir;
     const why = dir && contentRefusal(dir, ctx.appVersion);
     if (why) return why;
   }
@@ -343,7 +343,7 @@ export function globalPlan(env) {
   for (const a of ['claude', 'codex'].filter((x) => agents.includes(x))) {
     const { listed, markets } = pluginState(ctx, a);
     const name = agent(a).name;
-    for (const p of PLUGINS[a].filter((x) => full || x.id.startsWith('benchkeeper@'))) {
+    for (const p of PLUGINS[a].filter((x) => full || x.id.startsWith('cedarloom@'))) {
       const have = listed.find((x) => x.id === p.id && x.enabled);
       const off = !have && listed.find((x) => x.id === p.id);
       // An installed pack plugin is kept current without its pack being chosen again.
@@ -389,7 +389,7 @@ export function globalPlan(env) {
     }
     // An account folder with the plugin behind the app: the marketplace refresh and the update run with that folder only. The
     // default folder gets none (the agent's own update keeps it current); a plugin an account lacks is not installed there.
-    const own = PLUGINS[a].find((x) => x.id === 'benchkeeper@benchkeeper');
+    const own = PLUGINS[a].find((x) => x.id === 'cedarloom@cedarloom');
     for (const acc of a === 'claude' ? claudeAccounts(ctx) : []) {
       const state = pluginState(ctx, a, acc);
       const have = state.listed.find((x) => x.id === own.id);
@@ -482,7 +482,7 @@ export function globalPlan(env) {
       settings: { agent: 'claude', keys: ['autoCompactWindow', 'modelSettings'] },
     }, RECOMMENDATION);
     // Offered, not preselected: the band is a choice, and a plugin's options live under its id.
-    add('settings:claude:tier-band', 'BenchKeeper status band above the prompt (optional, terminal and desktop app): project, branch, last test run, the tier of the last answer and buttons to set it for the session', { kind: 'write', path: f, edit: sets([[['pluginConfigs', 'benchkeeper@benchkeeper', 'options', 'tierBand'], true]]), settings: { agent: 'claude', keys: ['pluginConfigs.benchkeeper@benchkeeper.options.tierBand'] } }, { selected: false, optional: true });
+    add('settings:claude:tier-band', 'BenchKeeper status band above the prompt (optional, terminal and desktop app): project, branch, last test run, the tier of the last answer and buttons to set it for the session', { kind: 'write', path: f, edit: sets([[['pluginConfigs', 'cedarloom@cedarloom', 'options', 'tierBand'], true]]), settings: { agent: 'claude', keys: ['pluginConfigs.cedarloom@cedarloom.options.tierBand'] } }, { selected: false, optional: true });
   }
   if (agents.includes('codex')) {
     const f = at('.codex/config.toml');

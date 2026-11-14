@@ -81,7 +81,7 @@ test('global drift: rules changed after apply are an error, the user\'s own item
   assert.deepEqual(levels(found, 'rules'), []);
   assert.ok(!found.some((i) => /status band/.test(i.message)), 'the optional status band left off is not drift');
   assert.deepEqual(levels(found, 'plugin'), ['error', 'error']);
-  assert.equal(found.find((i) => i.check === 'plugin').message, 'not installed: Claude Code marketplace benchkeeper');
+  assert.equal(found.find((i) => i.check === 'plugin').message, 'not installed: Claude Code marketplace cedarloom');
   assert.ok(!found.some((i) => i.message === 'no container engine (podman or docker)'), 'no project uses a dev container');
   appendFileSync(join(ctx.home, '.claude/rules/00-global.md'), 'my own line\n');
   mkdirSync(join(ctx.home, '.claude/skills/stray'), { recursive: true });
@@ -195,10 +195,10 @@ test('a rules path that is a dangling link counts as a missing rules file, an er
 test('an older BenchKeeper plugin is no finding: the agent\'s own update decides', () => {
   const ctx = { ...machine(), appVersion: '6.0.0' };
   mkdirSync(join(ctx.home, '.claude/plugins'), { recursive: true });
-  writeFileSync(join(ctx.home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'benchkeeper@benchkeeper': [{ scope: 'user', version: '0.1.0' }] } }));
-  writeFileSync(join(ctx.home, '.claude/plugins/known_marketplaces.json'), JSON.stringify({ benchkeeper: { source: { ref: 'stable' } } }));
-  writeFileSync(join(ctx.home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { 'benchkeeper@benchkeeper': true } }));
-  const found = doctor(ctx, { agents: ['claude'], env: {}, devcontainerCli: '1.0.0' }).filter((i) => /benchkeeper@benchkeeper/.test(i.message));
+  writeFileSync(join(ctx.home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'cedarloom@cedarloom': [{ scope: 'user', version: '0.1.0' }] } }));
+  writeFileSync(join(ctx.home, '.claude/plugins/known_marketplaces.json'), JSON.stringify({ cedarloom: { source: { ref: 'stable' } } }));
+  writeFileSync(join(ctx.home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { 'cedarloom@cedarloom': true } }));
+  const found = doctor(ctx, { agents: ['claude'], env: {}, devcontainerCli: '1.0.0' }).filter((i) => /cedarloom@cedarloom/.test(i.message));
   assert.deepEqual(found, []);
 });
 
@@ -248,9 +248,9 @@ test('global drift: the fix names the level below full, plain apply at full; mis
   apply(preview(globalPlan({ ctx, agents: ['claude'], devcontainerCli: '1.0.0' })), ctx);
   const found = doctor(ctx, { agents: ['claude'], env: {}, devcontainerCli: '1.0.0' });
   const { dismissId, ...plugin } = found.find((i) => i.check === 'plugin');
-  assert.deepEqual(plugin, { level: 'error', check: 'plugin', message: 'not installed: Claude Code marketplace benchkeeper', fix: 'benchkeeper apply' });
-  assert.match(dismissId, /^change:plugin:claude:benchkeeper@benchkeeper:[0-9a-f]{64}$/);
-  assert.equal(found.filter((i) => i.message === 'not installed: Claude Code marketplace benchkeeper').length, 1, 'one finding per step');
+  assert.deepEqual(plugin, { level: 'error', check: 'plugin', message: 'not installed: Claude Code marketplace cedarloom', fix: 'benchkeeper apply' });
+  assert.match(dismissId, /^change:plugin:claude:cedarloom@cedarloom:[0-9a-f]{64}$/);
+  assert.equal(found.filter((i) => i.message === 'not installed: Claude Code marketplace cedarloom').length, 1, 'one finding per step');
   appendFileSync(join(ctx.home, '.claude/rules/00-global.md'), 'my own line\n');
   const rules = doctor(ctx, { agents: ['claude'], env: {}, devcontainerCli: '1.0.0' }).find((i) => i.check === 'rules');
   assert.match(rules.message, / differs from setup \d+\.\d+\.\d+$/);
@@ -309,8 +309,8 @@ test('doctor: the coordinator policy against the plugin content Claude Code runs
   mkdirSync(content);
   writeFileSync(join(content, 'content.json'), JSON.stringify({ contentVersion: '6.26.0' }));
   mkdirSync(join(ctx.home, '.claude/plugins'), { recursive: true });
-  writeFileSync(join(ctx.home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'benchkeeper@benchkeeper': [{ scope: 'user', installPath: content }] } }));
-  assert.deepEqual(coordinator(), [['warning', 'docs/agents/orchestration.json needs the BenchKeeper plugin 6.27.0 or newer (minPlugin); the plugin Claude Code runs here is 6.26.0', 'claude plugin update benchkeeper@benchkeeper']]);
+  writeFileSync(join(ctx.home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: { 'cedarloom@cedarloom': [{ scope: 'user', installPath: content }] } }));
+  assert.deepEqual(coordinator(), [['warning', 'docs/agents/orchestration.json needs the BenchKeeper plugin 6.27.0 or newer (minPlugin); the plugin Claude Code runs here is 6.26.0', 'claude plugin update cedarloom@cedarloom']]);
   policy('6.26.0');
   assert.deepEqual(coordinator(), []);
   writeFileSync(join(dir, 'docs/agents/worker-rules.md'), '');

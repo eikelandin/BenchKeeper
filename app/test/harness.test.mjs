@@ -14,7 +14,7 @@ import { projectPlan } from '../src/steps/project.mjs';
 import { initRepo } from './helpers.mjs';
 
 const tmp = (p) => mkdtempSync(join(tmpdir(), p));
-const PLUGINS = JSON.stringify([{ id: 'benchkeeper@benchkeeper', enabled: true }, { id: 'ponytail@ponytail', enabled: true }]);
+const PLUGINS = JSON.stringify([{ id: 'cedarloom@cedarloom', enabled: true }, { id: 'ponytail@ponytail', enabled: true }]);
 const machine = (extra = () => null) => context({ home: tmp('bk-harn-'), run: (argv, o) => extra(argv, o) ?? (argv[0] === 'npm' ? { code: 1, stdout: '', stderr: '' }
   : { code: 0, stdout: argv.join(' ') === 'claude plugin list --json' ? PLUGINS : argv.includes('--json') ? '[]' : '1.0.0', stderr: '' }) });
 const byName = (checks) => Object.fromEntries(checks.map((c) => [c.name.replace(/ \(.*/, ''), c]));

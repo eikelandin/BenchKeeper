@@ -131,7 +131,7 @@ export function projectInstalls(ctx, dir, a) {
     : { state: onDisk.get(n) ?? 'not installed', hint: 'only this project' }]));
   return { packs, skills,
     global: {
-      plugin: plugged.filter((x) => enabled[x].includes('benchkeeper@benchkeeper')).map((x) => agent(x).name),
+      plugin: plugged.filter((x) => enabled[x].includes('cedarloom@cedarloom')).map((x) => agent(x).name),
       packs: lib.packs.filter((p) => !a.packs.includes(p.id) && packs[p.id].scope === 'global' && packs[p.id].state === 'installed').map((p) => ({ id: p.id, title: p.title ?? p.id })),
       skills: plugged.map((x) => ({ agent: agent(x).name, count: globalSkills(ctx, x) })),
     } };

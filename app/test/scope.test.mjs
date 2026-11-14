@@ -204,7 +204,7 @@ test('the Installs tab: scope hint, fixed scope and state per row; global items 
   const skills = pack(ctx, 'frontend').skills;
   writeFileSync(join(dir, '.cedarloom-app/state.json'), JSON.stringify({ schemaVersion: 2, agents: ['claude', 'codex'], env: 'host', packs: ['ponytail', 'frontend'], skills: skills.map((name) => ({ name })) }));
   // Claude Code has Ponytail, Matt Pocock's skills (global, not selected here) and BenchKeeper's own plugin for the user.
-  const ids = ['ponytail@ponytail', 'mattpocock-skills@claude-plugins-official', 'benchkeeper@benchkeeper'];
+  const ids = ['ponytail@ponytail', 'mattpocock-skills@claude-plugins-official', 'cedarloom@cedarloom'];
   writeFileSync(join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: Object.fromEntries(ids.map((id) => [id, [{ scope: 'user', version: '1.0.0' }]])) }));
   writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: Object.fromEntries(ids.map((id) => [id, true])) }));
   const routes = api(ctx);

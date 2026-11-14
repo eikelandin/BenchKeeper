@@ -28,8 +28,8 @@ export const boardFile = (ctx) => join(ctx.home, LEDGER, 'board.html');
 export function bandStacks(ctx) {
   const settings = json(readText(join(ctx.home, '.claude/settings.json')));
   return settings.enabledPlugins?.[PLUGIN] === true
-    && settings.enabledPlugins?.['benchkeeper@benchkeeper'] === true
-    && settings.pluginConfigs?.['benchkeeper@benchkeeper']?.options?.tierBand === true
+    && settings.enabledPlugins?.['cedarloom@cedarloom'] === true
+    && settings.pluginConfigs?.['cedarloom@cedarloom']?.options?.tierBand === true
     && readText(join(ctx.home, BAND_FLAG))?.trim() !== 'off';
 }
 
@@ -61,7 +61,7 @@ export function trackedStyles(ctx) {
   try { list = listAccounts(ctx); } catch { /* reported by accountChecks */ }
   return list.filter((a) => supports(a.agent, 'usage') && a.mode === 'host' && exists(join(a.dir, STATE_DIR, 'usage.mjs'))).map((a) => {
     const file = join(a.dir, 'settings.json');
-    return { account: a, file, value: json(readText(file)).pluginConfigs?.['benchkeeper@benchkeeper']?.options?.statusStyle };
+    return { account: a, file, value: json(readText(file)).pluginConfigs?.['cedarloom@cedarloom']?.options?.statusStyle };
   });
 }
 export const styleOf = (v) => (Object.hasOwn(SHOWS, v) ? v : 'merged');
@@ -73,7 +73,7 @@ export const styleChecks = (ctx) => trackedStyles(ctx).map(({ account: a, file, 
   return {
     level: 'info', check: 'statusline',
     message: `account ${a.name}: status line style ${style}${v === undefined ? ' (the default)' : ''}, prints ${SHOWS[style]}; the usage windows are recorded in every style`,
-    fix: `to change it, set the plugin option statusStyle (merged, plugin, cedarloom-app or none) under pluginConfigs."benchkeeper@benchkeeper".options in ${file}`,
+    fix: `to change it, set the plugin option statusStyle (merged, plugin, cedarloom-app or none) under pluginConfigs."cedarloom@cedarloom".options in ${file}`,
   };
 });
 

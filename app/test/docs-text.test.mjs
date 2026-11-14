@@ -6,7 +6,7 @@ import { test } from 'node:test';
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 
 test('the operating skill names every command whose effect undo does not reverse, and asks before each', () => {
-  const skill = read('../../plugins/benchkeeper/skills/operating-benchkeeper/SKILL.md');
+  const skill = read('../../plugins/cedarloom/skills/operating-benchkeeper/SKILL.md');
   const sentence = skill.slice(skill.indexOf('not undone by it'), skill.indexOf('## Safe order'));
   const ask = skill.split('\n').find((l) => l.startsWith('3. Ask before'));
   for (const cmd of ['packs remove', 'accounts remove', 'presets remove', 'knowledge clear', 'sessions cache clear', 'automations remove', 'webhook remove', 'machine remove', 'containers reconcile', 'packs save', 'packs import', 'profile import']) {
@@ -18,7 +18,7 @@ test('the operating skill names every command whose effect undo does not reverse
 test('every test the security model cites exists in that file under that title', () => {
   // A cited title is the test's title or a part of it; "..." stands for the words left out.
   const doc = read('../../docs/security.md');
-  const dirs = ['./', '../../.github/scripts/', '../../plugins/benchkeeper/hooks/tier/'];
+  const dirs = ['./', '../../.github/scripts/', '../../plugins/cedarloom/hooks/tier/'];
   const missing = [];
   for (const m of doc.matchAll(/`([\w.-]+\.test\.(?:mjs|tsx))`((?:\s*(?:,|and|or)?\s*"[^"\n]+")+)/g)) {
     const source = dirs.map((d) => { try { return read(d + m[1]); } catch { return null; } }).find(Boolean);
@@ -35,7 +35,7 @@ test('every test the security model cites exists in that file under that title',
 
 test('the setup guide, the app README and the operating skill describe own skills as the CLI has them', () => {
   const setup = read('../../docs/setup.md'), readme = read('../README.md');
-  const skill = read('../../plugins/benchkeeper/skills/operating-benchkeeper/SKILL.md');
+  const skill = read('../../plugins/cedarloom/skills/operating-benchkeeper/SKILL.md');
   assert.doesNotMatch(setup, /a unit of your own needs a change to BenchKeeper/);
   assert.match(setup, /`skills new/);
   const rows = readme.split('\n').filter((l) => l.startsWith('| `skills show'));

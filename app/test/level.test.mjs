@@ -13,7 +13,7 @@ import { apply, context, preview, undo } from '../src/runner.mjs';
 import { globalPlan } from '../src/steps/global.mjs';
 import { STATE } from '../src/steps/project.mjs';
 
-const ID = 'benchkeeper@benchkeeper';
+const ID = 'cedarloom@cedarloom';
 // A Claude Code and a Codex with a foreign plugin and marketplace each; installing and uninstalling BenchKeeper changes the lists.
 function machine() {
   const home = mkdtempSync(join(tmpdir(), 'bk-level-'));
@@ -94,7 +94,7 @@ test('without --level the level found counts: a standard machine is not grown to
   const c = cli(m.ctx);
   assert.equal(await c.exec(['plan', '--agents', 'claude']), 0);
   assert.doesNotMatch(c.text(), /Claude Code rules|Claude settings/);
-  assert.match(c.text(), /benchkeeper@benchkeeper/);
+  assert.match(c.text(), /cedarloom@cedarloom/);
 });
 
 test('doctor below full expects the plugin only: missing global rules and tools are not drift', () => {
@@ -114,7 +114,7 @@ test('the CLI: --level lite plans the plugin only, an unknown level exits 2, doc
   const m = machine();
   const c = cli(m.ctx);
   assert.equal(await c.exec(['plan', '--agents', 'claude', '--level', 'lite']), 0);
-  assert.match(c.text(), /Claude Code plugin benchkeeper@benchkeeper/);
+  assert.match(c.text(), /Claude Code plugin cedarloom@cedarloom/);
   assert.doesNotMatch(c.text(), /rules|settings/);
   assert.equal(await c.exec(['plan', '--agents', 'claude', '--level', 'tiny']), 2);
   assert.equal(await c.exec(['plan', '--agents', 'claude', '--level=']), 2);
