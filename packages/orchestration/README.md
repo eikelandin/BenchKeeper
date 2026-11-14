@@ -18,7 +18,7 @@ No CedarLoom launch hands the hook to a session any more: workflows run in the a
 
 ### The OS credential store
 
-The `hub-issues` token sits in the OS credential store, and the `cedarloom work-items` commands that use it are the owner's. Nothing in them tells who asks: a session that may run them sends as the owner, so its own sandbox or permission rules have to keep it from them. CedarLoom's worker sandbox kept a worker from them until the worker launch went (2026-11-08); the trial that showed it is in this file's history.
+The `hub-issues` token sits in the OS credential store, and the `cedarloom work-items` commands that use it are the owner's. Nothing in them tells who asks: a session that may run them sends as the owner, so its own sandbox or permission rules have to keep it from them. CedarLoom's worker sandbox kept a worker from them until the worker launch went; the trial that showed it is in this file's history.
 
 ### Everyday forms it refuses
 

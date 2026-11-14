@@ -109,7 +109,7 @@ export const originRepos = (
   remotes: Remotes = gitRemotes,
   hostOf?: (alias: string) => string | undefined,
 ): string[] => {
-  // Origin only, not a fork's upstream; every remote would be [...remotes.values()].flat().
+  // Origin only for now, not a fork's upstream (open question); every remote would be [...remotes.values()].flat().
   const urls = remotes(folder)?.get("origin") ?? [];
   const repos = urls.map((url) => githubRepo(url) ?? (hostOf === undefined ? null : aliasedRepo(url, hostOf)));
   return [...new Set(repos.filter((repo) => repo !== null))];
