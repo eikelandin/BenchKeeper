@@ -256,7 +256,7 @@ test("a command, task, precheck or approval message holds tabs and line breaks, 
     fields.map(([type, key, rest]) => NODE_CONFIGS[type].safeParse({ ...rest, [key]: text }).success);
   expect(ok("echo a\tb\nls")).toEqual([true, true, true, true, true]);
   // A reviewed workflow must not show one line and hold another: overrides, isolates, a carriage return, a NUL, and
-  // what shows as nothing (owner, 2026-11-08): soft hyphen, zero width space, word joiner, BOM, annotation, separators, tags.
+  // what shows as nothing: soft hyphen, zero width space, word joiner, BOM, annotation, separators, tags.
   const invisible = [
     "\u00ad",
     "\u180e",

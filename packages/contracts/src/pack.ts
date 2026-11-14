@@ -15,7 +15,7 @@ export const PACK_ID = String.raw`[a-z][a-z0-9-]{0,63}\.[a-z][a-z0-9-]{0,63}`;
 /** A pack's id: `publisher.name` in lower case, as an extension's. Packs of the `cedarloom` publisher ship with CedarLoom. */
 export const PackId = z.string().regex(new RegExp(`^${PACK_ID}$`));
 
-// Where Git fetches a folder (A29 b): text-only follows a ref after 3 days (A94); one with a runnable file is pinned.
+// Where Git fetches a folder: text-only follows a ref after 3 days; one with a runnable file is pinned.
 const located = {
   git: GitUrl,
   path: PortablePath.optional().describe("The folder inside the repository; its root when absent"),
@@ -105,7 +105,7 @@ export type PackManifest = z.infer<typeof PackManifest>;
 /**
  * Each Git source a profile follows by branch or tag, keyed as the planner names it: the commit in use with its
  * digest, and the newest commit fetched at the ref with when this machine first fetched it. That commit is taken 3 days
- * later (A94), since a commit's own date is whatever its author wrote. CedarLoom's own record of the sources the last
+ * later, since a commit's own date is whatever its author wrote. CedarLoom's own record of the sources the last
  * plan followed; one it cannot read stops the plan, and deleting it takes each source's newest commit at once.
  */
 export const PackSources = z

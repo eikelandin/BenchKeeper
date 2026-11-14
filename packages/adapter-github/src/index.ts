@@ -162,7 +162,7 @@ const hubLabels = (github: Client, hub: string): Pick<Tracker, "labels" | "creat
 
 /**
  * The tracker of the hub (`owner/name`, from local config) on GitHub's REST API, with a token of its `hub-issues` access
- * profile (A37). `fetch` and `timeoutMs` stand in for the network and its deadline in tests. Answers are checked before
+ * profile. `fetch` and `timeoutMs` stand in for the network and its deadline in tests. Answers are checked before
  * they are kept.
  */
 export const githubTracker = (

@@ -41,7 +41,7 @@ export const GitOid = z
   .regex(/^[0-9a-f]{40}([0-9a-f]{24})?$/)
   .register(contracts, { id: "GitOid" });
 
-/** The branch of the workflow store (P3 a) that holds the stored workflows. */
+/** The branch of the workflow store that holds the stored workflows. */
 export const STORE_REF = "refs/heads/main";
 
 /** Moves the workflow store's branch, only while it still points where the plan found it (git update-ref). */

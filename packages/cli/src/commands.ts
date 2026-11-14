@@ -186,7 +186,7 @@ const mayDo = (capabilities: useCases.Capabilities): string[] => [
   ...Object.keys(capabilities.programs ?? {}).map((id) => `runs the program ${id} on this machine`),
 ];
 
-// What an install's approval consents to; the publisher is the id's first part, which nothing verifies (P5 a).
+// What an install's approval consents to; the publisher is the id's first part, which nothing verifies.
 const consent = (manifest: ExtensionManifest, { source, ref, digest }: Pin): string => {
   const publisher = manifest.id.slice(0, manifest.id.indexOf("."));
   const folder = source.path === undefined ? "" : `, folder ${source.path}`;
@@ -365,7 +365,7 @@ export const workflowsOpen = (ctx: Context, id: string, { at }: { at?: string })
 
 type ExportOptions = { name?: string; license?: string; yes?: true };
 
-// Writes stored workflows to a folder; the user commits and pushes it with Git (P4 a).
+// Writes stored workflows to a folder; the user commits and pushes it with Git.
 export const workflowsExport = (ctx: Context, ids: string[], folder: string, options: ExportOptions): number => {
   const { name = basename(folder), license, yes } = options;
   const about = license === undefined ? { name } : { name, license };
