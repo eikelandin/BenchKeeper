@@ -7,7 +7,7 @@ import { License, semver, WorkflowId } from "./workflow.ts";
 const NodeIds = z.array(z.string());
 
 /**
- * What an import would do, shown before the plan (P6 a: nothing imported updates by itself): each workflow with its
+ * What an import would do, shown before the plan (nothing imported updates by itself): each workflow with its
  * status against the store, every line that runs or writes, and the licenses. The same model for the CLI, the API and
  * the UI.
  */

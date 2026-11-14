@@ -36,7 +36,7 @@ const quoted = (text: string): string => `'${text.replaceAll("'", `'\\''`)}'`;
 
 /**
  * The skill folder of a step, which Claude Code and Codex read alike: an agent step's task, or a command step's script.
- * No model loads a step on its own, outside its stage and gates (coordinator, 2026-11-08): Claude Code reads
+ * No model loads a step on its own, outside its stage and gates: Claude Code reads
  * `disable-model-invocation`, Codex its own policy file.
  */
 export const stepFiles = (workflow: WorkflowDefinition, node: Node): PackageFile[] => {

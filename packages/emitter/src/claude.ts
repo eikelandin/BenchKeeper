@@ -92,8 +92,8 @@ const hookOf = (node: string, file: string, ...args: string[]): Record<string, u
 });
 
 /**
- * The hooks file: the guard before every shell call and agent, its merges by level (Auto: an agent of a workflow script,
- * owner 2026-11-08), and the exit hook, which keeps each step script's status and refuses a report that differs. A crash
+ * The hooks file: the guard before every shell call and agent, its merges by level (Auto: an agent of a workflow script),
+ * and the exit hook, which keeps each step script's status and refuses a report that differs. A crash
  * or timeout of the guard or of `verify` refuses (`onFailure`, Claude Code 2.1.295 or later); Codex reads no such file.
  */
 const hooksFile = (plugin: string, level: AutomationLevel, { node, hub, memory }: Hooks): PackageFile => {

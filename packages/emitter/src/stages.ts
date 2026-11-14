@@ -5,7 +5,7 @@ import type { Source, StageScript, Step } from "./runner.ts";
 type Node = WorkflowDefinition["nodes"][number];
 type Edge = WorkflowDefinition["edges"][number];
 
-/** The gates each level keeps (owner, 2026-11-05): Supervised all three, Checkpoint the merge, Auto none. */
+/** The gates each level keeps: Supervised all three, Checkpoint the merge, Auto none. */
 const KEPT: Record<AutomationLevel, readonly string[]> = {
   supervised: ["implementation", "verdict", "merge"],
   checkpoint: ["merge"],

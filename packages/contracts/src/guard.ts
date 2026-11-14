@@ -8,10 +8,10 @@ export const GUARD_SCHEMA_VERSION = 1;
 export const RepoName = z.string().regex(/^[A-Za-z0-9-]{1,39}\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/);
 
 /**
- * What a workflow package's guard hook allows a workflow's own agents on GitHub (A13): the working folder's origin, the
- * hub, the only repository for issue commands, and the memory repository, whose `main` no push may update (A14). The
- * hub and the memory repository come from local config and are never named in CedarLoom (ARW1-2). Merges follow the
- * automation level (owner, 2026-11-08); any other caller runs untouched (owner, 2026-11-09).
+ * What a workflow package's guard hook allows a workflow's own agents on GitHub: the working folder's origin, the
+ * hub, the only repository for issue commands, and the memory repository, whose `main` no push may update. The
+ * hub and the memory repository come from local config and are never named in CedarLoom. Merges follow the
+ * automation level; any other caller runs untouched.
  */
 export const GuardPolicy = z
   .strictObject({

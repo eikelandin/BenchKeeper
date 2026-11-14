@@ -433,7 +433,7 @@ test("each agent step writes a skill folder of its own name; a check runs right 
   ]);
 });
 
-test("A28: a workflow a schedule starts holds only node types known not to write", () => {
+test("a workflow a schedule starts holds only node types known not to write", () => {
   // A child workflow could write, and the validator cannot see it: under a schedule, workflow.run is refused.
   expect(codes(workflow(["start:trigger.schedule", "c:workflow.run"], ["start.start>c.run"]))).toEqual([
     "run.node-unsupported",

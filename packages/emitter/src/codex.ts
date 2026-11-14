@@ -56,7 +56,7 @@ const onFailure = (step: Step): string => {
 // An agent step in prose: its task, its context, how it reviews, its retries and its checks.
 const agentLine = (head: string, step: Step, stage: StageScript, fresh: boolean): string => {
   const context = step.context === undefined ? "" : `, with ${from(step.context)} as its context`;
-  // A fresh context (coordinator, 247 Q3 b): Codex's own sub-agent with no earlier turns, no agent file of ours.
+  // A fresh context: Codex's own sub-agent with no earlier turns, no agent file of ours.
   const reviewer = fresh
     ? ' Run it in a fresh sub-agent: call spawn_agent with fork_turns "none" and this task and its context, and use its answer.'
     : "";
@@ -132,7 +132,7 @@ const stageSkill = (workflow: WorkflowDefinition, stage: Stage, script: StageScr
   ];
 };
 
-/** Codex's part of the package (owner, Q2 a): its manifest and a skill per stage; no Codex hooks, agents or rules. */
+/** Codex's part of the package: its manifest and a skill per stage; no Codex hooks, agents or rules. */
 export const codexFiles = (
   workflow: WorkflowDefinition,
   stages: Stage[],

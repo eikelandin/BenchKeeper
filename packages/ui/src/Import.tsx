@@ -84,7 +84,7 @@ const licenses = (units: Review["units"]): string =>
     .map(([license, under]) => t("import.licenseCount", { license, count: under.length }))
     .join(", ");
 
-/** The review of one import, before anything is stored (P6 a), with the source it came from. */
+/** The review of one import, before anything is stored, with the source it came from. */
 const ReviewShown = ({ review }: { review: Review }) => {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), [review]);

@@ -38,5 +38,5 @@ export const cleanEnv = (
   return Object.fromEntries(inherited);
 };
 
-/** GitHub's hosts: a managed policy that lets sandboxed commands reach only these loosens nothing (owner decision, 2026-11-06). */
+/** GitHub's hosts: a managed policy that lets sandboxed commands reach only these loosens nothing. */
 export const GITHUB_DOMAINS = ["github.com", "*.github.com", "*.githubusercontent.com"] as const;

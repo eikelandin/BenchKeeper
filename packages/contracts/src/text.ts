@@ -5,7 +5,7 @@ const tag = new RegExp(`[${TAGS}]`, "u");
 
 /**
  * A text an extension shows, in its manifest or a catalog: plain, and shown as is. No value is formatted into it, so
- * it is no ICU message (coordinator, 2026-11-06); a feature that needs values brings a real ICU compiler.
+ * it is no ICU message; a feature that needs values brings a real ICU compiler.
  */
 export const PlainText = z
   .string()
@@ -15,7 +15,7 @@ export const PlainText = z
 /** Zero width non-joiner and joiner: prose in scripts such as Persian or Devanagari needs them, and no command does. */
 const JOINERS = "\\u200C\\u200D";
 
-/** Refuses a text by the first character `refused` matches, named as U+XXXX: a finding says what nobody sees (hub 198). */
+/** Refuses a text by the first character `refused` matches, named as U+XXXX: a finding says what nobody sees. */
 export const refusing = (refused: string) => {
   const pattern = new RegExp(`[${refused}]`, "u");
   return (text: string, ctx: z.RefinementCtx): void => {

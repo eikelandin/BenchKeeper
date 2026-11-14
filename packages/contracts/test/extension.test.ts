@@ -125,7 +125,7 @@ const manifestChanges: Change[] = [
   ["an entry outside the folder", ["runtime", "entry"], "../main.js", true],
   ["an entry that is no script", ["runtime", "entry"], "dist/main.ts", true],
   ["a WebAssembly runtime", ["runtime", "kind"], "wasm", true],
-  ["hooks (A30)", ["hooks"], { preRun: "x" }, true],
+  ["hooks", ["hooks"], { preRun: "x" }, true],
   ["no action", ["contributes", "actions"], {}, true],
   ["an id in upper case", ["id"], "Acme.jira", true],
   ["an id without publisher", ["id"], "jira", true],
