@@ -98,8 +98,8 @@ const commandOf = (call: Call, policy: GuardPolicy): { command: string; cwd: str
 
 /**
  * The policy as a workflow's agent meets it: `origin` read from the working folder, with the hub and the memory
- * repository; a workflow script's agent merges only at Auto, which a stage reaches after its reviewer agreed (owner
- * 2026-11-08), and only in the origin's own repositories: never the hub's, nor the memory repository's, whose `main` no
+ * repository; a workflow script's agent merges only at Auto, which a stage reaches after its reviewer agreed,
+ * and only in the origin's own repositories: never the hub's, nor the memory repository's, whose `main` no
  * agent updates.
  */
 const callPolicy = (policy: GuardPolicy, cwd: string, merges: boolean, remotes: Remotes): CallPolicy => {
@@ -114,8 +114,8 @@ const callPolicy = (policy: GuardPolicy, cwd: string, merges: boolean, remotes: 
 
 /**
  * Why the guard refuses one PreToolUse input, or null. It binds only a workflow's own agents, a workflow script's and a
- * step of this package that runs as its own subagent: any other caller runs untouched, merges included (owner,
- * 2026-11-09). What it cannot read refuses (A79).
+ * step of this package that runs as its own subagent: any other caller runs untouched, merges included.
+ * What it cannot read refuses.
  */
 const guardHook = (input: string, policyJson: string | null, remotes: Remotes): string | null => {
   const policy = policyJson === null ? null : readPolicy(policyJson);

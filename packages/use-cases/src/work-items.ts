@@ -141,7 +141,7 @@ export const queueIntent = (state: string, config: string, intent: Intent, appro
 export const outboxEntries = (state: string): Promise<Result<OutboxEntry[]>> =>
   withOutbox(state, (store) => ({ ok: true, value: store.entries() }));
 
-/** Queues a failed entry again; the owner's step only, as nothing here tells who asks (owner, 2026-11-08). */
+/** Queues a failed entry again; the owner's step only, as nothing here tells who asks. */
 export const retryEntry = (state: string, id: string): Promise<Result<OutboxEntry>> =>
   withOutbox(state, (store) => store.retry(id));
 
