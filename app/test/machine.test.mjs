@@ -206,6 +206,7 @@ test('settings files: the machine variables in and out, other keys kept; Codex s
   assert.deepEqual(JSON.parse(text).env, { KEEP: '1', ...env });
   assert.deepEqual(JSON.parse(withVars(text, null)), { env: { KEEP: '1' }, model: 'x' });
   assert.deepEqual(JSON.parse(withVars(withVars('{}', env), null)), {});
+  assert.deepEqual(JSON.parse(withVars('{"env":{"BENCHKEEPER_MACHINE_EMAIL":"old@example.com","KEEP":"1"}}', null)), { env: { KEEP: '1' } });
   const toml = withCodexVars('model = "o"\n', env);
   assert.match(toml, /\[shell_environment_policy\.set\]\nGIT_AUTHOR_NAME = "octo-agent"/);
   assert.equal(withCodexVars(toml, null).trim().split('\n')[0], 'model = "o"');

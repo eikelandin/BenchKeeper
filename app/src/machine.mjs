@@ -23,7 +23,7 @@ const DEVICE = 'https://github.com/login/device';
 // Every variable a machine setting may write into an agent settings file: removing the setting takes out these names only.
 const PAIRS = 8;
 export const VARS = ['GIT_AUTHOR_NAME', 'GIT_AUTHOR_EMAIL', 'GIT_COMMITTER_NAME', 'GIT_COMMITTER_EMAIL', 'GH_CONFIG_DIR', 'GIT_CONFIG_COUNT',
-  ...Array.from({ length: PAIRS }, (_, i) => [`GIT_CONFIG_KEY_${i}`, `GIT_CONFIG_VALUE_${i}`]).flat(), 'CEDARLOOM_APP_MACHINE_EMAIL'];
+  ...Array.from({ length: PAIRS }, (_, i) => [`GIT_CONFIG_KEY_${i}`, `GIT_CONFIG_VALUE_${i}`]).flat(), 'CEDARLOOM_APP_MACHINE_EMAIL', 'BENCHKEEPER_MACHINE_EMAIL'];
 
 class MachineError extends Error {
   // A usage error carries 400, which the CLI's lookups read as exit 2.
