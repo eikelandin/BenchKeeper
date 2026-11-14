@@ -79,7 +79,7 @@ Limit: only the ref's newest commit is fetched, so a ref that moves more often t
 | `orchestration` | `developer` | auto memory off; the hub and the memory repository; the machine-local hub line, Orca's worktree files |
 | `full` | `orchestration`, `research` | Ponytail, Matt Pocock's skills; the `docs/agents` files those skills read |
 
-A part sits in the smallest preset that holds every part it requires, so each preset applies without a missing part; `agent-docs` and `local-manual` require the hub and start at `orchestration`. Presets grow upward instead of each extending `full` and switching parts off: a part added to `full` later then never reaches a smaller preset unasked. `default.json` extends `full` and is the profile of a machine without a selection (`DEFAULT_PROFILE` in `resolve.ts`), so a selection that names it keeps every part it had.
+A part sits in the smallest preset that holds every part it requires, so each preset applies without a missing part; `local-manual` requires the hub and starts at `orchestration`; `agent-docs` requires it too and sits in `full`, beside the skills that read its files. Presets grow upward instead of each extending `full` and switching parts off: a part added to `full` later then never reaches a smaller preset unasked. `default.json` extends `full` and is the profile of a machine without a selection (`DEFAULT_PROFILE` in `resolve.ts`), so a selection that names it keeps every part it had.
 
 ### Oldest app version
 
