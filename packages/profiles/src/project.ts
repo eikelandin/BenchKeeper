@@ -298,7 +298,7 @@ const addTargets = (files: Files, keeping: Keeping, found: Found[], written: Wri
   }
 };
 
-// The approval line of a part whose targets run as programs or configure tools, by class (owner, hub issue 130).
+// The approval line of a part whose targets run as programs or configure tools, by class.
 type Approval = { part: string; title: string; project: string; source: string | null };
 const approval = (line: Approval, found: Found[]): Finding | undefined => {
   const of = (kind: string) =>
@@ -377,7 +377,7 @@ const imports = (project: string, text: string): boolean =>
   /^@(?:\.\/)?AGENTS\.md[ \t]*$/m.test(text) ||
   onDisk(join(project, "CLAUDE.md")) === onDisk(join(project, "AGENTS.md"));
 
-// The project's CLAUDE.md: the owner's, or a new one with only `@AGENTS.md` (D31); and whether it brings in AGENTS.md.
+// The project's CLAUDE.md: the owner's, or a new one with only `@AGENTS.md`; and whether it brings in AGENTS.md.
 const claudeOf = ({ resolved }: Context, project: string) => {
   const path = join(project, "CLAUDE.md");
   const text = textFile(path);

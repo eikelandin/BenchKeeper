@@ -32,9 +32,9 @@ export type LogParams = { run: string; level: "info" | "warning" | "error"; mess
 export const log = new NotificationType<LogParams>("host/log");
 
 /**
- * A request the host sends for the extension, which has no network of its own (P7 a): to an
+ * A request the host sends for the extension, which has no network of its own: to an
  * origin it was granted, following redirects within the grant. `credential` names one of the manifest's credentials,
- * which the host adds for that credential's hosts only; the extension never sees its value (P8 a).
+ * which the host adds for that credential's hosts only; the extension never sees its value.
  * Bodies are text, and answers identity-coded: the host sets no Accept-Encoding and refuses one of the
  * extension's. The host replaces the value in an answer as it is, URL-encoded and in its basic form, as best effort: a
  * host that reflects it otherwise still shows it, so use a token rather than a password for basic.

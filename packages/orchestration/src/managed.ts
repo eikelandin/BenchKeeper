@@ -47,7 +47,7 @@ const LISTS = [
 ] as const;
 // A policy's own proxy replaces Claude Code's domain lists: docs/agents/cedarloom-rationale.md#managed-settings
 const PORTS = ["network.httpProxyPort", "network.socksProxyPort"] as const;
-// Hosts beyond the workers' GitHub-only network (#sandbox-network-alloweddomains; owner decision, 2026-11-06).
+// Hosts beyond the workers' GitHub-only network (#sandbox-network-alloweddomains).
 const DOMAINS = "network.allowedDomains";
 const GITHUB = new Set<string>(GITHUB_DOMAINS);
 

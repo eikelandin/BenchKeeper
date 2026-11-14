@@ -196,7 +196,7 @@ const optionsWrites = (plugins: [string, Plugin][], target: Target): Result<Oper
 const repository = (marketplace: NonNullable<Plugin["marketplace"]>): string =>
   "github" in marketplace ? marketplace.github : marketplace.git;
 
-// A named line, never preselected (owner, hub issue 130), as its plugin's hooks, MCP servers and commands run in every session.
+// A named line, never preselected, as its plugin's hooks, MCP servers and commands run in every session.
 export const waiting = <P extends Declared>(
   { level, project }: { level: "machine" | "project"; project: string | null },
   plugins: readonly [string, P][],
@@ -275,7 +275,7 @@ const ownedOf = (resolved: Resolved, home: string, fetched: Fetched, written: Re
   return { ok: true as const, value: { ...files.value, mine } };
 };
 
-// What the home holds that no on part names, each removal offered, none preselected (owner, PF4).
+// What the home holds that no on part names, each removal offered, none preselected.
 const offersOf = (
   { profile, on }: Resolved,
   home: string,
