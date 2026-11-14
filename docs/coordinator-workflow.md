@@ -47,7 +47,7 @@ Models are named by Claude Code's aliases, which Claude Code moves to newer vers
 
 `review.depth` is independent of `models.phases.review`, which names the reviewer's model and effort. An agent without `/code-review` runs the review passes of `skills/workflow/software.md:8`, where the depth only decides whether the security pass runs. `max` is not a policy value: that depth runs only when the owner asks for it in the session.
 
-Every default effort and review level is `high`, sensitive work included, which keeps its security review. `xhigh` runs only for the first review of a security or firmware-safety change (the default of `models.sensitive.security`, and the workflow skill's Review phase without a Flow line) and on the owner's request, because of what it costs (owner, 2026-11-12).
+Every default effort and review level is `high`, sensitive work included, which keeps its security review. `xhigh` runs only for the first review of a security or firmware-safety change (the default of `models.sensitive.security`, and the workflow skill's Review phase without a Flow line) and on the owner's request, because of what it costs.
 
 A change is sensitive when its diff touches a `review.sensitivePaths` entry or an owner-only path, or when it belongs to a risky class of the workflow skill (`skills/workflow/SKILL.md:23`) or changes CI, guards, data formats, money, what agents are told and allowed (`AGENTS.md`, `.claude`, `docs/agents`), or what runs on the host for a worktree or a trial (`orca.yaml`, `.devcontainer`). A change the reviewer cannot place is sensitive.
 
@@ -107,7 +107,7 @@ The coordinator merges, never a worker (`spec-template.md:27`), and only where t
 | Settings, rulesets and secrets are never touched | skill text (`SKILL.md:42`) | exists |
 | A worker creates no release, tag, package publish, repository, organization, token or GitHub App and changes no visibility; a pull request whose purpose is a release is left open | the spec's "You may not" line, skill text | exists |
 
-Built-in owner-only paths and names (the owner's decision of 2026-11-11; there is no switch):
+Built-in owner-only paths and names (there is no switch):
 
 - All of `.github`, and `CODEOWNERS` and `docs/CODEOWNERS`. Workflows run the scripts and actions under `.github`, and the CODEOWNERS files say who must review.
 - `docs/agents/orchestration.json` and `docs/agents/worker-rules.md`, the two files the coordinator takes its rights and rules from.
@@ -198,7 +198,7 @@ Before change 3 the dialog was never answered and the worker was blocked for the
 | `block` | nothing is typed; the worker waits for the owner | a harmless dialog, such as a delete inside a compound command, holds a worker for hours |
 | `decline` | after the stall check's read of the worker shows a permission dialog, the coordinator sends one Escape through the runner's terminal input (Orca: `terminal send` without `--enter`, which passes control bytes through) and then a runner message that names the declined call. It never sends Enter, a letter, a number or text, and never answers a trust dialog, a login or a question | Sent when no dialog is open, Escape interrupts the worker's turn, which a runner message restarts. The coordinator acts on terminal text a hijacked worker controls, and Escape is the only key that text can make it send |
 
-Decision (owner, 2026-11-11): both ship, `block` as the default and `decline` as the owner's opt-in in the policy, because a policy that is silent on an action means no (`SKILL.md:42`). The worker rule file removes the common cause in either mode. That Escape declines the call was observed in the source run for Claude Code and is unverified for other agents, so `decline` applies only to an agent whose declining key `orca.md` names. The coordinator's Escape does not make the terminal a person's (`orca.md:123`).
+Both ship, `block` as the default and `decline` as the owner's opt-in in the policy, because a policy that is silent on an action means no (`SKILL.md:42`). The worker rule file removes the common cause in either mode. That Escape declines the call was observed in the source run for Claude Code and is unverified for other agents, so `decline` applies only to an agent whose declining key `orca.md` names. The coordinator's Escape does not make the terminal a person's (`orca.md:123`).
 
 Starting workers in Claude Code's `dontAsk` mode would remove the dialog altogether: it "auto-denies every tool call that would otherwise prompt you" ([permission modes](https://code.claude.com/docs/en/permission-modes)). It needs allow rules that cover every edit and command a worker runs, which no setup writes yet, and it changes the start rule (`SKILL.md:52`), so it is not part of this design.
 
@@ -280,7 +280,7 @@ The documentation also keeps one record of fetched marketplaces per user and fet
 
 ## What changes for a version 1 policy
 
-A project that keeps its version 1 file gets these new defaults (owner, 2026-11-11), which the release notes name:
+A project that keeps its version 1 file gets these new defaults, which the release notes name:
 
 | Change | Direction |
 |---|---|

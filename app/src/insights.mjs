@@ -1,9 +1,9 @@
 // Insights: findings about this machine's agent setup, each with a stable id, a severity, the evidence and a fix. Read only.
-// Decisions (#273): Insights is a view of its own, not a Dashboard section. A signal that needs sessions needs at least
+// Insights is a view of its own, not a Dashboard section. A signal that needs sessions needs at least
 // MIN_SAMPLES of them and reports nothing below that, so a thin history never produces a ranked finding.
 // Five signals: unused skills (sessions against the installed skills), friction (a project whose sessions ended on a failed
 // test run), hygiene (the doctor's findings), freshness (the doctor's outdated items) and skills
-// (proposals per project to turn off, add or update its skills, #480). Skills behind their source need the network: `skills list --check`.
+// (proposals per project to turn off, add or update its skills). Skills behind their source need the network: `skills list --check`.
 // insights() is pure: the state in, the findings out. collectInsights() reads the state from the machine.
 import { createHash } from 'node:crypto';
 import { join, sep } from 'node:path';

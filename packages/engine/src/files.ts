@@ -29,7 +29,7 @@ export const errorCode = (error: unknown): string =>
 
 const changed = (): Error => Object.assign(new Error("the file changed during the write"), { code: "ECHANGED" });
 
-// Whether the folders to `path` are still real: a folder swapped for a link since the plan is found (hub issue 141).
+// Whether the folders to `path` are still real: a folder swapped for a link since the plan is found.
 const realWay = (path: string): boolean => {
   let folder = dirname(path);
   while (lstatSync(folder, { throwIfNoEntry: false }) === undefined) folder = dirname(folder);

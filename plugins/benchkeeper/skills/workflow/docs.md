@@ -5,7 +5,7 @@ READMEs, docs sites, changelogs, skill texts and product copy. Tier by the [chan
 1. **Inventory.** List each document in scope, its generator when it has one (edit the source, then regenerate), and the facts it states.
 2. **Two analysts, one editor.** Claude (a subagent) and Codex (`codex exec --sandbox read-only`) each get the same brief: the documents, the code they describe, the repository's `AGENTS.md` and its writing rules.
    - They read separately and return findings only, one format for both (id, document and line, kind, current text, evidence, proposed change).
-   - A finding is a statement the code, config or an official source contradicts (with file and line or URL), a missing current feature, stale names or versions, or copy that misses its reader.
+   - A finding is a statement the code, config or an official source contradicts (with file and line or URL), a missing current feature, stale names or versions, copy that misses its reader, or text that records who decided, when, or a tracker reference (docs state what holds, in a neutral tone; decisions live in the tracker).
    - With copy or marketing skills installed (product marketing, copywriting, copy editing, SEO audit), pass their paths to both for the copy findings.
    - Codex missing: a second Claude subagent.
    - Neither edits.

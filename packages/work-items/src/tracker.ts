@@ -1,7 +1,7 @@
 import type { IssueRef, RemoteComment, Result } from "@cedarloom/contracts";
 
 /**
- * The work tracker port: the issues and labels of the hub, the only tracker (A3 b), as the outbox reads and writes
+ * The work tracker port: the issues and labels of the hub, the only tracker, as the outbox reads and writes
  * them. A call never throws: a failure is `tracker.unavailable` (the entry stays queued) or a refusal (it fails), and
  * an answer is checked before it is returned. A write that finds the hub already as asked counts as done, so an
  * attempt can run again.

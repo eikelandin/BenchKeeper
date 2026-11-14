@@ -5,7 +5,7 @@ import { Color } from "./profile.ts";
 import { PlainText } from "./text.ts";
 
 /**
- * An issue of the hub, the only tracker (A3 b): its repository as `owner/name` and its number. The hub's name comes from
+ * An issue of the hub, the only tracker: its repository as `owner/name` and its number. The hub's name comes from
  * local config and never from CedarLoom's code (ARW1-2). `.` and `..` are no repository, so no name climbs the API path.
  */
 export const IssueRef = z.strictObject({

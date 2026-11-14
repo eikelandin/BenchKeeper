@@ -195,7 +195,7 @@ const REPORTING = new Set([
 ]);
 
 /**
- * A28: a report run, as a schedule starts, has only nodes of a type known not to write, so a type added later is
+ * A report run, as a schedule starts, has only nodes of a type known not to write, so a type added later is
  * refused until it is listed, and so is workflow.run, whose child the validator cannot see.
  */
 const reportOnly = (nodes: WorkflowDefinition["nodes"]): Finding[] =>

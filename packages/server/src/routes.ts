@@ -209,7 +209,7 @@ export const profileRoutes: FastifyPluginAsyncZod<{
 // The plans of the latest reviews, so an apply stores what a review showed; an older one is planned again.
 const KEPT = 16;
 
-// Imports (P6 a): a reviewed Git ref's plan applies once, by the approved preview's hash; the API reads no folder.
+// Imports: a reviewed Git ref's plan applies once, by the approved preview's hash; the API reads no folder.
 export const importRoutes: FastifyPluginAsyncZod<{ state: string; fetch: useCases.Fetch | undefined }> = async (
   app,
   { state, fetch },

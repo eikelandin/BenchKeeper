@@ -27,7 +27,7 @@ export const own = <T>(record: Readonly<Record<string, T>> | undefined, key: str
   record !== undefined && Object.hasOwn(record, key) ? record[key] : undefined;
 
 /**
- * Node types that wait until after 0.1.0 (owner, 2026-11-06): schedules and child workflows. The validator refuses
+ * Node types that wait until after 0.1.0: schedules and child workflows. The validator refuses
  * them, and the editor does not offer them.
  */
 export const LATER_TYPES: ReadonlySet<string> = new Set(["trigger.schedule", "workflow.run"]);
