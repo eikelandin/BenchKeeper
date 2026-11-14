@@ -87,7 +87,7 @@ const probe = async (command: string, args: string[]): Promise<void> => {
 };
 
 /**
- * The OS sandbox of `@anthropic-ai/sandbox-runtime`, the sandbox of Claude Code, pinned exactly: sandbox-exec on
+ * The OS sandbox of `@anthropic-ai/sandbox-runtime`, the sandbox of Claude Code (Q8), pinned exactly: sandbox-exec on
  * macOS, bubblewrap on Linux (with socat and ripgrep). On Windows its sandbox needs an elevated install of its own, so
  * it wraps nothing there, nor where its programs are missing or it warns of a weaker sandbox. Where the launch's
  * program does not start inside it, the wrap fails with that program's error.

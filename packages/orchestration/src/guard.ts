@@ -51,7 +51,7 @@ const unreadable = (detail: string): Denial => deny("unreadable", detail);
 
 // A program the guard checks, named as a word of its own, in any case, after a path or as git-<command>.
 const GUARDED = /(?:^|[^\w.-])(?:gh|git|curl)\b/i;
-// Variables that choose the token, gh's or git's configuration, the home both read it from, or git's repository.
+// Variables that choose the token, gh's or git's configuration, the home both read it from, or git's repository (A13).
 const PROTECTED_NAMES =
   "GH_TOKEN|GITHUB_TOKEN|GH_ENTERPRISE_TOKEN|GITHUB_ENTERPRISE_TOKEN|GH_CONFIG_DIR|GH_HOST|SSH_ASKPASS|HOME|" +
   // Every git variable but the pager's and the prompt's: they choose its repository, configuration, editor or programs.
@@ -921,7 +921,7 @@ const checkRepos = (repos: readonly (string | null)[] | null, context: Context, 
     : deny("outside-profiles", `${what} reaches ${outside ?? "a repository it cannot tell"}, outside this session's`);
 };
 
-// Issues are worked on in the hub only: a call on issues of any other repository, or of one the guard cannot tell.
+// Issues are worked on in the hub only (A3): a call on issues of any other repository, or of one the guard cannot tell.
 const checkHub = (repos: readonly (string | null)[] | null, context: Context, what: string): Denial | null => {
   const { hub } = context.policy;
   const elsewhere = repos === null || hub === null || repos.some((repo) => !sameRepo(repo, hub));
@@ -946,7 +946,7 @@ const GH_ALIASES = new Map([
 // Groups gh runs without a verb, or whose next word is no verb the guard checks.
 const GH_SINGLE = new Set(["browse", "status", "help", "version", "completion", "search"]);
 // A login or configuration change of gh itself, and the writes the owner keeps (secrets, repositories and their
-// settings, releases, anything public).
+// settings, releases, anything public; A13).
 const GH_CONFIG =
   /^(?:auth (?!status$)\S+|config (?:set|clear-cache)|alias (?!list$)\S+|extension (?!list$|search$|browse$)\S+|(?:ssh|gpg)-key (?!list$)\S+)$/;
 const GH_OWNER =

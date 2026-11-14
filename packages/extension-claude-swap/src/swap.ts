@@ -269,13 +269,13 @@ export const status = async (context: Exec): Promise<Record<string, unknown>> =>
 
 // As a shell would need it, to copy.
 const lineOf = (words: string[]): string => words.map((word) => (/[[>]/.test(word) ? `'${word}'` : word)).join(" ");
-// The claude-swap release an install pins, the one this extension reads; on macOS with the
+// The claude-swap release an install pins, the one this extension reads (coordinator, 2026-11-09); on macOS with the
 // menu bar, which runs claude-swap's own auto mode as a service (switching plan 14.3).
 const specOf = (platform: string): string => `claude-swap${platform === "darwin" ? "[menubar]" : ""}==${OBSERVED}`;
 // Where an install downloads claude-swap from: PyPI, named in the command.
 const INDEX = "https://pypi.org/simple";
 const SOURCE = `https://pypi.org/project/claude-swap/${OBSERVED}/`;
-// uv only. claude-swap needs Python 3.12 or newer, which uv finds or downloads when asked (the
+// uv only (coordinator, 2026-11-09). claude-swap needs Python 3.12 or newer, which uv finds or downloads when asked (the
 // first python3 on the path can be older: macOS ships 3.9); it reads no uv.toml, whose indexes would come before PyPI,
 // and takes the dependencies as they were the day after the pin's release (1.0.0: 2026-11-07T14:52Z).
 const UV_ARGS = [

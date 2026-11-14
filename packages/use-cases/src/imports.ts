@@ -249,7 +249,7 @@ const planOf = (stored: Stored, chosen: Workflow[]): Result<Plan | null> => {
 export type ImportPlan = { review: ImportReview; plan: Plan | null };
 
 /**
- * Plans an import: reads the export folder or fetches the Git ref as data, nothing checked out or run, and builds
+ * Plans an import (P6 a): reads the export folder or fetches the Git ref as data, nothing checked out or run, and builds
  * the review. Its plan stores the new and updated workflows as one store.update; a workflow in conflict is never
  * replaced.
  */

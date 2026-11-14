@@ -11,7 +11,7 @@ export interface Command {
   readonly words: Word[];
 }
 
-/** The simple commands a text runs, those in `$(...)` too; `skipped`: it holds a form outside the grammar. */
+/** The simple commands a text runs, those in `$(...)` too; `skipped`: it holds a form outside the grammar (A79). */
 export interface Script {
   readonly commands: Command[];
   readonly skipped: boolean;

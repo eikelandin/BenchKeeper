@@ -170,7 +170,7 @@ const pinned = (state: string, { read, source, tree, manifest }: Fetched): Resul
 };
 
 /**
- * Plans the install of the extension at a Git source (Git only, no npm and no install script): fetches the ref into a throwaway bare repository, pins the commit and the digest of the folder's files,
+ * Plans the install of the extension at a Git source (P2 a: Git only, no npm and no install script): fetches the ref into a throwaway bare repository, pins the commit and the digest of the folder's files,
  * reads the manifest, stages the files, and plans one write of the installed set. Its approval is the user's consent
  * to the manifest's capabilities, whose digest the entry keeps. Nothing of the extension runs.
  */

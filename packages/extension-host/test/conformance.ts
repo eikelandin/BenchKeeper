@@ -16,7 +16,7 @@ const INJECTED: Partial<Record<NodeJS.Platform, string[]>> = {
 
 /**
  * The conformance kit: what an extension's process must be refused, however it is confined (plan section 4). The
- * flags-only launch of a bundled extension passes it now; an OS sandbox for extensions from elsewhere must too.
+ * flags-only launch of a bundled extension passes it now; an OS sandbox for extensions from elsewhere (Q8) must too.
  */
 export const CONFORMANT = {
   write: "ERR_ACCESS_DENIED",

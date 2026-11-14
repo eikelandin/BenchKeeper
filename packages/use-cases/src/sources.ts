@@ -61,7 +61,7 @@ const pinned = async (state: string, source: Pinned, fetch: Fetch): Promise<Resu
   return { ok: false, finding: { code: "profile.source-digest", params } };
 };
 
-// A file that may run in a branch or tag source: not .md or .txt at 100644; a pack's own manifest is data.
+// A file that may run in a branch or tag source: not .md or .txt at 100644 (Q2 a); a pack's own manifest is data.
 const runnable = (tree: Tree, pack: boolean): string | undefined =>
   tree.files.find(
     (file) =>
@@ -72,7 +72,7 @@ const runnable = (tree: Tree, pack: boolean): string | undefined =>
 const due = (known: Followed[string], seen: { commit: string; at: string }, now: number): boolean =>
   known.commit === seen.commit || now - Date.parse(seen.at) >= UPDATE_WAIT_MS;
 
-// A branch or tag source: its commit at once the first time, else after 3 days here; runnable files need a pin.
+// A branch or tag source: its commit at once the first time, else after 3 days here (A94); runnable files need a pin.
 // shortcut: only the ref's newest commit is fetched, as for extensions.
 const followed = async (
   state: string,

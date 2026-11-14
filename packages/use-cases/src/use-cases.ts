@@ -80,7 +80,7 @@ export const previewPlan = (plan: Plan): PlanPreview => ({
   },
 });
 
-/** The workflow store beside the run store: a bare repository, made at the first save. */
+/** The workflow store (P3 a) beside the run store: a bare repository, made at the first save. */
 export const storeOf = (state: string) => openStore(join(state, "store.git"));
 
 /** Applies an approved plan as one run; fails only when the store cannot be opened. */
