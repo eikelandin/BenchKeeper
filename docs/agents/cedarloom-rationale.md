@@ -67,6 +67,20 @@ Limit: only the ref's newest commit is fetched, so a ref that moves more often t
 
 `packages/profiles/src/`
 
+### Presets
+
+`packages/packs/bundled/cedarloom.core/profiles/`. The core pack ships five presets as profile files, each adding parts to the one it extends:
+
+| Preset | Extends | Adds |
+|---|---|---|
+| `core` | none | the CedarLoom plugin, the global rules, Claude Code settings; the manual, the default tier, the deny rules, the switch that disables bypass mode |
+| `developer` | `core` | language servers, no reads of secret files, a prompt before workflow edits; gates, the sandbox, the block on writes outside the project, the dev container command, skill packs |
+| `research` | `core` | MCP server settings, find-skills; the memory repository |
+| `orchestration` | `developer` | auto memory off; the hub and the memory repository; the machine-local hub line, Orca's worktree files |
+| `full` | `orchestration`, `research` | Ponytail, Matt Pocock's skills; the `docs/agents` files those skills read |
+
+A part sits in the smallest preset that holds every part it requires, so each preset applies without a missing part; `agent-docs` and `local-manual` require the hub and start at `orchestration`. Presets grow upward instead of each extending `full` and switching parts off: a part added to `full` later then never reaches a smaller preset unasked. `default.json` extends `full` and is the profile of a machine without a selection (`DEFAULT_PROFILE` in `resolve.ts`), so a selection that names it keeps every part it had.
+
 ### Oldest app version
 
 `resolve.ts` (`manifestOf`) and `packages/use-cases/src/workflow-packages.ts` (`planPackageInstall`). A Git pack whose manifest names a `minApp` above the running release is refused with `profile.app-too-old`. Its `minApp` is read before the strict parse, as a newer release's manifest may hold fields this one refuses. Bundled packs are exempt, as bundled profiles are: they ship with the release, and their manifests say `0.1.0` while a development build is `0.0.0`. A workflow package's install compares the parsed `metadata.minApp` and reports `package.app-too-old`: the store holds only files this release parsed, so there is no unknown field to read past. A development build (`0.0.0`) skips these checks and the profile file's with a Node warning (`appTooOld`, code `CEDARLOOM_DEV_BUILD`), so a checkout loads packs and samples made for a release (ESchuderer/hub#396).

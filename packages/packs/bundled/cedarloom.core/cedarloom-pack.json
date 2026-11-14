@@ -4,7 +4,7 @@
   "id": "cedarloom.core",
   "version": "0.1.0",
   "name": "CedarLoom core",
-  "description": "The rules, templates and default profile that ship with CedarLoom.",
+  "description": "The rules, templates and profile presets that ship with CedarLoom.",
   "license": "MIT",
   "minApp": "0.1.0",
   "entries": {
@@ -60,9 +60,29 @@
       "kind": "template",
       "description": "An export folder with the default workflow feature: cedarloom import it, then cedarloom workflows install feature"
     },
+    "profiles/core.json": {
+      "kind": "profile",
+      "description": "Preset core: the CedarLoom plugin, global rules, the AGENTS.md rules and deny rules"
+    },
+    "profiles/developer.json": {
+      "kind": "profile",
+      "description": "Preset developer: core, plus language servers, CI gates, the sandbox, the dev container command and skill packs"
+    },
+    "profiles/research.json": {
+      "kind": "profile",
+      "description": "Preset research: core, plus MCP server settings, the find-skills skill and a memory repository"
+    },
+    "profiles/orchestration.json": {
+      "kind": "profile",
+      "description": "Preset orchestration: developer, plus a hub repository, a memory repository and the Orca worktree setup"
+    },
+    "profiles/full.json": {
+      "kind": "profile",
+      "description": "Preset full: orchestration and research, plus the Ponytail and Matt Pocock plugins"
+    },
     "profiles/default.json": {
       "kind": "profile",
-      "description": "The CedarLoom way: every part on three levels"
+      "description": "The CedarLoom way: the full preset, the profile of a machine without a selection"
     }
   }
 }

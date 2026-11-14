@@ -6,13 +6,14 @@ import { ok, testRoot } from "./harness.ts";
 
 const root = testRoot("profile-copy");
 const DEFAULT = { pack: "cedarloom.core", path: "profiles/default.json" };
+const CORE = { pack: "cedarloom.core", path: "profiles/core.json" };
 
-// A machine's config folder after copying the default into a file of the owner's, and that file's JSON.
-const copied = () => {
+// A machine's config folder after copying a pack's profile into a file of the owner's, and that file's JSON.
+const copied = (from = DEFAULT) => {
   const [config, state, folder] = ["config-", "state-", "copy-"].map((name) => mkdtempSync(join(root, name)));
   if (config === undefined || state === undefined || folder === undefined) throw new Error("no folders");
   const file = join(folder, "mine.json");
-  expect(ok(applyPlan(state, ok(planProfileCopy(config, DEFAULT, file)), { yes: true })).status).toBe("applied");
+  expect(ok(applyPlan(state, ok(planProfileCopy(config, from, file)), { yes: true })).status).toBe("applied");
   return { config, file, json: JSON.parse(readFileSync(file, "utf8")) };
 };
 
@@ -40,16 +41,16 @@ test("init copies a pack's profile into a new file and selects it; never over a 
 });
 
 test("diff names a part removed from the copy, one added and a changed field, not a part whose keys moved", () => {
-  const { config, file, json } = copied();
-  delete json.machine["skill.find-skills"];
+  const { config, file, json } = copied(CORE);
+  delete json.machine["rules.global"];
   json.project.mine = json.project.manual;
   json.name = "Mine";
-  const docs = json.project["agent-docs"];
-  docs.files = Object.fromEntries(Object.entries(docs.files).toReversed());
+  const settings = json.machine["settings.claude-code"];
+  settings.set = Object.fromEntries(Object.entries(settings.set).toReversed());
   writeFileSync(file, JSON.stringify(json));
-  expect(ok(diffProfile(config, DEFAULT))).toEqual([
+  expect(ok(diffProfile(config, CORE))).toEqual([
     { change: "changed", key: "name" },
-    { change: "removed", key: "machine.skill.find-skills" },
+    { change: "removed", key: "machine.rules.global" },
     { change: "added", key: "project.mine" },
   ]);
 });

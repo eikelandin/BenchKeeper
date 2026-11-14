@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ProfileSelection } from "@cedarloom/contracts";
 import { BUNDLED } from "@cedarloom/packs";
-import { DEFAULT_PROFILE, filesIn, readEntry, resolveProfile } from "@cedarloom/profiles";
+import { composedProfile, DEFAULT_PROFILE, filesIn, LEVELS, readEntry, resolveProfile } from "@cedarloom/profiles";
 import { expect, test, vi } from "vitest";
 
 // A released CedarLoom: a development build (0.0.0) loads files for a newer one.
@@ -67,6 +67,24 @@ test.for<[string, ProfileSelection, unknown[]]>([
 ])("a selection with %s does not apply", ([, chosen, expected]) => {
   expect(problems(chosen)).toEqual(expected);
 });
+
+test.for(["core", "developer", "research", "orchestration", "full", "default"])(
+  "the preset %s applies with every part it holds on, as each part it requires is in the preset",
+  (preset) => {
+    const chosen = selection({ profile: { pack: "cedarloom.core", path: `profiles/${preset}.json` } });
+    const composed = composedProfile(chosen.profile);
+    const parts = composed.ok
+      ? LEVELS.flatMap((level) => Object.keys(composed.value[level]).map((id) => `${level}.${id}`))
+      : [];
+    const all = selection({ ...chosen, select: Object.fromEntries(parts.map((part) => [part, true])) });
+    const resolved = resolveProfile(all, "0.1.0", () => true);
+    expect([parts.length > 0, resolved.ok && resolved.value.problems, resolved.ok && resolved.value.unmet]).toEqual([
+      true,
+      [],
+      [],
+    ]);
+  },
+);
 
 test("a bundled profile ships with its release, so a development build reads it", () => {
   expect(problems(selection({}), "0.0.0")).toEqual([]);
