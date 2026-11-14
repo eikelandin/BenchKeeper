@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "cedarloom.profile",
+  "id": "cedarloom.full",
+  "version": "0.1.0",
+  "name": "Full",
+  "description": "Orchestration and research, plus the Ponytail and Matt Pocock plugins and the docs/agents files Matt Pocock's skills read.",
+  "license": "MIT",
+  "minApp": "0.1.0",
+  "extends": [
+    {
+      "pack": "cedarloom.core",
+      "path": "profiles/orchestration.json"
+    },
+    {
+      "pack": "cedarloom.core",
+      "path": "profiles/research.json"
+    }
+  ],
+  "packs": {
+    "cedarloom.core": {
+      "bundled": true
+    }
+  },
+  "machine": {
+    "plugin.ponytail": {
+      "type": "plugin",
+      "title": "Ponytail, level full",
+      "default": "on",
+      "plugin": "ponytail@ponytail",
+      "marketplace": {
+        "name": "ponytail",
+        "github": "DietrichGebert/ponytail",
+        "autoUpdate": false
+      },
+      "options": {
+        "file": ".config/ponytail/config.json",
+        "set": {
+          "defaultMode": "full"
+        }
+      }
+    },
+    "plugin.matt-pocock": {
+      "type": "plugin",
+      "title": "Matt Pocock's skills",
+      "default": "on",
+      "plugin": "mattpocock-skills@claude-plugins-official"
+    }
+  },
+  "project": {
+    "agent-docs": {
+      "type": "files",
+      "title": "docs/agents for Matt Pocock's skills",
+      "default": "on",
+      "commit": true,
+      "requires": ["workspace.hub"],
+      "files": {
+        "docs/agents/issue-tracker.md": {
+          "pack": "cedarloom.core",
+          "path": "templates/issue-tracker.md"
+        },
+        "docs/agents/triage-labels.md": {
+          "pack": "cedarloom.core",
+          "path": "templates/triage-labels.md"
+        },
+        "docs/agents/domain.md": {
+          "pack": "cedarloom.core",
+          "path": "templates/domain.md"
+        }
+      }
+    }
+  }
+}

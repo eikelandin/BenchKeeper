@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "kind": "cedarloom.profile",
+  "id": "cedarloom.developer",
+  "version": "0.1.0",
+  "name": "Developer",
+  "description": "Core, plus language servers, no reads of .env and login files, a prompt before workflow edits; in each project the CI gates, the sandbox, the dev container command and skill packs.",
+  "license": "MIT",
+  "minApp": "0.1.0",
+  "extends": [
+    {
+      "pack": "cedarloom.core",
+      "path": "profiles/core.json"
+    }
+  ],
+  "packs": {
+    "cedarloom.core": {
+      "bundled": true
+    },
+    "cedarloom.mantine": {
+      "bundled": true
+    }
+  },
+  "machine": {
+    "plugin.typescript-lsp": {
+      "type": "plugin",
+      "title": "TypeScript and JavaScript language server",
+      "description": "Claude sees type errors after its edits and finds definitions and references by symbol. The plugin starts typescript-language-server from your PATH and installs nothing: install it first, such as with npm install -g typescript-language-server typescript (https://code.claude.com/docs/en/plugins/code-intelligence).",
+      "default": "off",
+      "plugin": "typescript-lsp@claude-plugins-official"
+    },
+    "plugin.rust-analyzer-lsp": {
+      "type": "plugin",
+      "title": "Rust language server (rust-analyzer)",
+      "description": "Claude sees compile errors after its edits to .rs files and finds definitions and references by symbol. The plugin starts rust-analyzer from your PATH and installs nothing: install it first, such as with rustup component add rust-analyzer (https://code.claude.com/docs/en/plugins/code-intelligence).",
+      "default": "off",
+      "plugin": "rust-analyzer-lsp@claude-plugins-official"
+    },
+    "settings.secret-reads": {
+      "type": "settings",
+      "title": "No reads of .env files and login files",
+      "description": "Claude's file tools, and file commands it recognizes in Bash such as cat, refuse .env files (.env.example too) and the SSH, GitHub CLI and Claude Code login files, so their values stay out of the conversation. A command that reads files without naming them, such as grep -r, still can; the sandbox closes that (https://code.claude.com/docs/en/permissions#read-and-edit). Switched off after an apply, its keys stay in your Claude Code settings.json until you remove them.",
+      "default": "on",
+      "set": {
+        "permissions": {
+          "deny": [
+            "Read(.env)",
+            "Read(.env.*)",
+            "Read(~/.ssh/**)",
+            "Read(~/.config/gh/**)",
+            "Read(~/AppData/Roaming/GitHub CLI/**)",
+            "Read(/.credentials.json)"
+          ]
+        }
+      }
+    },
+    "settings.workflow-writes": {
+      "type": "settings",
+      "title": "Ask before Claude's file tools write .github/workflows",
+      "description": "Claude's file edits to GitHub Actions workflows prompt in every permission mode, bypass included, as a workflow decides what CI runs with the repository's secrets; an unattended session stops at that prompt. Shell commands such as cp or a redirect are not covered (https://code.claude.com/docs/en/permission-modes#actions-no-mode-auto-approves). Switched off after an apply, its keys stay in your Claude Code settings.json until you remove them.",
+      "default": "on",
+      "set": {
+        "permissions": {
+          "ask": ["Edit(.github/workflows/**)"]
+        }
+      }
+    }
+  },
+  "project": {
+    "dc-wrapper": {
+      "type": "files",
+      "title": "scripts/dc, the dev container command",
+      "default": "auto",
+      "when": "devcontainer",
+      "commit": false,
+      "files": {
+        "scripts/dc": {
+          "pack": "cedarloom.core",
+          "path": "templates/dc.sh"
+        }
+      }
+    },
+    "dc-line": {
+      "type": "local-manual",
+      "title": "Machine-local line: the dev container command",
+      "default": "auto",
+      "when": "devcontainer",
+      "rules": [
+        {
+          "pack": "cedarloom.core",
+          "path": "rules/dc.md"
+        }
+      ],
+      "requires": ["project.dc-wrapper"]
+    },
+    "sandbox": {
+      "type": "settings",
+      "title": "Claude Code's sandbox for Bash commands, on this machine",
+      "description": "Commands still ask before they run. Off by default: it runs on macOS, Linux and WSL2 only, Linux needs bubblewrap and socat, and docker, which the dev container command runs, fails inside it (https://code.claude.com/docs/en/sandboxing).",
+      "default": "off",
+      "commit": false,
+      "set": {
+        "sandbox": {
+          "enabled": true,
+          "autoAllowBashIfSandboxed": false
+        }
+      }
+    },
+    "outside-writes": {
+      "type": "settings",
+      "title": "No file writes outside the project, in the projects you apply",
+      "description": "Claude's Write, Edit and NotebookEdit tools refuse paths outside the working directories in every permission mode, apart from Claude Code's own files such as the scratchpad. Shell commands are not limited (the sandbox does that), the EnterWorktree and ExitWorktree tools go, and it needs Claude Code 2.1.314 or later, so it is off by default. The switch is this machine's: once on, it goes into every project applied afterwards (https://code.claude.com/docs/en/settings-reference#permissions-blockwritesoutsideworkingdirectories). Switched off after an apply, the setting stays: remove permissions.blockWritesOutsideWorkingDirectories from the project's .claude/settings.local.json by hand, as undo of the run stops working once Claude Code itself writes that file.",
+      "default": "off",
+      "commit": false,
+      "set": {
+        "permissions": {
+          "blockWritesOutsideWorkingDirectories": true
+        }
+      }
+    },
+    "gates": {
+      "type": "gates",
+      "title": "CI gates from your reusable workflows, Dependabot with a 3-day cooldown",
+      "default": "auto",
+      "when": "gates",
+      "callers": ["check"],
+      "dependabotCooldownDays": 3
+    },
+    "packs": {
+      "type": "packs",
+      "title": "Skill packs for this project",
+      "default": "on",
+      "packs": []
+    },
+    "mantine-skills": {
+      "type": "packs",
+      "title": "Mantine skills: conventions and component traps, and Mantine's form skill",
+      "description": "An agent building UI on Mantine gets mantine-family (component traps, forms, tables, i18n and accessibility checks for any Mantine project; provider setup, design tokens and control density for projects on @open-reloading/ui) and Mantine's own mantine-form (the useForm API of @mantine/form, copied from mantinedev/skills at a recorded commit).",
+      "default": "auto",
+      "when": "mantine",
+      "packs": ["cedarloom.mantine"]
+    }
+  }
+}
