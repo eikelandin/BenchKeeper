@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "cedarloom.profile",
+  "id": "cedarloom.research",
+  "version": "0.1.0",
+  "name": "Research",
+  "description": "Core, plus MCP servers that wait for approval and get no tokens from your shell, the find-skills skill and a memory repository.",
+  "license": "MIT",
+  "minApp": "0.1.0",
+  "extends": [
+    {
+      "pack": "cedarloom.core",
+      "path": "profiles/core.json"
+    }
+  ],
+  "packs": {
+    "cedarloom.core": {
+      "bundled": true
+    }
+  },
+  "machine": {
+    "skill.find-skills": {
+      "type": "skill",
+      "title": "find-skills",
+      "default": "off",
+      "source": {
+        "git": "https://github.com/vercel-labs/skills.git",
+        "ref": "main",
+        "path": "skills/find-skills"
+      }
+    },
+    "settings.mcp-servers": {
+      "type": "settings",
+      "title": "MCP servers: none approved wholesale by your settings, none with your shell's tokens",
+      "description": "Your own settings no longer approve every server of a repository's .mcp.json at once, so each waits for your approval unless a repository you trusted approves it in its own settings. Local MCP servers start with a safe baseline environment plus their own env entry instead of your shell's, so a server gets no token you did not give it; a server that read a token from your shell needs it in its env entry (https://code.claude.com/docs/en/mcp#project-server-approvals-and-workspace-trust, https://code.claude.com/docs/en/env-vars). Switched off after an apply, its keys stay in your Claude Code settings.json until you remove them.",
+      "default": "on",
+      "set": {
+        "enableAllProjectMcpServers": false,
+        "env": {
+          "CLAUDE_CODE_MCP_ALLOWLIST_ENV": "1"
+        }
+      }
+    }
+  },
+  "workspace": {
+    "memory": {
+      "type": "memory",
+      "title": "Memory repository and its loader",
+      "default": "off",
+      "scaffold": {
+        "pack": "cedarloom.core",
+        "path": "templates/memory"
+      },
+      "loader": true
+    }
+  }
+}

@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "kind": "cedarloom.profile",
+  "id": "cedarloom.orchestration",
+  "version": "0.1.0",
+  "name": "Orchestration",
+  "description": "Developer, plus auto memory off, a hub repository for issues and owner questions and a memory repository; in each project the machine-local hub line and the Orca worktree setup.",
+  "license": "MIT",
+  "minApp": "0.1.0",
+  "extends": [
+    {
+      "pack": "cedarloom.core",
+      "path": "profiles/developer.json"
+    }
+  ],
+  "packs": {
+    "cedarloom.core": {
+      "bundled": true
+    },
+    "cedarloom.orca": {
+      "bundled": true
+    }
+  },
+  "machine": {
+    "settings.auto-memory": {
+      "type": "settings",
+      "title": "Auto memory off",
+      "description": "Claude Code neither writes nor reads its own notes from your sessions, so each session works only from the rules and files you can review; what should last goes into those rules or the project's docs (https://code.claude.com/docs/en/memory#auto-memory). Switched off after an apply, its keys stay in your Claude Code settings.json until you remove them.",
+      "default": "on",
+      "set": {
+        "autoMemoryEnabled": false,
+        "env": {
+          "CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"
+        }
+      }
+    }
+  },
+  "workspace": {
+    "hub": {
+      "type": "hub",
+      "title": "Hub repository: issues, triage labels and owner questions",
+      "default": "on",
+      "labels": {
+        "needs-triage": {
+          "color": "f9d0c4"
+        },
+        "needs-info": {
+          "color": "b60205"
+        },
+        "ready-for-agent": {
+          "color": "fef2c0"
+        },
+        "ready-for-human": {
+          "color": "1d76db"
+        },
+        "wontfix": {
+          "color": "ffffff",
+          "description": "This will not be worked on"
+        },
+        "question": {
+          "color": "d876e3",
+          "description": "Owner decision needed: tick an option or comment, then set ready-for-agent"
+        },
+        "deferred": {
+          "color": "c5def5",
+          "description": "Owner deferred: the question queue skips it until the label is removed"
+        }
+      },
+      "projectLabel": {
+        "prefix": "project:",
+        "color": "1d76db"
+      },
+      "rules": {
+        "pack": "cedarloom.core",
+        "path": "rules/questions.md"
+      }
+    },
+    "memory": {
+      "type": "memory",
+      "title": "Memory repository and its loader",
+      "default": "off",
+      "scaffold": {
+        "pack": "cedarloom.core",
+        "path": "templates/memory"
+      },
+      "loader": true
+    }
+  },
+  "project": {
+    "local-manual": {
+      "type": "local-manual",
+      "title": "Machine-local line: where issues and owner questions go",
+      "default": "on",
+      "requires": ["workspace.hub"],
+      "rules": [
+        {
+          "pack": "cedarloom.core",
+          "path": "rules/local.md"
+        }
+      ]
+    },
+    "orca": {
+      "type": "files",
+      "title": "Orca worktree setup",
+      "default": "auto",
+      "when": "orca",
+      "commit": false,
+      "files": {
+        "orca.yaml": {
+          "pack": "cedarloom.orca",
+          "path": "templates/orca.yaml"
+        },
+        ".worktreeinclude": {
+          "pack": "cedarloom.orca",
+          "path": "templates/worktreeinclude"
+        }
+      }
+    }
+  }
+}

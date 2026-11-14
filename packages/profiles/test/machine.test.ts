@@ -1,20 +1,21 @@
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BUNDLED } from "@cedarloom/packs";
-import { DEFAULT_PROFILE, planMachine, resolveProfile } from "@cedarloom/profiles";
+import { composedProfile, DEFAULT_PROFILE, planMachine, resolveProfile } from "@cedarloom/profiles";
 import { expect, test } from "vitest";
 
 const folder = () => mkdtempSync(join(process.env["RUNNER_TEMP"] ?? tmpdir(), "cedarloom-machine-"));
 
-// The machine plan of the default profile, changed by `edit`, as a local profile, for a home of its own.
+// The machine plan of the default profile with its parents, changed by `edit`, as a local profile, for a home of its own.
 type Edit = (profile: { machine: Record<string, Record<string, unknown>> }) => void;
 const planOf = (
   edit: Edit,
   home = folder(),
   { user = home, guarded = [] as string[], allow = [] as string[] } = {},
 ) => {
-  const profile = JSON.parse(readFileSync(join(BUNDLED, DEFAULT_PROFILE.pack, DEFAULT_PROFILE.path), "utf8"));
+  const composed = composedProfile(DEFAULT_PROFILE);
+  if (!composed.ok) throw new Error(composed.finding.code);
+  const profile = structuredClone(composed.value);
   edit(profile);
   const file = join(folder(), "mine.json");
   writeFileSync(file, JSON.stringify(profile));

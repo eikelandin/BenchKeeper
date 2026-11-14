@@ -1,11 +1,11 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import {
+  composeProfile,
   isPlainText,
+  type LoadParent,
   PACK_SCHEMA_VERSION,
   PackManifest,
-  Profile,
-  PROFILE_SCHEMA_VERSION,
   readDocument,
   readProfile,
 } from "@cedarloom/contracts";
@@ -60,21 +60,30 @@ test("every text a bundled pack ships is plain: tabs and line breaks, no other c
   );
 });
 
-test("each bundled profile reads whole, and every text it names is an entry of a bundled pack", async () => {
+test("each bundled profile composes with its parents into a whole profile, and every text it names is a bundled entry", async () => {
   const entryOf = ({ pack, path }: { pack: string; path: string }): boolean =>
     packs.some(({ manifest, entries }) => manifest.id === pack && entries.includes(path));
   const profiles = packs.flatMap(({ folder, manifest, entries }) =>
     entries.filter((entry) => manifest.entries[entry]?.kind === "profile").map((entry) => join(folder, entry)),
   );
-  const results = await Promise.all(
-    profiles.map(async (path) => {
-      const value = await json(path);
-      const named = references(value).filter((ref) => !entryOf(ref));
-      return [readProfile(value).ok, readDocument(Profile, PROFILE_SCHEMA_VERSION, value).ok, named];
-    }),
-  );
+  const files = new Map(await Promise.all(profiles.map(async (path) => [path, await json(path)] as const)));
+  const load: LoadParent = ({ pack, path }) => {
+    const value = files.get(join(pack, path));
+    return value === undefined ? undefined : { ok: true, value };
+  };
+  const results = [...files.values()].map((value) => {
+    const named = references(value).filter((ref) => !entryOf(ref));
+    return [readProfile(value).ok, composeProfile(value, load).ok, named];
+  });
   expect([profiles.map((path) => path.split(sep).join("/")), results]).toEqual([
-    ["cedarloom.core/profiles/default.json"],
-    [[true, true, []]],
+    [
+      "cedarloom.core/profiles/core.json",
+      "cedarloom.core/profiles/developer.json",
+      "cedarloom.core/profiles/research.json",
+      "cedarloom.core/profiles/orchestration.json",
+      "cedarloom.core/profiles/full.json",
+      "cedarloom.core/profiles/default.json",
+    ],
+    Array.from({ length: 6 }, () => [true, true, []]),
   ]);
 });
