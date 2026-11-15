@@ -90,6 +90,7 @@ const DENIED = [
   'gh workflow run release.yml',
   'gh api -X POST repos/o/r/actions/workflows/npm.yml/dispatches -f ref=main',
   'gh repo edit --default-branch dev',
+  'gh repo sync o/fork --force',
   'gh secret set TOKEN',
   'gh auth status',
   'git push --tags',
@@ -214,6 +215,9 @@ test('role guard: denies a push to a remote whose default branch it cannot read:
   for (const command of [`git --git-dir=${feature}/.git push origin HEAD:trunk`, `git --git-dir ${feature}/.git push origin HEAD:trunk`]) {
     assert.equal(decision(command, { cwd: dirname(fresh) }), 'deny', command);
   }
+  // The session folder is no repository yet: the same command creates it before the push.
+  const created = ['git clone https://example.com/o/r.git . && git push origin HEAD:develop', 'git init && git fetch https://example.com/o/r.git develop && git push https://example.com/o/r.git FETCH_HEAD:develop'];
+  for (const command of created) assert.equal(decision(command, { cwd: dirname(fresh) }), 'deny', command);
   // The session folder reads the default branch trunk, but git pushes from the repository GIT_DIR or --git-dir names.
   const other = [`git --git-dir=${fresh}/.git push origin HEAD:develop`, `GIT_DIR=${fresh}/.git git push origin HEAD:develop`, `env GIT_DIR=${fresh}/.git git push origin HEAD:develop`];
   for (const command of other) assert.equal(decision(command), 'deny', command);
@@ -278,7 +282,8 @@ test('role guard: input it cannot read exits 2, which blocks the call', () => {
   }
 });
 
-test('role guard: a command it fails to read exits 2, which blocks the call', () => {
+// root reads a folder without permissions, so the lookup does not throw.
+test('role guard: a command it fails to read exits 2, which blocks the call', { skip: process.getuid?.() === 0 && 'runs as root' }, () => {
   // A folder without permissions makes the lookup of a cd target inside it throw.
   const locked = mkdtempSync(join(tmpdir(), 'role-guard-'));
   chmodSync(locked, 0o000);

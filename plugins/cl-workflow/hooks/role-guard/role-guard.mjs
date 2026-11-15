@@ -16,7 +16,7 @@ const GH_VALUE_FLAGS = new Set(['-R', '--repo', '--hostname', '-b', '--body', '-
 // Per gh command, the verbs that only read: every other verb is denied.
 const GH_READS = new Map([['auth', []], ['release', ['list', 'view', 'download', 'verify', 'verify-asset']], ['secret', ['list']], ['variable', ['list', 'get']]]);
 // Per gh command, the verbs that are denied.
-const GH_WRITES = new Map([['pr', ['merge']], ['repo', ['edit', 'rename', 'archive', 'unarchive', 'delete', 'deploy-key']], ['workflow', ['run', 'enable', 'disable']], ['config', ['set']], ['alias', ['set', 'import', 'delete']], ['ssh-key', ['add', 'delete']], ['gpg-key', ['add', 'delete']]]);
+const GH_WRITES = new Map([['pr', ['merge']], ['repo', ['edit', 'rename', 'archive', 'unarchive', 'delete', 'deploy-key', 'sync']], ['workflow', ['run', 'enable', 'disable']], ['config', ['set']], ['alias', ['set', 'import', 'delete']], ['ssh-key', ['add', 'delete']], ['gpg-key', ['add', 'delete']]]);
 // The long flags of gh api that take a value; -i (--include) is its only short flag without one.
 const API_VALUE_FLAGS = new Set(['cache', 'field', 'header', 'hostname', 'input', 'jq', 'method', 'preview', 'raw-field', 'template']);
 // REST paths that merge, commit files, release, dispatch a workflow, write refs or change settings and security, when called with a method other than GET.
@@ -111,8 +111,6 @@ const GIT = gitProgram();
 // Without git every query fails: no tag, no branch and no remote's default branch is known, so every push is denied.
 const gitIn = (dir, args) => (GIT ? spawnSync(GIT, ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }) : { status: 1 });
 const hasRef = (dir, ref) => gitIn(dir, ['show-ref', '--verify', '--quiet', ref]).status === 0;
-// git exits 128 where it finds no repository it may use; a timeout or a missing git gives no such answer.
-const outsideRepo = (dir) => gitIn(dir, ['rev-parse', '--git-dir']).status === 128;
 const gitLine = (dir, args) => {
   const r = gitIn(dir, args);
   return r.status === 0 ? r.stdout.trim() : '';
@@ -186,8 +184,8 @@ function push(args, dir, known) {
     if (!current) return UNREAD_BRANCH;
     targets.push(current);
   }
-  // A URL, a path or a remote never fetched names no default branch; only from a known folder outside a repository does the push fail anyway.
-  if (!remoteHead && !(known && outsideRepo(dir))) return UNREAD_DEFAULT;
+  // A URL, a path or a remote never fetched names no default branch; the same command may create the repository it pushes from.
+  if (!remoteHead) return UNREAD_DEFAULT;
   const target = targets.find((branch) => defaults.has(branch));
   return target ? `a push to the default branch ${target}` : null;
 }
