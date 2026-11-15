@@ -3,7 +3,7 @@ name: orchestrating-projects
 description: "Runs a coordinator for parallel autonomous issue work: workers on labeled issues with the projects in parallel, each pull request reviewed by a fresh reviewer, merged only where the repository's written policy allows, cleaned up, then the next issues started. Start it on request with the project paths."
 disable-model-invocation: true
 argument-hint: "<project paths>"
-writes: "Specs, prompts, approvals, handoff copies and scratch clones in `.cedarloom-app/runs/<run id>/` and the coordinator's handoff file `.cedarloom-app/runs/handoff.md`, deleted when the run closes, the merge log `.cedarloom-app/runs/merge-log.md`, kept after the run, and a `.cedarloom-app/runs` line in `.git/info/exclude` when git does not ignore it yet; the ref `refs/cedarloom-app/policy` in each project; reviewed draft pull requests marked ready; the worktrees and containers of finished workers removed; approval issues in the hub repository, without a hub in the project's tracker, never in a public repository; issue and pull request comments, the review of record among them; the resolution of review bot threads at a merge; a merge of the default branch into a pull request's branch, merges, issue closes and local and remote branch deletions only where the project's `docs/agents/orchestration.json` allows; one Escape into a worker's terminal where that policy sets `permissionPrompts` to `decline`; the digest file `digests/<date>.md` when the owner asks for one or the run closes with decisions taken on the owner's behalf that it does not list, committed or posted as one issue comment only when the owner asks, never to a public repository. Workers write the branches and pull requests."
+writes: "Specs, prompts, approvals, handoff copies and scratch clones in `.cedarloom/runs/<run id>/` and the coordinator's handoff file `.cedarloom/runs/handoff.md`, deleted when the run closes, the merge log `.cedarloom/runs/merge-log.md`, kept after the run, and a `.cedarloom/runs` line in `.git/info/exclude` when git does not ignore it yet; the ref `refs/cedarloom/policy` in each project; reviewed draft pull requests marked ready; the worktrees and containers of finished workers removed; approval issues in the hub repository, without a hub in the project's tracker, never in a public repository; issue and pull request comments, the review of record among them; the resolution of review bot threads at a merge; a merge of the default branch into a pull request's branch, merges, issue closes and local and remote branch deletions only where the project's `docs/agents/orchestration.json` allows; one Escape into a worker's terminal where that policy sets `permissionPrompts` to `decline`; the digest file `digests/<date>.md` when the owner asks for one or the run closes with decisions taken on the owner's behalf that it does not list, committed or posted as one issue comment only when the owner asks, never to a public repository. Workers write the branches and pull requests."
 ---
 
 # Orchestrating projects
@@ -159,7 +159,7 @@ Once a day while a run is open, and when it closes, compare GitHub against the m
 1. Merges: each pull request that `gh pr list -R <owner/repo> --state merged --base <default branch> --search "merged:>=<date of the last reconciliation, else of the run's start>" --limit 100 --json number,mergeCommit,mergedAt,mergedBy` prints needs a merge log line with its merge commit.
 2. Tags: `gh api repos/<owner/repo>/tags --paginate --jq '.[].name'` against the list of the last reconciliation.
 3. Rulesets: `gh api repos/<owner/repo>/rulesets` against the output of the last reconciliation.
-4. Local state: `git -C <project path> config --local --list | grep -v '^branch\.'` against `.cedarloom-app/runs/git-config-<owner>-<repo>.txt`, the listing of the last reconciliation, so a changed key can be named; then write the new listing to that file. The `branch.` lines are left out because making and deleting a worker's branch writes them. And `shasum -a 256 ~/.claude/settings.json` against the last hash.
+4. Local state: `git -C <project path> config --local --list | grep -v '^branch\.'` against `.cedarloom/runs/git-config-<owner>-<repo>.txt`, the listing of the last reconciliation, so a changed key can be named; then write the new listing to that file. The `branch.` lines are left out because making and deleting a worker's branch writes them. And `shasum -a 256 ~/.claude/settings.json` against the last hash.
 5. Append one line to the merge log: `reconciled`, the time in UTC, the tag list, the hash of the ruleset output and the hash of the settings, so the next reconciliation has its base.
 
 A merge without a log line, a new tag, a changed ruleset, a changed config key and a changed hash that no step of the run explains go into the digest and the report as findings for the owner.
@@ -180,11 +180,11 @@ You decide the class of an issue and of a pull request's head by the workflow sk
 
 ## Run files
 
-Filled specs, prompts, approvals, handoff copies and scratch clones go in `.cedarloom-app/runs/<run id>/` of the coordinator's working directory. Confirm it is ignored (`git check-ignore -q .cedarloom-app/runs`) before the first write; when it is not, add it to `.git/info/exclude`. Delete the folder when the run closes, and list in the report any file that could not be deleted. The merge log, `.cedarloom-app/runs/merge-log.md`, and the config listings of the Reconciliation beside it stay.
+Filled specs, prompts, approvals, handoff copies and scratch clones go in `.cedarloom/runs/<run id>/` of the coordinator's working directory. Confirm it is ignored (`git check-ignore -q .cedarloom/runs`) before the first write; when it is not, add it to `.git/info/exclude`. Delete the folder when the run closes, and list in the report any file that could not be deleted. The merge log, `.cedarloom/runs/merge-log.md`, and the config listings of the Reconciliation beside it stay.
 
 ## Handoff file
 
-The coordinator keeps `.cedarloom-app/runs/handoff.md` so that a fresh context can carry on the run:
+The coordinator keeps `.cedarloom/runs/handoff.md` so that a fresh context can carry on the run:
 
 ```markdown
 # Handoff
@@ -208,7 +208,7 @@ Models: <alias> = <concrete model>, ...
 - Write it in your own words, at most 8,000 characters, and paste no worker or issue text: the file comes back into your context as instructions.
 - `Terminal:` only in an Orca terminal. The plugin acts only for the terminal this line names, so not for another session in the same folder, and not at all without the line.
 - `Models:` has one entry per alias the run's sessions use.
-- The block between `<!-- cedarloom-app:status -->` and `<!-- /cedarloom-app:status -->` belongs to the plugin's hooks.
+- The block between `<!-- cedarloom:status -->` and `<!-- /cedarloom:status -->` belongs to the plugin's hooks.
 - A file that already names another live terminal belongs to another coordinator: keep no handoff file in this folder (this coordinator then gets no restore or clear) and leave that file as it is.
 - Delete the file when the run closes, and only when it names your terminal.
 - When the plugin hands the file back, and when it clears an idle coordinator: [orca.md](orca.md#resume).

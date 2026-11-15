@@ -855,7 +855,7 @@ export function startServer(ctx, { port = 0, token = randomBytes(32).toString('b
     const why = rejectReason(req, { port: p, session, key, api: url.pathname.startsWith('/api/') });
     // A browser that opens a used, expired or wrong-host link reads what to do; API calls keep JSON, the board frame a page of its own.
     if (why && req.method === 'GET' && [401, 421].includes(why[0]) && !url.pathname.startsWith('/api/') && url.pathname !== '/board') {
-      return send(why[0], `<!doctype html><meta charset="utf-8"><title>BenchKeeper</title><h1>This link does not open BenchKeeper</h1>\n<p>The link works once and for 10 minutes. Open it as printed, at http://127.0.0.1:${p}/, not at localhost or another port.</p>\n<p>For a new link, run <code>npx benchkeeper</code> again.</p>`, 'text/html; charset=utf-8');
+      return send(why[0], `<!doctype html><meta charset="utf-8"><title>BenchKeeper</title><h1>This link does not open BenchKeeper</h1>\n<p>The link works once and for 10 minutes. Open it as printed, at http://127.0.0.1:${p}/, not at localhost or another port.</p>\n<p>For a new link, run <code>npx @cedarloom/app</code> again.</p>`, 'text/html; charset=utf-8');
     }
     // The board frame shows its errors: the app cannot read why a frame failed to load.
     const boardError = (code, text) => send(code, `<!doctype html><meta charset="utf-8"><meta name="color-scheme" content="light dark"><title>Sessions board</title><p>${text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}</p>`, 'text/html; charset=utf-8', { 'content-security-policy': "default-src 'none'; frame-ancestors 'self'" });

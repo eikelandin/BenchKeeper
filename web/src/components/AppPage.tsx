@@ -4,7 +4,7 @@ import { SiteShell } from './SiteShell';
 export type Shot = { width: number; height: number };
 
 // The CLI prefix of each view's commands; the release rewrites the version.
-const V = 'npx benchkeeper@6.27.0';
+const V = 'npx @cedarloom/app@6.27.0';
 
 // One section per view of the app; view is its route in the sidebar of app/ui/App.jsx. The screenshots are saved by app/scripts/screenshots.mjs.
 export const VIEWS: { id: string; view: string; title: string; shot: string; alt: string; text: string[]; cli: string[] }[] = [
@@ -73,7 +73,7 @@ export const VIEWS: { id: string; view: string; title: string; shot: string; alt
   },
   {
     id: 'setup', view: 'projects', title: 'Project setup', shot: 'setup',
-    alt: 'The Set up project drawer on its last step: the choice between a setup on this machine and one in the repository on a branch, then the files it writes, CLAUDE.local.md and .benchkeeper/state.json, as diffs.',
+    alt: 'The Set up project drawer on its last step: the choice between a setup on this machine and one in the repository on a branch, then the files it writes, CLAUDE.local.md and .cedarloom-app/state.json, as diffs.',
     text: [
       'Five steps: agents, where the agent runs, skills, default tier and a review. The review shows every file as a diff before anything is written.',
       'The setup stays on this machine by default, in files Git ignores. The other choice commits it on a local branch, which you push.',
@@ -211,7 +211,7 @@ export default function AppPage({ base, shots }: { base: string; shots: Record<s
         <Stack gap="xs" maw={720}>
           <Title order={1} fz={{ base: 34, md: 44 }}>The app</Title>
           <Text size="lg">
-            <code>npx benchkeeper@6.27.0</code> opens the app in your browser: set up the machine and each repository, see what drifted, undo a run.
+            <code>npx @cedarloom/app@6.27.0</code> opens the app in your browser: set up the machine and each repository, see what drifted, undo a run.
             The same steps run on the command line, see the CLI tab of the <Anchor href={`${base}/#start`}>quick start</Anchor>.
           </Text>
           <Text c="dimmed">All screenshots show example data: a demo home folder with the projects shop and blog. They come from no real machine.</Text>
