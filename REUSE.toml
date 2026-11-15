@@ -8,25 +8,6 @@ path = "**"
 SPDX-FileCopyrightText = "2026 Eike Landin"
 SPDX-License-Identifier = "ISC"
 
-# Documentation is CC0-1.0; the skills, rules, agents and templates that the plugin and packs ship are code.
-[[annotations]]
-path = [
-  "AGENTS.md",
-  "CHANGELOG.md",
-  "CLAUDE.md",
-  "README.md",
-  "SECURITY.md",
-  "docs/**",
-  "app/CHANGELOG.md",
-  "app/README.md",
-  "packages/README.md",
-  "packages/*/README.md",
-  "plugins/*/CHANGELOG.md",
-  "plugins/*/library/README.md",
-]
-SPDX-FileCopyrightText = "2026 Eike Landin"
-SPDX-License-Identifier = "CC0-1.0"
-
 [[annotations]]
 path = "patches/thread-stream@4.2.0.patch"
 SPDX-FileCopyrightText = ["2021 Matteo Collina", "2026 Eike Landin"]
