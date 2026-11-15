@@ -175,7 +175,7 @@ test('policy: a skill folder copied alone, as for an agent without plugins, chec
 
 test('policy: minPlugin is checked against the version in the plugin manifest two folders above the skill', async () => {
   const plugin = mkdtempSync(join(tmpdir(), 'bk-policy-'));
-  cpSync(fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects', import.meta.url)), join(plugin, 'skills', 'orchestrating-projects'), { recursive: true });
+  cpSync(fileURLToPath(new URL('../skills/orchestrating-projects', import.meta.url)), join(plugin, 'skills', 'orchestrating-projects'), { recursive: true });
   mkdirSync(join(plugin, '.claude-plugin'));
   writeFileSync(join(plugin, '.claude-plugin', 'plugin.json'), '{ "name": "cedarloom", "version": "2.3.0" }');
   const copied = await import(pathToFileURL(join(plugin, 'skills', 'orchestrating-projects', 'policy.mjs')).href);
