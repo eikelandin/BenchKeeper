@@ -30,6 +30,8 @@ const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const norm = (s) => s.replace(/\s+/g, ' ').trim();
 const linesOf = (text) => (text === '' ? [] : text.replace(/\n$/, '').split('\n'));
 const sum = (values) => values.reduce((n, v) => n + v, 0);
+// Code-unit order, the same on every machine: localeCompare would follow the locale and reorder the stored baseline.
+const byCodeUnit = (a, b) => Number(a > b) - Number(a < b);
 
 export function globRegex(glob) {
   let re = '';
@@ -65,10 +67,14 @@ function walk(root, dir = '') {
   });
 }
 
-// Tracked and untracked files that git does not ignore; outside a git repository, every file.
+// git from a system folder, so the PATH search does not decide which program runs.
+const GIT = ['/usr/bin/git', '/usr/local/bin/git', '/opt/homebrew/bin/git', join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Git', 'cmd', 'git.exe')].find((p) => existsSync(p));
+
+// Tracked and untracked files that git does not ignore; outside a git repository or without git, every file.
 function repoFiles(root) {
+  if (!GIT) return walk(root);
   try {
-    return execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'ignore'] }).split('\0').filter(Boolean);
+    return execFileSync(GIT, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'ignore'] }).split('\0').filter(Boolean);
   } catch {
     return walk(root);
   }
@@ -77,7 +83,7 @@ function repoFiles(root) {
 export function scope(root, cfg) {
   const inc = cfg.include.map(globRegex);
   const exc = cfg.exclude.map(globRegex);
-  return [...new Set(repoFiles(root))].filter((p) => inc.some((re) => re.test(p)) && !exc.some((re) => re.test(p)) && existsSync(join(root, p))).sort();
+  return [...new Set(repoFiles(root))].filter((p) => inc.some((re) => re.test(p)) && !exc.some((re) => re.test(p)) && existsSync(join(root, p))).sort(byCodeUnit);
 }
 
 // Front matter as `key: value` lines (quotes dropped) and the number of its closing `---` line; end 0 when there is none.
@@ -87,8 +93,8 @@ export function frontMatter(lines) {
   if (close < 0) return { fields: {}, end: 0 };
   const fields = {};
   for (const [i, line] of lines.slice(1, close).entries()) {
-    const kv = /^([A-Za-z][\w-]*):\s*(.*)$/.exec(line);
-    if (kv) fields[kv[1]] = { value: kv[2].replace(/^(["'])(.*)\1$/, '$2'), line: i + 2 };
+    const kv = /^([A-Za-z][\w-]*):(.*)$/.exec(line);
+    if (kv) fields[kv[1]] = { value: kv[2].trimStart().replace(/^(["'])(.*)\1$/, '$2'), line: i + 2 };
   }
   return { fields, end: close + 1 };
 }
@@ -155,7 +161,7 @@ const RULE = /\b(never|must not|do not|don't|may not|forbidden|prohibited)\b/i;
 const LEGAL = /\b(licen[sc]e[sd]?|copyright|SPDX-License-Identifier|warranty|liabilit(y|ies)|trademarks?)\b/i;
 const SECTION = /\b(never|safety|security|legal|licen[sc]e|constraints?|rules|decisions?)\b/i;
 const ITEM = /^\s*([-*+]|\d+[.)])\s/;
-const HEADING = /^ {0,3}(#{1,6})\s+(.*)$/;
+const HEADING = /^ {0,3}(#{1,6})[ \t](.*)$/;
 
 // Candidates only: the patterns miss rules worded another way, so the reader of the file adds those by hand.
 // A listed description is one line whose trigger and boundary sentences ("Use when", "Do not use") route every session.
@@ -249,7 +255,14 @@ export function planCuts(root, cfg, plan) {
   return { errors, contents, rows, before: before.total, after: sum(Object.values(after)), floor, budget: cfg.budget.total ?? null };
 }
 
-const slug = (heading) => heading.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[`*]/g, '').trim().toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, '').replace(/ /g, '-');
+// A heading's text without its closing `#` sequence.
+const headingText = (text) => {
+  const t = text.trim();
+  let end = t.length;
+  while (end > 0 && t[end - 1] === '#') end--;
+  return t.slice(0, end).trimEnd();
+};
+const slug = (heading) => heading.replace(/\[([^[\]]*)\]\([^()]*\)/g, '$1').replace(/[`*]/g, '').trim().toLowerCase().replace(/[^\p{L}\p{N} _-]/gu, '').replace(/ /g, '-');
 
 // Heading anchors as GitHub builds them (a repeated heading gets -1, -2), plus explicit name and id attributes.
 export function anchorsOf(text) {
@@ -257,9 +270,9 @@ export function anchorsOf(text) {
   const seen = new Map();
   for (const [, line] of prose(linesOf(text))) {
     for (const [, id] of line.matchAll(/<[a-z]+\s[^>]*\b(?:name|id)="([^"]+)"/g)) out.add(id.toLowerCase());
-    const h = /^ {0,3}#{1,6}\s+(.*?)\s*#*\s*$/.exec(line);
+    const h = HEADING.exec(line);
     if (!h) continue;
-    const base = slug(h[1]);
+    const base = slug(headingText(h[2]));
     const n = seen.get(base) ?? 0;
     seen.set(base, n + 1);
     out.add(n ? `${base}-${n}` : base);
@@ -269,6 +282,17 @@ export function anchorsOf(text) {
 
 const isFile = (p) => existsSync(p) && statSync(p).isFile();
 const decode = (s) => { try { return decodeURIComponent(s); } catch { return s; } };
+
+// The path in a backticked token, without trailing punctuation, a `#fragment` or a `:line` or `:start-end` suffix.
+function pathOf(token) {
+  let end = token.length;
+  while (end > 0 && '.,;:'.includes(token[end - 1])) end--;
+  const t = token.slice(0, end);
+  const hash = t.indexOf('#');
+  if (hash >= 0) return t.slice(0, hash);
+  const colon = t.lastIndexOf(':');
+  return colon >= 0 && /^\d+(?:-\d+)?$/.test(t.slice(colon + 1)) ? t.slice(0, colon) : t;
+}
 
 // Dead references: links, heading anchors and CLAUDE.md imports are errors; a backticked path is a warning, as that match is a heuristic.
 export function deadRefs(root, cfg, paths = scope(root, cfg)) {
@@ -293,7 +317,7 @@ export function deadRefs(root, cfg, paths = scope(root, cfg)) {
       }
       if (imports) for (const [, , target] of plain.matchAll(/(^|\s)@([\w./-]*[/.][\w/-]+)/g)) if (!existsSync(join(dir, target))) dead('import', `@${target}`);
       for (const [, token] of raw.matchAll(/`([^`\s]+)`/g)) {
-        const path = token.replace(/[.,;:]+$/, '').replace(/(:\d+(-\d+)?|#.*)$/, '');
+        const path = pathOf(token);
         if (!/^(\.{1,2}\/)?[\w@.-]+(\/[\w@.-]+)+\/?$/.test(path)) continue;
         if ([dir, root].some((base) => existsSync(join(base, path)))) continue;
         const first = path.split('/')[0];
@@ -311,7 +335,7 @@ export function check(root, cfg, against, budgetOnly = false) {
   const now = measure(root, cfg);
   const prev = against ? Object.fromEntries(Object.entries(against.files).map(([p, f]) => [p, f.tokens])) : cfg.baseline;
   const known = Object.keys(prev).length > 0;
-  const paths = [...new Set([...Object.keys(prev), ...Object.keys(now.files)])].sort();
+  const paths = [...new Set([...Object.keys(prev), ...Object.keys(now.files)])].sort(byCodeUnit);
   const changed = paths.filter((p) => (prev[p] ?? 0) !== (now.files[p]?.tokens ?? 0));
   const before = sum(Object.values(prev));
   const out = ['### Token budget', ''];
