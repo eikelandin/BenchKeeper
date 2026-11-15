@@ -225,6 +225,51 @@ test("a profile with a problem is refused, never shown as a machine with nothing
   ]);
 });
 
+test("profiles use saves a preset with no part switched by hand, keeps the bindings and names the parts to allow", async () => {
+  const { root, cli } = setup();
+  expect((await cli("profiles", "bind", "hub", "acme/hub", "--yes")).code).toBe(EXIT.ok);
+  expect((await cli("profiles", "select", "machine.plugin.ponytail", "off", "--yes")).code).toBe(EXIT.ok);
+  const used = await cli("--json", "profiles", "use", "developer");
+  expect([used.code, json(used.out)]).toMatchObject([
+    EXIT.ok,
+    {
+      format: "cedarloom.profile-use",
+      cleared: ["machine.plugin.ponytail"],
+      held: false,
+      allow: ["machine.plugin.cedarloom"],
+    },
+  ]);
+  expect(JSON.parse(readFileSync(join(root, "config", "profile.json"), "utf8"))).toMatchObject({
+    profile: { pack: "cedarloom.core", path: "profiles/developer.json" },
+    select: {},
+    bindings: { hub: "acme/hub" },
+  });
+  // The shown plan is the one its apply line applies, the plugin part's settings included.
+  const apply = await cli("--json", "profiles", "apply", "--allow", "machine.plugin.cedarloom");
+  expect(json(apply.out)).toMatchObject({ format: "cedarloom.plan", planHash: json(used.out)["planHash"] });
+  expect((await cli("profiles", "use", "profiles/developer.json")).code).toBe(EXIT.usage);
+});
+
+test("profiles use keeps the preset when its plan is held back or cannot be made, and names the run", async () => {
+  const { root, cli } = setup();
+  const held = await cli("--json", "profiles", "use", "orchestration");
+  expect([held.code, json(held.out)]).toMatchObject([EXIT.refused, { held: true, planHash: null }]);
+  expect(JSON.parse(readFileSync(join(root, "config", "profile.json"), "utf8"))).toMatchObject({
+    profile: { pack: "cedarloom.core", path: "profiles/orchestration.json" },
+  });
+  mkdirSync(join(root, "claude"));
+  writeFileSync(join(root, "claude", "settings.json"), "{ not json");
+  const failed = await cli("--json", "profiles", "use", "developer");
+  const { runId } = json(failed.out);
+  expect([failed.code, json(failed.out)]).toMatchObject([
+    EXIT.noInput,
+    { format: "cedarloom.profile-use", preset: "developer", findings: [{ code: "document.unreadable" }] },
+  ]);
+  expect(runId).toEqual(expect.any(String));
+  // The human output names the run before the refusal.
+  expect((await cli("profiles", "use", "research")).out).toContain("undo it with: cedarloom runs undo ");
+});
+
 test("level shows the default and each project's level, and sets one of them by plan with --yes", async () => {
   const { root, cli } = setup();
   expect((await cli("level")).out).toBe("supervised  (default)\n");

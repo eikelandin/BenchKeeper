@@ -137,12 +137,12 @@ export const readEntry = (ref: Ref, kind: EntryKind, folder?: Folder): Result<st
   return { ok: true, value: bytes.value.toString("utf8") };
 };
 
-/** The paths of a pack's skill entries; none for a pack without a manifest here. */
-export const skillEntries = (pack: string, folder: Folder | undefined): Result<string[]> => {
+/** The paths of a pack's entries of that kind; none for a pack without a manifest here. */
+export const packEntries = (pack: string, kind: EntryKind, folder: Folder | undefined): Result<string[]> => {
   const manifest = manifestOf(pack, folder);
   if (!manifest.ok) return manifest;
   const entries = Object.entries(manifest.value?.entries ?? {});
-  return { ok: true, value: entries.filter(([, entry]) => entry.kind === "skill").map(([path]) => path) };
+  return { ok: true, value: entries.filter(([, entry]) => entry.kind === kind).map(([path]) => path) };
 };
 
 /** The files under a fetched pack's folder entry, paths relative to it. */

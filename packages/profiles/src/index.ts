@@ -9,6 +9,7 @@ export {
   type Folder,
   filesIn,
   LEVELS,
+  packEntries,
   type Probe,
   type Resolved,
   readEntry,
