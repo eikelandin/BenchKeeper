@@ -1,7 +1,7 @@
 #!/bin/sh
 # Prints "owner/name tag version" for each repository ($1, comma separated; empty: the one of the checkout) whose newest
 # release has a valid tag and no recorded pass, nor a recorded failure younger than a day. Exit 0 when it printed a line.
-dir=${XDG_STATE_HOME:-$HOME/.local/state}/benchkeeper/release-watch
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/release-watch
 now=$(date +%s) due=1
 for r in $(echo "${1:-.}" | tr , ' '); do
   [ "$r" != . ] || r=$(gh repo view --json nameWithOwner --jq .nameWithOwner) || continue
