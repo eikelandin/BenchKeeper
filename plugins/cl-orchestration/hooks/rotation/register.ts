@@ -47,7 +47,7 @@ const slashes = (path?: string) => path?.replaceAll('\\', '/')
 // A program from an absolute folder of PATH, never by its bare name: Windows looks in the working folder, a project, first.
 async function program($: EngineInterface, name: string) {
   const windows = (await $.env.get('OS')) === 'Windows_NT'
-  for (const folder of ((await $.env.get('PATH')) ?? '').split(windows ? ';' : ':')) {
+  for (const folder of ((await $.env.get('PATH')) ?? (await $.env.get('Path')) ?? '').split(windows ? ';' : ':')) {
     if (!(windows ? /^[A-Za-z]:[\\/]/ : /^\//).test(folder)) continue
     const path = `${folder.replace(/[\\/]+$/, '')}/${name}${windows ? '.exe' : ''}`
     if ((await $.fs.stat(path, { resolve: true }).catch(() => null))?.kind === 'file') return path

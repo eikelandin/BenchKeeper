@@ -40,6 +40,7 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
       const tasks = orca === undefined ? [] : [{ status: 'ready' }, ...Array.from({ length: orca.completed }, () => ({ status: 'completed' })), ...Array.from({ length: orca.failed }, () => ({ status: 'failed' }))]
       return { value: { exitCode: orca === undefined ? 1 : 0, stdout: JSON.stringify({ ok: true, result: { runId: orca?.run, tasks } }), stderr: '' } } as never
     }
+    if (e.argv[0] !== '/usr/bin/git') throw new Error(`not a program from PATH: ${e.argv[0]}`)
     // The log call lists the commits after its --since; the time is the second field of a line.
     const since = e.argv.find((arg) => arg.startsWith('--since-as-filter='))?.slice('--since-as-filter='.length)
     const log = () => changed.log.split('\n').filter((line) => line !== '' && Date.parse(line.split(' ')[1] ?? '') > Date.parse(since ?? '')).map((line) => `${line}\n`).join('')
