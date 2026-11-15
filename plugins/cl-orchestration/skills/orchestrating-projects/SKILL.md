@@ -100,7 +100,7 @@ The runner wakes the coordinator when mail arrives, and a timer wakes it every 1
 
 ## Outcomes
 
-A worker's outcome comes from its report and the handoff block it names (outcome, what changed, checks and results, open risks, next step), in a batch per issue from its status message ([spec-template.md](spec-template.md#batches)), never from reading its terminal. Copy the handoff into the run folder before cleaning up.
+A worker's outcome comes from its report and the handoff block in its report (outcome, what changed, checks and results, open risks, next step), in a batch per issue from its status message ([spec-template.md](spec-template.md#batches)), never from reading its terminal. Copy the handoff into the run folder before cleaning up.
 
 - **Done with a PR**: review, ready and merge it by [review-and-merge.md](review-and-merge.md), which also says when a PR stays open for the owner; until one of the two, its worker stays unreleased for follow-ups. After the merge, close the issue when `closeIssue`, with `issues.repository` in the tracker, except for a PR of a split batch ([Needs replan](#outcomes)), whose issue closes by that batch's rule. Then clean up.
 - **Done, no change needed**: verify the claim yourself on the base branch (read the code, run the check the issue names). Comment the evidence on the issue and close it when `closeIssue`. Then clean up.

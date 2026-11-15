@@ -21,7 +21,7 @@ const shipped = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url)
 // The plugin's manifest lies two folders up; a skill folder copied alone (an agent without plugins) has none, so its version is unknown.
 const pluginVersion = () => { try { const v = shipped('../../.claude-plugin/plugin.json').version; return /^\d+\.\d+\.\d+$/.test(v) ? v : null; } catch { return null; } };
 
-// Started from a hook or `git rebase --exec`, these variables name another repository and carry that command's -c settings: neither reaches git here, and git fails instead of asking (as repoEnv in the app's src/git.mjs).
+// Started from a hook or `git rebase --exec`, these variables name another repository and carry that command's -c settings: neither reaches git here, and git fails instead of asking.
 const REPO_VARS = /^GIT_(DIR|WORK_TREE|COMMON_DIR|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|PREFIX)$/;
 const CONFIG_VARS = /^GIT_CONFIG_(PARAMETERS|COUNT|KEY_\d+|VALUE_\d+)$/;
 const childEnv = () => {
@@ -88,7 +88,7 @@ function check(s, v, path, out) {
   }
 }
 
-// The errors of a parsed policy file, each { rule, path, message }. The app's policy editor checks with this function too, so both refuse the same files.
+// The errors of a parsed policy file, each { rule, path, message }.
 export function validate(doc) {
   if (kind(doc) !== 'object') return [{ rule: 'not-object', path: '', message: 'must be a JSON object' }];
   const errors = [];
@@ -105,7 +105,7 @@ const plain = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.sta
 // { policy, errors }: the policy with every default filled in, or null with the errors. Fields are read by name, whatever the file's schemaVersion.
 export function effective(doc, version = pluginVersion()) {
   const errors = validate(doc);
-  // The one check the schema cannot hold: it depends on the plugin that reads the file, which the app's editor does not judge.
+  // The one check the schema cannot hold: it depends on the plugin that reads the file.
   if (!errors.length && doc.minPlugin && !version) errors.push({ rule: 'range', path: 'minPlugin', message: 'cannot be checked: the version of this plugin is unknown (no .claude-plugin/plugin.json two folders above the skill)' });
   else if (!errors.length && doc.minPlugin && older(version, doc.minPlugin)) errors.push({ rule: 'range', path: 'minPlugin', message: `must be at most ${version}, the version of this plugin` });
   if (errors.length) return { policy: null, errors };
