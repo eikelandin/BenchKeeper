@@ -1,5 +1,6 @@
 # Playwright MCP snapshots and logs
 .playwright-mcp/
+# npm installs, such as the pinned Claude Code in .github/claude-code
 node_modules/
 # The Claude Code types a session lays beside a loaded mod (docs/development.md#plugin-mod-types)
 plugins/*/.claude-plugin/types/
