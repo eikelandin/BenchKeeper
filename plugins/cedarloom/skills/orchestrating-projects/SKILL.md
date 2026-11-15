@@ -41,7 +41,7 @@ These hold in every step and for every outcome.
 
 ## Roles
 
-Every session of a run has one role: the owner, the coordinator (this session), a worker (the phase orchestrator of its issue at standard and deep), a worker's phase subagent, a reviewer (also a re-reviewer and a verifier) and a headless job. All of them may share one GitHub login, so each line below holds by these steps, not by a permission: the [Reconciliation](#reconciliation) finds a breach after the fact. Setup steps that make some of them technical are the user's ([coordinator workflow](https://github.com/eikelandin/BenchKeeper/blob/main/docs/coordinator-workflow.md#user-steps)).
+Every session of a run has one role: the owner, the coordinator (this session), a worker (the phase orchestrator of its issue at standard and deep), a worker's phase subagent, a reviewer (also a re-reviewer and a verifier) and a headless job. All of them may share one GitHub login, so each line below holds by these steps, not by a permission: the [Reconciliation](#reconciliation) finds a breach after the fact. Setup steps that make some of them technical are the user's.
 
 | Action | Who | Never |
 |---|---|---|
@@ -97,12 +97,12 @@ The runner wakes the coordinator when mail arrives, and a timer wakes it every 1
 
 A worker's outcome comes from its report and the handoff block it names (outcome, what changed, checks and results, open risks, next step), in a batch per issue from its status message ([spec-template.md](spec-template.md#batches)), never from reading its terminal. Copy the handoff into the run folder before cleaning up.
 
-- **Done with a PR**: review, ready and merge it by [review-and-merge.md](review-and-merge.md), which also says when a PR stays open for the owner; until one of the two, its worker stays unreleased for follow-ups. After the merge, close the issue when `closeIssue`, with `issues.repository` in the tracker. Then clean up.
+- **Done with a PR**: review, ready and merge it by [review-and-merge.md](review-and-merge.md), which also says when a PR stays open for the owner; until one of the two, its worker stays unreleased for follow-ups. After the merge, close the issue when `closeIssue`, with `issues.repository` in the tracker, except for a PR of a split batch ([Needs replan](#outcomes)), whose issue closes by that batch's rule. Then clean up.
 - **Done, no change needed**: verify the claim yourself on the base branch (read the code, run the check the issue names). Comment the evidence on the issue and close it when `closeIssue`. Then clean up.
 - **Blocked**: the worker commented on the issue and reported BLOCKED (a refused hook, a missing credential, a check it cannot fix). Confirm the comment exists, release the worker (a batch's: [Batches](spec-template.md#batches)), start the next issue of that project. Keep that worktree and branch, and list the issue in the report: they may hold the only copy of the work.
 - **Needs replan**: the worker found the spec does not fit the issue. Never restart it with the same spec. When the handoff's next step stays inside the issue's text and the policy, write one new spec from the template with it; otherwise list the issue for the owner. One replan per issue and run.
   - Work that splits into several PRs: the worker posted its PR list on the issue, each PR with its goal and files. Approve it with a comment on the issue only when every PR stays inside the issue's text, the spec's Owned paths and the policy; then write the new spec as a batch of those PRs in the list's order, one branch `<type>/<number>-<slug>` with its own slug per PR, and the approved list under `Shared context:`. Otherwise list the issue and the PRs for the owner.
-  - In such a batch the unit is the PR, not the issue: one draft PR per branch and one status message per PR ([spec-template.md](spec-template.md#batches)), and the issue closes by `closeIssue` only after the last PR of the approved list is merged.
+  - In such a batch the unit is the PR, not the issue: one draft PR per branch and one status message per PR ([spec-template.md](spec-template.md#batches)), and the issue closes by `closeIssue` only after every PR of the approved list is merged, in any order.
 - **Failed**: the worker reported failure without BLOCKED or NEEDS_REPLAN. Read the worker's output. Retry once with a fresh worker and a spec from the template. A second failure is blocked.
 - **Stalled**: no commit, PR or message for `stallMinutes`. Read the worker's last output. Only proof that the session ended without a report (its final turn is over and nothing was sent) makes it blocked, after stopping it. A worker still producing output keeps waiting.
 
@@ -156,11 +156,11 @@ A headless job is a session without a terminal (`claude -p`), such as a consult 
 
 Once a day while a run is open, and when it closes, compare GitHub against the merge log ([review-and-merge.md](review-and-merge.md#merge-log)) for each project. It finds a breach after the fact and changes nothing:
 
-1. Merges: each pull request that `gh pr list -R <owner/repo> --state merged --base <default branch> --search "merged:>=<date of the last reconciliation, else of the run's start>" --limit 100 --json number,mergeCommit,mergedAt,mergedBy` prints needs a merge log line with its merge commit.
+1. Merges: each pull request that `gh pr list -R <owner/repo> --state merged --base <default branch> --search "merged:>=<date of the last reconciliation, else of the run's start>" --limit 100 --json number,mergeCommit,mergedAt,mergedBy` prints needs a merge log line with its merge commit. A result of exactly 100 may be cut off: report it to the owner as a finding and reconcile the interval again in smaller date ranges.
 2. Tags: `gh api repos/<owner/repo>/tags --paginate --jq '.[].name'` against the list of the last reconciliation.
 3. Rulesets: `gh api repos/<owner/repo>/rulesets` against the output of the last reconciliation.
 4. Local state: `git -C <project path> config --local --list | grep -v '^branch\.'` against `.cedarloom/runs/git-config-<owner>-<repo>.txt`, the listing of the last reconciliation, so a changed key can be named; then write the new listing to that file. The `branch.` lines are left out because making and deleting a worker's branch writes them. And `shasum -a 256 ~/.claude/settings.json` against the last hash.
-5. Append one line to the merge log: `reconciled`, the time in UTC, the tag list, the hash of the ruleset output and the hash of the settings, so the next reconciliation has its base.
+5. Append one line to the merge log: `reconciled`, the time in UTC, `<owner/repo>`, the tag list, the hash of the ruleset output and the hash of the settings, so the next reconciliation of that project has its base: the last `reconciled` line with its `<owner/repo>`.
 
 A merge without a log line, a new tag, a changed ruleset, a changed config key and a changed hash that no step of the run explains go into the digest and the report as findings for the owner.
 
