@@ -30,7 +30,7 @@ const chain = (command: string) => (/[;|&\n`]|\$\(/.test(command.replaceAll('&&'
 // Without its redirections (> log, 2>&1, &> log), which leave the exit code alone. The lookbehinds start a match only at the
 // first space or digit of a run, so a long run without a redirection is read once (linear time).
 export const plain = (command: string) => command.replace(/(?<!\s)\s*(?:&|(?<!\d)\d+)?>>?\s*(?:&\d+|[^\s;&|'"]+)/g, '')
-// The script of one sh -c '<script>', alone or after a container exec (devcontainer exec ... sh -lc 'cd app && npm test'),
+// The script of one sh -c '<script>', alone or after a container exec (devcontainer exec ... sh -lc 'cd web && npm test'),
 // else the command: in echo sh -c 'npm test' the shell is an argument.
 function script(command: string) {
   const c = plain(command)

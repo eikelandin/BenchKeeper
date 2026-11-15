@@ -41,7 +41,7 @@ const applied = (state: string, plan: Plan | null): void => {
 };
 
 // The default profile's plugin parts, approved by name.
-const PLUGINS = ["machine.plugin.cedarloom", "machine.plugin.ponytail", "machine.plugin.matt-pocock"];
+const PLUGINS = ["machine.plugin.cedarloom", "machine.plugin.ponytail"];
 // A fresh machine: config, state, Claude Code home and user home folders of its own.
 const folders = () => {
   const [config, state, home, user] = ["config-", "state-", "home-", "user-"].map((name) =>

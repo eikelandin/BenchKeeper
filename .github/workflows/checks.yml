@@ -54,6 +54,16 @@ jobs:
         run: node --test .github/scripts/pr-title.test.mjs
       - name: Renamed account
         run: node --test .github/scripts/account-name.test.mjs
+      # A plugin runs without the app: references to it and paths outside the plugin folder fail unless listed in plugin-boundary-allow.json, which a pull request may not grow.
+      - name: Plugin boundary
+        run: |
+          node --test .github/scripts/plugin-boundary.test.mjs
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            git fetch --depth=1 --no-tags origin "$GITHUB_BASE_REF"
+            node .github/scripts/plugin-boundary.mjs --base FETCH_HEAD
+          else
+            node .github/scripts/plugin-boundary.mjs
+          fi
       # npm.yml builds the release commit; release.yml never lets a later push cancel the release job.
       - name: Release workflows
         run: node --test .github/scripts/release-workflows.test.mjs
