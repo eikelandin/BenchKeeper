@@ -79,6 +79,25 @@ test('a plan is refused when the file changed, a range overlaps or a reason is m
   assert.equal(p.errors.filter((e) => /changed since|overlaps|no reason/.test(e)).length, 4);
 });
 
+test('a cut that ends far beyond the file is refused, not expanded line by line', () => {
+  const root = repo({ 'AGENTS.md': AGENTS });
+  const hash = measure(root, loadConfig(root)).files['AGENTS.md'].sha256;
+  const p = planCuts(root, loadConfig(root), { cuts: [{ file: 'AGENTS.md', start: 3, end: Number.MAX_SAFE_INTEGER, reason: 'r', sha256: hash }] });
+  assert.deepEqual(p.errors, ['AGENTS.md:3-9007199254740991: not a line range of this file (10 lines)']);
+});
+
+test('cut --apply writes nothing when a file changes after the plan was checked', () => {
+  const root = repo({ 'AGENTS.md': AGENTS });
+  const plan = join(root, 'plan.json');
+  writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'AGENTS.md', start: 3, end: 6, reason: 'history', sha256: measure(root, loadConfig(root)).files['AGENTS.md'].sha256 }] }));
+  const out = [];
+  // The summary line prints after the plan check and before the write: an editor save at that moment.
+  const print = (l) => { out.push(l); if (l.startsWith('total ')) writeFileSync(join(root, 'AGENTS.md'), `${AGENTS}Saved.\n`); };
+  assert.equal(run(['cut', '--root', root, '--plan', plan, '--apply'], print), 1);
+  assert.ok(out.includes('error: AGENTS.md: the file changed since the plan was checked; measure again'));
+  assert.equal(readFileSync(join(root, 'AGENTS.md'), 'utf8'), `${AGENTS}Saved.\n`);
+});
+
 test('anchors follow the heading text; a repeated heading gets a number', () => {
   assert.deepEqual([...anchorsOf('# Set up `npm`\n## Notes\n## Notes\n```\n# not a heading\n```\n')], ['set-up-npm', 'notes', 'notes-1']);
 });

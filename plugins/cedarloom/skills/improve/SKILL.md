@@ -32,7 +32,7 @@ Target: $ARGUMENTS (Codex: the text after the skill name), as in [audit](../audi
 3. Show the diffs and ask which to apply: all, some by number, none.
 4. Apply the approved diffs file by file. Record `git status --porcelain` first. Read the cited lines again first: when they no longer match the quote, skip the diff and report it.
 5. Verify. A failure undoes that diff and is reported; a fix is a new diff shown for approval.
-   - Instructions and docs: `node <skill folder>/../debloat/token-budget.mjs check` passes (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`): no protected text lost, no dead link, anchor or import.
+   - Instructions and docs: from the repository root (`git rev-parse --show-toplevel`), `node <skill folder>/../debloat/token-budget.mjs check` passes (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`): no protected text lost, no dead link, anchor or import.
    - Code: the changed-files check the repository names in AGENTS.md or its package scripts passes.
    - `git status --porcelain` adds to the list recorded in step 4 only files with an approved diff.
 6. Report: applied, skipped and flagged findings by number, the `remove` findings left over, the result of each check. Evidence before and after: per applied finding the quoted text before and the text after, and the table of `token-budget.mjs check` with the token change. A pull request of these changes carries the same evidence.

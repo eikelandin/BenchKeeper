@@ -247,16 +247,18 @@ export function planCuts(root, cfg, plan) {
     const raw = text.split(/(?<=\n)/).filter(Boolean);
     cuts.sort((a, b) => a.start - b.start);
     const head = frontMatter(lines).end;
+    const inFile = (c) => Number.isInteger(c.start) && Number.isInteger(c.end) && c.start >= 1 && c.end <= lines.length && c.start <= c.end;
     for (const [i, c] of cuts.entries()) {
       const at = `${file}:${c.start}-${c.end}`;
-      if (!Number.isInteger(c.start) || !Number.isInteger(c.end) || c.start < 1 || c.end > lines.length || c.start > c.end) errors.push(`${at}: not a line range of this file (${lines.length} lines)`);
+      if (!inFile(c)) errors.push(`${at}: not a line range of this file (${lines.length} lines)`);
       if (c.start <= head) errors.push(`${at}: cuts into the front matter (lines 1-${head}); a description or setting changes through a reviewed rewrite, not a cut`);
       if (!c.reason?.trim()) errors.push(`${at}: no reason`);
       if (!c.sha256) errors.push(`${at}: no sha256: take it from measure --json`);
       else if (c.sha256 !== sha256(text)) errors.push(`${at}: the file changed since the plan was made; measure again`);
       if (i && c.start <= cuts[i - 1].end) errors.push(`${at}: overlaps ${file}:${cuts[i - 1].start}-${cuts[i - 1].end}`);
     }
-    const drop = new Set(cuts.flatMap((c) => Array.from({ length: Math.max(0, c.end - c.start + 1) }, (_, k) => c.start + k)));
+    // Only ranges inside the file: an end far beyond it would allocate one entry per line number.
+    const drop = new Set(cuts.filter(inFile).flatMap((c) => Array.from({ length: Math.max(0, c.end - c.start + 1) }, (_, k) => c.start + k)));
     const kept = lines.filter((_, i) => !drop.has(i + 1));
     contents[file] = raw.filter((_, i) => !drop.has(i + 1)).join('');
     for (const c of cuts) rows.push({ file, start: c.start, end: c.end, freed: tokensOf(raw.slice(c.start - 1, c.end).join('')), reason: c.reason });
@@ -420,13 +422,18 @@ export function run(argv, print = console.log) {
     return 0;
   }
   if (command === 'cut' && opts.plan) {
-    const p = planCuts(root, cfg, JSON.parse(readFileSync(opts.plan, 'utf8')));
+    const plan = JSON.parse(readFileSync(opts.plan, 'utf8'));
+    const p = planCuts(root, cfg, plan);
     for (const r of p.rows) print(`${String(-r.freed).padStart(7)}  ${r.file}:${r.start}-${r.end}  ${r.reason ?? ''}`);
     print(`total ${p.before} -> ${p.after} estimated tokens; protected floor ${p.floor}${p.budget == null ? '' : `; budget ${p.budget}`}`);
     if (p.budget != null && p.after > p.budget) print(p.floor > p.budget ? `the budget cannot be reached: the protected text alone is ${p.floor}` : `still ${p.after - p.budget} above the budget`);
     for (const e of p.errors) print(`error: ${e}`);
     if (p.errors.length) return 1;
     if (!opts.apply) { print('dry run: nothing written (add --apply)'); return 0; }
+    // A save since planCuts read the files would be overwritten: check every file again, then write all or nothing.
+    const changed = Object.keys(p.contents).filter((file) => sha256(readFileSync(join(root, file), 'utf8')) !== plan.cuts.find((c) => c.file === file).sha256);
+    for (const file of changed) print(`error: ${file}: the file changed since the plan was checked; measure again`);
+    if (changed.length) return 1;
     for (const [file, text] of Object.entries(p.contents)) writeFileSync(join(root, file), text);
     print(`${p.rows.length} cuts written; run check`);
     return 0;
