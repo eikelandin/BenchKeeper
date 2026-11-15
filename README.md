@@ -14,7 +14,7 @@ CedarLoom gives Claude Code a workflow: it sizes the planning, checks and review
 - [Claude Code](https://code.claude.com/docs/en/setup) 2.1.295 or later.
 - [Node.js](https://nodejs.org/) on the PATH: the plugins' hooks run `node`. CI runs the plugin tests on Node.js 22.
 - Git and the [GitHub CLI](https://cli.github.com/) (`gh`) for setting up repositories and for coordinating issue work.
-- [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, for `cl-orchestration` only: the coordinator starts nothing without it. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
+- Optional, for `cl-orchestration`: [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, to run each worker in a terminal of its own; without it the coordinator runs its workers as background agents of its own session. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
 
 ## Install
 
@@ -60,14 +60,14 @@ The role guard refuses merges, releases and pushes to the default branch in ever
 
 ## Typical flow
 
-1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without Orca. Update with the commands under [Update](#update).
+1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without the coordinator. Update with the commands under [Update](#update).
 2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](plugins/cl-orchestration/skills/orchestrating-projects/policy.md)). The coordinator starts nothing until that file is on the default branch.
-3. Per task, without Orca:
+3. Per task, without the coordinator:
    - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
    - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
-4. Per task, with Orca (needs `cl-orchestration`):
+4. Per issue, with the coordinator (needs `cl-orchestration`):
    - Label the issues with the `startLabel`.
-   - In an Orca terminal, run `CEDARLOOM_ROLE=coordinator claude`, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
+   - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts a worker per issue through its [runner](plugins/cl-orchestration/skills/orchestrating-projects/runners.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
    - Where the coordinator's questions go: [Hub repository](#hub-repository).
 
 ## Hub repository
