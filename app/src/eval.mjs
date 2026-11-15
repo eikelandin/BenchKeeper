@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { codexMcpOff, noTrace } from './advise.mjs';
 import { OWN_PLUGINS } from './agents.mjs';
 import { agentEnv, childEnv } from './childenv.mjs';
-import { contentDir } from './content.mjs';
+import { ruleFile } from './content.mjs';
 import { mask } from './redact.mjs';
 import { claudeResult } from './runner.mjs';
 import { hashPath, hashText, readText } from './fsx.mjs';
@@ -16,7 +16,7 @@ const results = (ctx) => join(userEvals(ctx), 'results.jsonl');
 
 // What a target's result depends on: the skill or rules text, and its cases.
 function targetHash(ctx, target, cases) {
-  const src = target.startsWith('rule:') ? join(contentDir, 'rules', `${target.slice('rule:'.length)}.md`) : skillSource(ctx, target, cases[0]?.project)?.dir;
+  const src = target.startsWith('rule:') ? ruleFile(`${target.slice('rule:'.length)}.md`) : skillSource(ctx, target, cases[0]?.project)?.dir;
   return hashText(`${src ? hashPath(src) : 'missing'}\n${JSON.stringify(cases.map(({ file, ...c }) => c))}`);
 }
 

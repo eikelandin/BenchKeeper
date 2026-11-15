@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import nodePath, { isAbsolute, join, relative, resolve } from 'node:path';
 import { listAccounts } from '../accounts.mjs';
 import { agent, forAgent, skillDirs } from '../agents.mjs';
-import { appVersion, contentDir, contentVersion, library } from '../content.mjs';
+import { appVersion, contentVersion, library, ruleFile } from '../content.mjs';
 import { BASELINE_REPO, CALLERS, callerFile } from '../baseline.mjs';
 import { cooldownEnv } from '../cooldown.mjs';
 import { exists, hashPath, isLink, listDir, readText, realish } from '../fsx.mjs';
@@ -429,7 +429,7 @@ export function projectPlan({ ctx, dir, answers, plugins = {} }) {
   // a CLAUDE.md that imports it. Local: CLAUDE.local.md for Claude Code (it imports AGENTS.md, since a CLAUDE.local.md
   // stops Claude Code reading AGENTS.md on its own) and AGENTS.override.md for Codex (read instead of AGENTS.md, so its
   // block carries AGENTS.md's text too and is rebuilt from it on every apply; the user's lines around it stay).
-  const rules = readFileSync(join(contentDir, 'rules/project.md'), 'utf8').split('\n').filter((l) => a.workflowLoad || !l.includes('`workflow:workflow`')).join('\n');
+  const rules = readFileSync(ruleFile('project.md'), 'utf8').split('\n').filter((l) => a.workflowLoad || !l.includes('`workflow:workflow`')).join('\n');
   const ruleLines = forAgent(rules, a.agents.find((id) => !agent(id).plugins) ?? a.agents[0]).split('\n').map((l) => l.replace(/^- /, ''));
   const packLines = a.packs.map((id) => lib.packs.find((p) => p.id === id)?.pointer).filter(Boolean);
   const lines = (run) => [...ruleLines, ENVS[a.env], dc && written(dc, run) && DC_LINE, a.tier && `Default tier: ${a.tier}`, ...packLines, ...skills.filter((s) => s.source === 'own' && !a.disabled.includes(s.name)).map((s) => s.pointer?.match(/^`([^`]+)`/)?.[1])].filter(Boolean);

@@ -13,6 +13,8 @@ export const contentDir = isPacked ? packed : join(plugins, 'cedarloom/');
 // Own skill name to its folder, in the byte order readdir gives one folder.
 export const ownSkills = () => new Map(parts('skills').flatMap((d) => readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => [e.name, join(d, e.name)])).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
 export const libraryDir = parts('library')[0] ?? join(contentDir, 'library');
+// A rule file such as project.md, from the plugin that ships it: rules/ of more than one plugin holds files.
+export const ruleFile = (name) => parts('rules').map((d) => join(d, name)).find((f) => existsSync(f)) ?? join(contentDir, 'rules', name);
 export const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
 export const library = () => JSON.parse(readFileSync(join(libraryDir, 'library.json'), 'utf8'));
 

@@ -30,7 +30,7 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 |---|---|---|
 | [.claude-plugin/marketplace.json](../.claude-plugin/marketplace.json) | the marketplace, read by Claude Code and Codex | `$HOME/.claude/plugins/`, `$HOME/.codex/plugins/` |
 | [plugins/cedarloom/rules/global.md](../plugins/cedarloom/rules/global.md) | global rules | written by the app to `$HOME/.claude/rules/00-global.md`, and as a block into the Codex, Gemini CLI and Copilot instruction files |
-| [plugins/cedarloom/rules/project.md](../plugins/cedarloom/rules/project.md) | repository rules (standard level and up) | part of the project block the app writes (`CLAUDE.local.md`, `AGENTS.override.md`, or `AGENTS.md` with `--share`) |
+| [plugins/setup/rules/project.md](../plugins/setup/rules/project.md) | repository rules (standard level and up) | the CedarLoom block `setting-up-projects` writes, and part of the project block the app writes (`CLAUDE.local.md`, `AGENTS.override.md`, or `AGENTS.md` with `--share`) |
 | [plugins/orchestration/rules/worker.md](../plugins/orchestration/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `orchestrating-projects`; no setup installs it as a rule file |
 | [app](../app) | the installer: global setup, project setup, history and undo, CLI and browser UI ([README](../app/README.md)) | `npx @cedarloom/app@6.27.0` |
 | [plugins/setup/skills/setting-up-projects](../plugins/setup/skills/setting-up-projects/SKILL.md) | set up or update one repo after `projects apply`: devcontainer, the project parts of AGENTS.md with footgun docs (`docs/agents/`), stack skills, other configuration to remove | plugin skill `setup:setting-up-projects` |

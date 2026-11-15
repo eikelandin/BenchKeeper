@@ -71,7 +71,7 @@ The coordinator (`orchestrating-projects`) starts and merges nothing in a projec
 - `closeIssue`: `true`, the coordinator closes an issue after its pull request merged; `false` leaves that to the user.
 - `trustedAuthors`: none, or the review bots the user names whose comments workers may follow.
 
-Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the field table in the coordinator's [Policy](../orchestrating-projects/SKILL.md#policy) section and [orchestration.schema.json](../orchestrating-projects/orchestration.schema.json).
+Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `orchestration:orchestrating-projects` (the orchestration plugin) lists each field and its default.
 
 ## 6. Other configuration (ask)
 
@@ -93,7 +93,7 @@ After the apply step, give the diff (`git diff` against the default branch plus 
 - Statements in `AGENTS.md` that the run checked (commands, test status, build output, reproducibility) match what the checks showed.
 - Each link in a touched `AGENTS.md` resolves. An `AGENTS.md` that holds the block has Commands, the block, Every change considers and Pointers in that order, and `CLAUDE.md` is exactly `@AGENTS.md`. A committed `AGENTS.md` without the block: its diff holds only the parts the user picked, and `CLAUDE.md` is unchanged.
 - The text between the block's markers is the one [project-rules.md](project-rules.md) gives for the chosen answer, and the block appears once in the file. No block with `benchkeeper:` or `cedarloom-app:` markers remains in `AGENTS.md`, `CLAUDE.local.md` or `AGENTS.override.md`. A local `CLAUDE.local.md` is ignored by git.
-- A new `docs/agents/orchestration.json` is valid JSON, holds only keys the schema names, and the values the user approved.
+- A new `docs/agents/orchestration.json` is valid JSON and holds `schemaVersion` 2 and only the fields above, with the values the user approved.
 - A folder `AGENTS.md` or `CLAUDE.md` added inside a docs or site source folder is excluded from that build (for example `exclude_docs` in MkDocs).
 - Each removal left no folder or lock entry.
 - The branch merges cleanly into the default branch. Otherwise merge the default branch in and resolve the conflicts before pushing.
