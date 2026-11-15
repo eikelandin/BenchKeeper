@@ -9,9 +9,9 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Check, Where } from '../../types'
 import { askUntil, lasting } from '../ask/window.mjs'
 
-const where = atom({ plugin: 'workflow', key: 'where' } as const, null)
-const tests = atom({ plugin: 'workflow', key: 'tests' } as const, null)
-const lint = atom({ plugin: 'workflow', key: 'lint' } as const, null)
+const where = atom({ plugin: 'cl-workflow', key: 'where' } as const, null)
+const tests = atom({ plugin: 'cl-workflow', key: 'tests' } as const, null)
+const lint = atom({ plugin: 'cl-workflow', key: 'lint' } as const, null)
 // A command list as found anywhere in a command, and as the start of one part of a chain, also after a runner (npx vitest).
 const commands = (list: string) => ({
   any: new RegExp(`(?:^|[\\s;&|('"])${list}(?=$|[\\s;&|):'"])`),

@@ -5,7 +5,7 @@ import type { Engine } from 'claude-code/testing'
 import { plain } from './register'
 
 const BAND = {
-  plugin: 'workflow',
+  plugin: 'cl-workflow',
   component: 'AbovePrompt',
   props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 100, scroll: { offset: 0, bodyRows: 12 }, view: {} },
 } as const

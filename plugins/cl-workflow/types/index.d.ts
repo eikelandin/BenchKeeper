@@ -5,6 +5,6 @@ export type Check = { result: 'pass' | 'fail'; edits: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    workflow: { where: Where | null; tests: Check | null; lint: Check | null }
+    'cl-workflow': { where: Where | null; tests: Check | null; lint: Check | null }
   }
 }
