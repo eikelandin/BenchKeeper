@@ -5,7 +5,7 @@ agent = "claude"
 schedule = "0 7 1 * *"
 workspace = "project"
 reuse_session = false
-precheck = "! pgrep -f \"automation-[m]aintenance-sweep\" >/dev/null && k=$(npx -y @cedarloom/app@0.1 knowledge show --json) && maintenance-sweep/precheck.sh {{min_merged}} \"$k\""
+precheck = "command -v cedarloom-app >/dev/null || { echo 'cedarloom-app is not installed' >&2; exit 1; }; ! pgrep -f \"automation-[m]aintenance-sweep\" >/dev/null && k=$(cedarloom-app knowledge show --json) && maintenance-sweep/precheck.sh {{min_merged}} \"$k\""
 missed_run_grace_minutes = 1440
 mode = "report"
 helpers = ["maintenance-sweep/precheck.sh"]

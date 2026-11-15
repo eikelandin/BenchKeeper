@@ -11,7 +11,7 @@ const names = (path, text) => offences(`${P}/${path}`, text, P);
 
 test('names of the app are found in text of any kind', () => {
   assert.deepEqual(names('a.md', 'Run `npx benchkeeper@6 doctor`.'), ['app-package']);
-  assert.deepEqual(names('a.md', 'Run `npx -y @cedarloom/app@0 plan`.'), ['app-package']);
+  assert.deepEqual(names('a.md', 'Run `npx -y @cedarloom/app@0 plan`.'), ['app-npx', 'app-package']);
   assert.deepEqual(names('a.json', '{"command": "benchkeeper:ask"}'), ['app-package']);
   assert.deepEqual(names('a.md', 'State lives in .cedarloom-app/runs.'), ['app-state']);
   assert.deepEqual(names('a.mjs', 'const home = process.env.CEDARLOOM_APP_HOME;'), ['app-state']);
@@ -64,6 +64,19 @@ test('imports must stay inside the plugin or name a Node built-in or the Claude 
   assert.deepEqual(names('a.mjs', "import fs from 'node:fs'; import x from 'left-pad';"), ['import-outside']);
   assert.deepEqual(names('a.mjs', 'const message = "import \'cache\' failed"; // require(\'x\')\n/* import \'y\' */ const t = `import \'z\'`;'), []);
   assert.deepEqual(names('a.mjs', "const m = await import(/* chunk */ 'left-pad');"), ['import-outside']);
+});
+
+test('a package runner call of @cedarloom/app is found in any form, a call of its installed command is not', () => {
+  assert.deepEqual(names('a.md', 'Run `npx @cedarloom/app@0.1 <command>`.'), ['app-npx', 'app-package']);
+  assert.deepEqual(names('a.toml', 'precheck = "k=$(npx --yes @cedarloom/app knowledge show --json)"'), ['app-npx', 'app-package']);
+  assert.deepEqual(names('a.sh', 'bunx @cedarloom/app plan\npnpm dlx @cedarloom/app plan\nnpm exec -- @cedarloom/app plan'), ['app-npx', 'app-package']);
+  assert.deepEqual(names('a.md', 'When `command -v cedarloom-app` finds it, run `cedarloom-app plan`.'), ['app-state']);
+});
+
+test('a package runner call of @cedarloom/app fails even when the allow list names it', () => {
+  assert.deepEqual(differences({ 'p/a.md': ['app-npx', 'app-package'] }, { 'p/a.md': ['app-npx', 'app-package'] }), [
+    'p/a.md: app-npx runs a package from the registry: call the installed command when `command -v` finds it',
+  ]);
 });
 
 test('a difference is named for a new reference and for an allow entry that no longer matches', () => {

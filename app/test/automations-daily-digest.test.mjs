@@ -103,10 +103,12 @@ test('daily-digest precheck: with YYYY-MM-DD in file, the last digest is the fil
 
 // The filled hook of the template, run as Claude Code runs a shell-form hook, on one Bash call in a project whose origin
 // is Owner/Repo; the decision it prints, or null for none. nested: run it in a checkout inside the project with that origin.
-// input: the raw JSON in place of the one built from command.
-function guard(command, values = {}, { nested, input } = {}) {
+// input: the raw JSON in place of the one built from command. head: the branch origin/HEAD points to.
+function guard(command, values = {}, { nested, input, head } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'bk-dd-guard-'));
-  initRepo(dir)('remote', 'add', 'origin', 'git@github.com:Owner/Repo.git');
+  const git = initRepo(dir);
+  git('remote', 'add', 'origin', 'git@github.com:Owner/Repo.git');
+  if (head) git('symbolic-ref', 'refs/remotes/origin/HEAD', `refs/remotes/origin/${head}`);
   const cwd = nested ? join(dir, 'vendor/pub') : dir;
   if (nested) { mkdirSync(cwd, { recursive: true }); initRepo(cwd)('remote', 'add', 'origin', `git@github.com:${nested}.git`); }
   const hook = fill(template(), { mode: 'act', commit: 'true', issue: '7', ...values }).hook.replace('daily-digest/guard.sh', `"${join(genericDir, 'daily-digest/guard.sh')}"`);
@@ -138,6 +140,32 @@ test('daily-digest hook: allows only the exact dated write commands of step 5, d
   assert.equal(guard('gh issue comment 7 --repo someorg/public --body-file digests/2026-11-12.md', {}, { nested: 'someorg/public' }), 'deny', 'the origin of the project, not of the current folder');
   assert.equal(guard(null, {}, { input: JSON.stringify({ tool_input: { command: 'curl x', x: { command: add } } }) }), 'deny', 'a second command key');
   for (const c of ['gh pr list --state all --json number', 'git log -1 --format=%s -- digests/2026-11-12.md', 'date +%F', 'gh pr view 3 --json comments,commits', 'gh issue list --repo org/add-ons --state open']) assert.equal(guard(c), null, c);
+});
+
+test('daily-digest hook: denies every git or gh call that is neither an exact form of step 5 nor a read-only command', { skip: process.platform === 'win32' && 'sh hook' }, () => {
+  for (const c of [
+    'git -C . add -A',
+    'git -c core.x=y commit -am hi',
+    'gh -R acme/proj issue comment 7 --body-file x.md',
+    'git push origin HEAD:main',
+    'gh api repos/Owner/Repo/issues/7/comments -f body=x',
+    'gh pr merge 3',
+    'gh pr review 3 --approve',
+    '/usr/bin/git push origin HEAD:main',
+    'env git push origin HEAD:main',
+    'git status && git push origin HEAD:main',
+    'git log; gh pr merge 3',
+    'git log -1 --output=AGENTS.md',
+    'git fetch --upload-pack=touch origin main',
+    'gh pr list --search "$(gh pr merge 3)"',
+  ]) assert.equal(guard(c), 'deny', c);
+  for (const c of [
+    'git fetch origin main', 'git rev-list --left-right --count origin/main...HEAD', 'git remote get-url origin', 'git status --porcelain -- digests/2026-11-12.md',
+    'gh repo view Owner/Repo --json visibility,defaultBranchRef', 'gh pr list --repo Owner/Repo --state merged --search "merged:>=2026-11-11"',
+  ]) assert.equal(guard(c), null, c);
+  assert.equal(guard('git push origin HEAD:main', {}, { head: 'main' }), 'allow', 'the push of step 5 to the default branch');
+  assert.equal(guard('git push origin HEAD:release', {}, { head: 'main' }), 'deny', 'a branch other than the default');
+  assert.equal(guard('git push origin HEAD:main', { commit: 'false' }, { head: 'main' }), 'deny');
 });
 
 test('daily-digest export: the run\'s settings hold the hook on Bash calls, and it decides there', { skip: process.platform === 'win32' && 'sh export' }, () => {
