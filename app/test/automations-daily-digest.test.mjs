@@ -102,18 +102,24 @@ test('daily-digest precheck: with YYYY-MM-DD in file, the last digest is the fil
 });
 
 // The filled hook of the template, run as Claude Code runs a shell-form hook, on one Bash call in a project whose origin
-// is Owner/Repo; the decision it prints, or null for none. nested: run it in a checkout inside the project with that origin.
-// input: the raw JSON in place of the one built from command. head: the branch origin/HEAD points to.
-function guard(command, values = {}, { nested, input, head } = {}) {
+// is Owner/Repo; the decision it prints, or null for none. The hook process starts in the project folder and the input's
+// cwd names the call's folder: with nested, a checkout inside the project with that origin. input: the raw JSON in place
+// of the one built from command. head: the branch origin/HEAD points to, at the project's first commit. setup: runs with
+// the project's git and folder before the call.
+function guard(command, values = {}, { nested, input, head, setup } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'bk-dd-guard-'));
   const git = initRepo(dir);
   git('remote', 'add', 'origin', 'git@github.com:Owner/Repo.git');
-  if (head) git('symbolic-ref', 'refs/remotes/origin/HEAD', `refs/remotes/origin/${head}`);
+  if (head) {
+    git('update-ref', `refs/remotes/origin/${head}`, 'HEAD');
+    git('symbolic-ref', 'refs/remotes/origin/HEAD', `refs/remotes/origin/${head}`);
+  }
+  setup?.(git, dir);
   const cwd = nested ? join(dir, 'vendor/pub') : dir;
   if (nested) { mkdirSync(cwd, { recursive: true }); initRepo(cwd)('remote', 'add', 'origin', `git@github.com:${nested}.git`); }
   const hook = fill(template(), { mode: 'act', commit: 'true', issue: '7', ...values }).hook.replace('daily-digest/guard.sh', `"${join(genericDir, 'daily-digest/guard.sh')}"`);
-  input ??= JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command, description: 'git add -- digests/2026-11-12.md' } });
-  const r = spawnSync('sh', ['-c', hook], { cwd, env: { ...process.env, CLAUDE_PROJECT_DIR: dir }, input, encoding: 'utf8' });
+  input ??= JSON.stringify({ hook_event_name: 'PreToolUse', cwd, tool_name: 'Bash', tool_input: { command, description: 'git add -- digests/2026-11-12.md' } });
+  const r = spawnSync('sh', ['-c', hook], { cwd: dir, env: { ...process.env, CLAUDE_PROJECT_DIR: dir }, input, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? null : JSON.parse(r.stdout).hookSpecificOutput.permissionDecision;
 }
@@ -168,10 +174,35 @@ test('daily-digest hook: denies every git or gh call that is neither an exact fo
     'git fetch origin main', 'git rev-list --left-right --count origin/main...HEAD', 'git remote get-url origin', 'git status --porcelain -- digests/2026-11-12.md', "git log -1 --format='%h %s; done'",
     'gh repo view Owner/Repo --json visibility,defaultBranchRef', 'gh pr list --repo Owner/Repo --state merged --search "merged:>=2026-11-11"',
   ]) assert.equal(guard(c), null, c);
-  assert.equal(guard('git push origin HEAD:main', {}, { head: 'main' }), 'allow', 'the push of step 5 to the default branch');
-  assert.equal(guard('git push origin HEAD:release', {}, { head: 'main' }), 'deny', 'a branch other than the default');
-  assert.equal(guard('git push origin HEAD:main', { commit: 'false' }, { head: 'main' }), 'deny');
-  assert.equal(guard('git push origin HEAD:main', {}, { head: 'main', nested: 'someorg/public' }), 'deny', 'a push from a nested checkout');
+  for (const c of ['git log -1 *', 'g\\it push origin HEAD:release', "gi''t push origin HEAD:release", '"g"it add -- README.md']) assert.equal(guard(c), 'deny', c);
+});
+
+test('daily-digest hook: allows the push only of the one digest commit on the default branch', { skip: process.platform === 'win32' && 'sh hook' }, () => {
+  const push = 'git push origin HEAD:main';
+  const commit = (git, dir, name, subject) => {
+    mkdirSync(join(dir, name, '..'), { recursive: true });
+    writeFileSync(join(dir, name), `${name}\n`);
+    git('add', '-A');
+    git('commit', '-qm', subject);
+  };
+  const digest = (git, dir) => commit(git, dir, 'digests/2026-11-12.md', 'docs: daily digest');
+  const work = (git, dir) => { for (const n of [1, 2, 3]) commit(git, dir, `f${n}.txt`, `wip ${n}`); };
+  assert.equal(guard(push, {}, { head: 'main', setup: digest }), 'allow', 'the push of step 5 to the default branch');
+  for (const [why, setup] of [
+    ['nothing ahead', () => {}],
+    ['work commits ahead', work],
+    ['work commits and the digest commit ahead', (git, dir) => { work(git, dir); digest(git, dir); }],
+    ['the digest commit with another file', (git, dir) => { writeFileSync(join(dir, 'other.md'), 'x\n'); digest(git, dir); }],
+    ['the digest file under another subject', (git, dir) => commit(git, dir, 'digests/2026-11-12.md', 'wip')],
+    ['another file under the digest subject', (git, dir) => commit(git, dir, 'notes.md', 'docs: daily digest')],
+    ['work commits ahead on another branch', (git, dir) => { git('switch', '-qc', 'feat/wip'); work(git, dir); }],
+    ['the digest commit on another branch', (git, dir) => { git('switch', '-qc', 'feat/wip'); digest(git, dir); }],
+    ['behind origin', (git, dir) => { commit(git, dir, 'f1.txt', 'theirs'); git('update-ref', 'refs/remotes/origin/main', 'HEAD'); git('reset', '-q', '--hard', 'HEAD~1'); digest(git, dir); }],
+  ]) assert.equal(guard(push, {}, { head: 'main', setup }), 'deny', why);
+  assert.equal(guard('git push origin HEAD:release', {}, { head: 'main', setup: digest }), 'deny', 'a branch other than the default');
+  assert.equal(guard(push, { commit: 'false' }, { head: 'main', setup: digest }), 'deny');
+  assert.equal(guard(push, {}, { head: 'main', setup: digest, nested: 'someorg/public' }), 'deny', 'a push from a nested checkout');
+  assert.equal(guard(null, {}, { head: 'main', setup: digest, input: JSON.stringify({ tool_input: { command: push } }) }), 'deny', 'no cwd in the input');
 });
 
 test('daily-digest export: the run\'s settings hold the hook on Bash calls, and it decides there', { skip: process.platform === 'win32' && 'sh export' }, () => {
