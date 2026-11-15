@@ -3,7 +3,7 @@
 // Usage: node token-budget.mjs <measure|protect|cut|baseline|check> [options]   (USAGE below; exit 0 ok, 1 check failed, 2 usage error)
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -239,6 +239,8 @@ export function planCuts(root, cfg, plan) {
   for (const [file, cuts] of byFile) {
     // The config holds the protect list: a cut there could remove the guard that checks this plan.
     if (!inScope.has(file) || file === CONFIG) { errors.push(`${file}: not an instruction file or doc in scope`); continue; }
+    // A write follows a symlink to its target, which can lie outside the repository or outside the scope.
+    if (lstatSync(join(root, file)).isSymbolicLink()) { errors.push(`${file}: a symlink: cut the file it points to`); continue; }
     const text = readFileSync(join(root, file), 'utf8');
     const lines = linesOf(text);
     // Each line with its own line break, so that the kept lines stay byte for byte (CRLF, a missing last break).

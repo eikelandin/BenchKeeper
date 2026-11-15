@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -163,6 +163,26 @@ test('a cut outside the instruction files and docs in scope is refused and write
   assert.equal(readFileSync(join(root, '..', outside), 'utf8'), 'a\nb\n');
   assert.equal(readFileSync(join(root, 'src/app.js'), 'utf8'), 'a\nb\n');
   assert.equal(readFileSync(join(root, '.github/token-budget.json'), 'utf8'), config);
+});
+
+test('a cut through a symlink in scope is refused and writes nothing', (t) => {
+  const root = repo({ 'AGENTS.md': AGENTS });
+  const outside = join(root, '..', `${basename(root)}-target.md`);
+  writeFileSync(outside, 'a\nb\n');
+  mkdirSync(join(root, 'docs'));
+  try {
+    symlinkSync(outside, join(root, 'docs/link.md'));
+  } catch {
+    t.skip('symlinks need a privilege here');
+    return;
+  }
+  const hash = measure(root, loadConfig(root)).files['docs/link.md'].sha256;
+  const plan = join(root, 'plan.json');
+  writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'docs/link.md', start: 2, end: 2, reason: 'r', sha256: hash }] }));
+  const out = [];
+  assert.equal(run(['cut', '--root', root, '--plan', plan, '--apply'], (l) => out.push(l)), 1);
+  assert.ok(out.includes('error: docs/link.md: a symlink: cut the file it points to'));
+  assert.equal(readFileSync(outside, 'utf8'), 'a\nb\n');
 });
 
 test('a cut without the sha256 of the file is refused', () => {
