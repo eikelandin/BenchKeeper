@@ -12,7 +12,7 @@ import facts from '../data/facts.json';
 import Mark from './Mark';
 import { SiteShell } from './SiteShell';
 
-const REPO = 'https://github.com/ESchuderer/BenchKeeper';
+const REPO = 'https://github.com/eikelandin/BenchKeeper';
 const SETUP = `${REPO}/blob/main/docs/setup.md`;
 // Homepage features beyond the overview cards: title, link (relative to the site base unless absolute or `#`), one line.
 const MORE_FEATURES: [string, string, string][] = [

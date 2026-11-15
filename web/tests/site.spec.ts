@@ -16,7 +16,7 @@ for (const path of ['./', './overview/', './app/', './writes/', './changelog/', 
   test(`${path} links back to the repository and its security policy`, async ({ page }) => {
     await page.goto(path);
     const footer = page.locator('footer');
-    await expect(footer.locator('a[href="https://github.com/ESchuderer/BenchKeeper"]')).toHaveCount(1);
+    await expect(footer.locator('a[href="https://github.com/eikelandin/BenchKeeper"]')).toHaveCount(1);
     await expect(footer.locator('a[href$="/SECURITY.md"]')).toHaveCount(1);
   });
 
@@ -24,7 +24,7 @@ for (const path of ['./', './overview/', './app/', './writes/', './changelog/', 
     await page.goto(path);
     await expect(page.locator('a[href*="EVALUATIONS"], a[href*="evaluations/"]')).toHaveCount(0);
     if (path !== './benchmark/') return await expect(page.locator('a[href*="BenchKeeper-research"]')).toHaveCount(0);
-    await expect(page.locator('main a[href="https://github.com/ESchuderer/BenchKeeper-research"]')).toHaveCount(1);
+    await expect(page.locator('main a[href="https://github.com/eikelandin/BenchKeeper-research"]')).toHaveCount(1);
   });
 
   test(`${path} names CedarLoom in the title, header and footer, with the brand mark as its icon`, async ({ page }) => {
@@ -98,8 +98,8 @@ test('the writes page renders the sections of docs/setup.md and docs/security.md
   await expect(doc.locator('h2#trust-boundaries + ul')).toContainText('Two exceptions.');
   await expect(doc.locator('h2#what-the-app-writes + table')).toContainText('.git is denied');
   await expect(doc.locator('h2#what-the-app-never-does + ul > li').first()).toHaveText('Run a command through a shell.');
-  await expect(doc.locator('a[href="https://github.com/ESchuderer/BenchKeeper/blob/main/docs/security.md#controls-in-claude-code"]')).toHaveCount(1);
-  await expect(doc.locator('a[href="https://github.com/ESchuderer/BenchKeeper/blob/main/SECURITY.md"]')).toHaveCount(1);
+  await expect(doc.locator('a[href="https://github.com/eikelandin/BenchKeeper/blob/main/docs/security.md#controls-in-claude-code"]')).toHaveCount(1);
+  await expect(doc.locator('a[href="https://github.com/eikelandin/BenchKeeper/blob/main/SECURITY.md"]')).toHaveCount(1);
 });
 
 test('the changelog page shows the entries of CHANGELOG.md in its order', async ({ page }) => {

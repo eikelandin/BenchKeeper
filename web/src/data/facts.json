@@ -326,7 +326,7 @@
     {
       "id": "rules",
       "title": "`rules/global.md`",
-      "href": "https://github.com/ESchuderer/BenchKeeper/blob/main/plugins/cedarloom/rules/global.md",
+      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/rules/global.md",
       "scope": "Global, every session, full level",
       "text": "Secrets kept out, confirmation before hard-to-reverse actions or actions visible to others, assumptions stated, the minimum change and the check that proves it done. The repository rules (when and how to ask, best practice with a source, writing without filler, sources for claims, checks never weakened, load the workflow skill) are in `rules/project.md`, part of each project's block.",
       "evidence": ["plugins/cedarloom/rules/global.md", "plugins/cedarloom/rules/project.md", "docs/stack.md#contents"]
@@ -334,7 +334,7 @@
     {
       "id": "workflow",
       "title": "`workflow`",
-      "href": "https://github.com/ESchuderer/BenchKeeper/blob/main/plugins/cedarloom/skills/workflow/SKILL.md",
+      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/skills/workflow/SKILL.md",
       "scope": "Global, before repository work",
       "text": "The task kind and tier, the playbooks for software changes, docs passes and research, the check per change type, batch mode with long checks at the end.",
       "evidence": ["plugins/cedarloom/skills/workflow/SKILL.md", "docs/stack.md#contents"]
@@ -358,7 +358,7 @@
     {
       "id": "app",
       "title": "The app and the setup skills",
-      "href": "https://github.com/ESchuderer/BenchKeeper/tree/main/app",
+      "href": "https://github.com/eikelandin/BenchKeeper/tree/main/app",
       "scope": "On request",
       "text": "`npx benchkeeper@6.27.0` sets up the machine and each repository, shows every change first and records each run for undo. Its Dashboard reports drift, Fix everything applies the global plan and updates the projects that are behind, and the Sessions board tracks tier, cost and outcome per session. `/benchkeeper:setting-up-projects` adds stack skills and the dev container, `/benchkeeper:maintaining-repos` runs a maintenance pass, `/benchkeeper:orchestrating-projects` coordinates workers on labeled issues across projects.",
       "evidence": ["app/README.md#web-ui", "app/ui/fix.jsx", "docs/stack.md#contents"]
@@ -368,7 +368,7 @@
       "title": "Devcontainer and browser checks",
       "href": "https://code.visualstudio.com/docs/devcontainers/devcontainer-cli",
       "scope": "Per repository",
-      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Domain skills come from the [BenchKeeper library](https://github.com/ESchuderer/BenchKeeper/blob/main/plugins/cedarloom/library/README.md), stack skills from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
+      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Domain skills come from the [BenchKeeper library](https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/library/README.md), stack skills from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
       "evidence": ["docs/stack.md#components", "plugins/cedarloom/skills/setting-up-projects/SKILL.md", "plugins/cedarloom/skills/setting-up-projects/devcontainer.md"]
     }
   ],
