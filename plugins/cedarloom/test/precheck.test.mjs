@@ -115,6 +115,26 @@ test('precheck: reads the policy from the default branch, skips a project withou
   assert.throws(() => check('/p', stub({ ...POLICY, merge: { mode: 'disjont' }, later: true })), /enum at merge\.mode: .+; unknown-key at later: /);
 });
 
+test('precheck: a member or collaborator counts only with write access to the tracker, and a failed lookup starts nothing', () => {
+  const policy = { ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } };
+  const by = (number, author_association, login) => issue(number, { author_association, user: { login }, labels: [{ name: 'agent-ready' }, { name: 'project-a' }] });
+  // A managed user's login ends in _<shortcode>.
+  const issues = [by(1, 'MEMBER', 'reader'), by(2, 'COLLABORATOR', 'reader'), by(3, 'MEMBER', 'writer'), by(4, 'COLLABORATOR', 'maintainer'), by(5, 'COLLABORATOR', 'admin'), by(6, 'OWNER', 'owner'), by(7, 'MEMBER', 'mona_acme')];
+  // The REST API gives the maintain role as write.
+  const roles = { reader: 'read', writer: 'write', maintainer: 'write', admin: 'admin', mona_acme: 'write' };
+  const asked = [];
+  const run = (fails) => (dir, cmd, args) => {
+    if (args[0] !== 'api') return stub(policy)(dir, cmd, args);
+    if (args[1] === '--paginate') return JSON.stringify([issues]);
+    asked.push(args.join(' '));
+    if (fails) throw new Error('HTTP 502');
+    return JSON.stringify({ permission: roles[args[1].split('/')[4]] });
+  };
+  assert.deepEqual(check('/p', run(false), {}), [3, 4, 5, 6, 7]);
+  assert.ok(asked.includes('api repos/owner/tracker/collaborators/reader/permission'));
+  assert.throws(() => check('/p', run(true), {}), /HTTP 502/);
+});
+
 test('precheck: an origin on another host than gh\'s fails instead of listing the github.com repository of the same path', () => {
   for (const origin of ['https://gitlab.com/owner/project.git', 'git@gitlab.com:owner/project.git', 'ssh://git@gitlab.com:2222/owner/project']) {
     calls.length = 0;
