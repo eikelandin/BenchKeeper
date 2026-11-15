@@ -174,10 +174,10 @@ The default is false because an open run spends a turn at every tick, and a sche
 
 | Rule | Home | State |
 |---|---|---|
-| The owner is asked in the session only while terminal questions are allowed, else by an approval filed in the project's tracker when it is private, else in the hub repository, else in the local queue (`approvals.md`) | skill text (`SKILL.md:145-146`) | exists |
+| The owner is asked in the session only while terminal questions are allowed, else by an approval filed in the project's tracker when it is private, else in the hub repository, else in the local queue, or into the report when the tracker is a public hub (`approvals.md`) | skill text (`SKILL.md:145-146`) | exists |
 | The owner's answer to a filed approval lifts a `design` gate only. For a `merge` or an `owner-only` gate the merge stays the owner's: the answer is a recorded decision, nothing merges because of it, and the run goes on when it sees the pull request merged. An answer counts only for the head the approval names | `answer` in `approval.mjs` (the newest comment by time that starts as an answer or is an option's label, such as `(a)`, or the one letter or digit of such a label alone, by the repository's owner or a member with write access); skill text (`approvals.md:50-56`, `SKILL.md:53`) | exists |
-| A worker takes the safest reversible option and writes it in the pull request | spec (`spec-template.md:42`) | exists |
-| A worker flags work that is wrong, too big or against a recorded decision, and never widens its scope | spec (`spec-template.md:46`), and the question path below | exists |
+| A worker takes the safest reversible option and writes it in the pull request | spec (`spec-template.md:65`) | exists |
+| A worker flags work that is wrong, too big or against a recorded decision, and never widens its scope | spec (`spec-template.md:73`), and the question path below | exists |
 | Work that splits into several pull requests: the worker posts the list on the issue before implementing and reports NEEDS_REPLAN; the coordinator approves it when every pull request stays inside the issue, the owned paths and the policy, and starts them as a batch, else lists them for the owner | spec (Needs replan), skill text (`SKILL.md`, Outcomes) | exists |
 | Who does what: the roles table (merge, split, model ceiling, shared git directory, review of record, threads, issue closes, follow-ups, headless jobs, answers) | skill text (`SKILL.md#roles`) | exists |
 | A worker is released only once it has settled (after its report, or after it was stopped), and one with a pull request only after the merge or once the pull request is left for the owner | `orca.md:125` | exists |
@@ -296,7 +296,7 @@ The documentation also keeps one record of fetched marketplaces per user and fet
 - Pick: in the hub, branches hold no hub number, so the coordinator takes `startLabel` off an issue when its worker starts. An open pull request from a fork never counts: anyone can open one.
 - Close: after the merge the coordinator closes a hub issue with a comment linking the pull request, a project issue only with `closeIssue`. A closing keyword (`Fixes owner/repo#12`) closes the issue when the pull request merges, in another repository too and whatever `closeIssue` says ([linking a pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)): the spec forbids one, and the same check before ready looks for it.
 - One project per issue: a label per project does not make the labels distinct. In a run, an issue that matches more than one project starts nowhere and is listed for the owner: a rule of Pick in `SKILL.md` (`SKILL.md:69`), carried by `distinct` in `precheck.mjs`: run with every project of the run, the precheck prints such an issue for none of them and names it on stderr.
-- Naming: in a public project nothing names the hub, the worker's spec included. `hub-mentions.mjs` refuses a merge whose title, body, branch or commit messages name `owner/name`, in any encoded form, or `name#<number>`, or whose commits it cannot all read; the reviewer looks for the rest.
+- Naming: in a public project nothing names the hub, the worker's spec included. `hub-mentions.mjs` refuses a merge whose title, body, branch or commit messages name `owner/name`, in its percent, entity or backslash form, or `name#<number>`, or whose commits it cannot all read; the reviewer looks for the rest.
 
 ## What changes for a version 1 policy
 

@@ -89,7 +89,7 @@ const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd,
   ]);
 };
 
-const HUB_ISSUES = 'gh api --paginate --slurp repos/owner/hub/issues?state=open&per_page=100&labels=agent-ready,project%3Aproject';
+const HUB_ISSUES = 'gh api --paginate --slurp repos/owner/tracker/issues?state=open&per_page=100&labels=agent-ready,project%3Aproject';
 const REPO_ISSUES = 'gh api --paginate --slurp repos/owner/project/issues?state=open&per_page=100&labels=agent-ready';
 // Which repository the issues were listed in, and whether pull requests were.
 const listed = (policy, settings) => {
@@ -100,21 +100,21 @@ const listed = (policy, settings) => {
 
 test('precheck: the option issuesIn chooses the tracker, the policy\'s issues.tracker overrides it either way, and without a hub it is the repository', () => {
   // In the hub, issues carry the project label and no pull request hides one: 7, 8 and 9 pick, 10 without the label does not.
-  assert.deepEqual(listed(POLICY, { hub: 'owner/hub', issuesIn: 'hub' }), ['hub', false, [7, 8, 9]]);
-  assert.deepEqual(listed(POLICY, { hub: 'owner/hub', issuesIn: 'repo' }), ['repo', true, [7]]);
-  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'repo' } }, { hub: 'owner/hub', issuesIn: 'hub' }), ['repo', true, [7]]);
-  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'hub' } }, { hub: 'owner/hub', issuesIn: 'repo' }), ['hub', false, [7, 8, 9]]);
+  assert.deepEqual(listed(POLICY, { hub: 'owner/tracker', issuesIn: 'hub' }), ['hub', false, [7, 8, 9]]);
+  assert.deepEqual(listed(POLICY, { hub: 'owner/tracker', issuesIn: 'repo' }), ['repo', true, [7]]);
+  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'repo' } }, { hub: 'owner/tracker', issuesIn: 'hub' }), ['repo', true, [7]]);
+  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'hub' } }, { hub: 'owner/tracker', issuesIn: 'repo' }), ['hub', false, [7, 8, 9]]);
   assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'hub' } }, { issuesIn: 'hub' }), ['repo', true, [7]]);
   // A committed file that names another repository lists the project's own issues.
-  assert.deepEqual(listed({ ...POLICY, issues: { repository: 'owner/other', tracker: 'hub' } }, { hub: 'owner/hub', issuesIn: 'repo' }), ['repo', true, [7]]);
+  assert.deepEqual(listed({ ...POLICY, issues: { repository: 'owner/other', tracker: 'hub' } }, { hub: 'owner/tracker', issuesIn: 'repo' }), ['repo', true, [7]]);
   assert.ok(!calls.some((c) => c.includes('owner/other')));
 });
 
 test('precheck: the command line takes a plain hub and repo or hub, else names the fault', () => {
-  assert.deepEqual(settingsOf(['--hub', 'owner/hub', '--issues-in', 'hub', '/a']), { hub: 'owner/hub', issuesIn: 'hub', dirs: ['/a'] });
+  assert.deepEqual(settingsOf(['--hub', 'owner/tracker', '--issues-in', 'hub', '/a']), { hub: 'owner/tracker', issuesIn: 'hub', dirs: ['/a'] });
   assert.deepEqual(settingsOf(['/a', '/b']), { hub: undefined, issuesIn: 'repo', dirs: ['/a', '/b'] });
   // An empty hub in the = form fails, instead of taking the first project path as the hub.
-  for (const [argv, fault] of [[['--hub=', 'projects/web', '/a'], /--hub/], [['--hub', '${user_config.hub}', '/a'], /--hub/], [['--hub', 'owner/../x', '/a'], /--hub/], [['--issues-in', 'other', '/a'], /--issues-in/], [['--hub', 'owner/hub'], /usage:/]]) assert.throws(() => settingsOf(argv), fault);
+  for (const [argv, fault] of [[['--hub=', 'projects/web', '/a'], /--hub/], [['--hub', '${user_config.hub}', '/a'], /--hub/], [['--hub', 'owner/../x', '/a'], /--hub/], [['--issues-in', 'other', '/a'], /--issues-in/], [['--hub', 'owner/tracker'], /usage:/]]) assert.throws(() => settingsOf(argv), fault);
 });
 
 test('precheck: reads the policy from the default branch, skips a project without one and names why the reader rejects one', () => {
