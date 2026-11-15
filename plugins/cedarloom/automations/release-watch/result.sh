@@ -8,7 +8,7 @@ case "$result" in pass|fail) ;; *) echo "result must be pass or fail" >&2; exit 
 "$(dirname "$0")/valid.sh" tag "$tag" >/dev/null
 printf '%s\n' "$repo" | grep -qxE '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' || { echo "not a repository: $repo" >&2; exit 2; }
 [ -f "$body" ] || { echo "report file $body is missing" >&2; exit 2; }
-dir=${XDG_STATE_HOME:-$HOME/.local/state}/benchkeeper/release-watch
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/release-watch
 mkdir -p "$dir"
 echo "$tag $result $(date +%s)" >> "$dir/$(echo "$repo" | tr / _)"
 [ "$mode" = act ] || exit 0

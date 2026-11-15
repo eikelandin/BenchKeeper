@@ -2,7 +2,7 @@
 export const RUNS = '.cedarloom/runs';
 export const FILE = `${RUNS}/handoff.md`;
 export const STATUS = ['<!-- cedarloom:status -->', '<!-- /cedarloom:status -->'];
-const HEADER = "BenchKeeper restored this coordinator's handoff file after a context clear or compaction (.cedarloom/runs/handoff.md, below). Before anything else, run its Resume steps: the runner's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
+const HEADER = "CedarLoom restored this coordinator's handoff file after a context clear or compaction (.cedarloom/runs/handoff.md, below). Before anything else, run its Resume steps: the runner's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
 // Claude Code drops additionalContext above 10,000 characters: the header, this much of the file and drift together and
 // the cut line stay below.
 const CAP = 9000;
@@ -73,17 +73,14 @@ export const STATUS_ARGS = [...GIT, 'status', '--porcelain=v1', '-z'];
 export const TOP_ARGS = [...GIT, 'rev-parse', '--show-toplevel'];
 
 // The paths of `status --porcelain=v1 -z` output: "XY path" entries, a rename or copy followed by its original path, which is
-// skipped. The run folder .cedarloom/runs/ with the handoff file is not drift; the rest of .cedarloom/ can be committed and is.
-// A wholly untracked .cedarloom/ is one `?? .cedarloom/` entry that holds no committed file, so it is not drift either.
+// skipped. The handoff file and its run state under .cedarloom-app/ are not drift.
 export const changedPaths = (stdout) => {
   const entries = stdout.split('\0');
   const paths = [];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.length < 4) continue;
-    const path = entry.slice(3);
-    const untrackedFolder = entry.startsWith('?? ') && /(^|\/)\.cedarloom\/$/.test(path);
-    if (!untrackedFolder && !/(^|\/)\.cedarloom\/runs(\/|$)/.test(path)) paths.push(path);
+    if (!/(^|\/)\.cedarloom-app\//.test(entry.slice(3))) paths.push(entry.slice(3));
     if ('RC'.includes(entry[0]) || 'RC'.includes(entry[1])) i++;
   }
   return paths;
@@ -116,5 +113,5 @@ export const drift = (sinceMs, commits, paths) => {
 // The file keeps its full CAP; the drift gets the room the file leaves below CAP, none when the file was cut.
 export const restored = (text, drifted = '') => {
   const section = within(drifted.split('\n'), Math.min(DRIFT_CAP, CAP - Math.min(text.length, CAP)));
-  return `${HEADER}\n\n${text.length > CAP ? `${text.slice(0, CAP)}\n[BenchKeeper cut the file here; ${text.length - CAP} more characters are in ${FILE}.]` : text}${section && `\n${section}`}`;
+  return `${HEADER}\n\n${text.length > CAP ? `${text.slice(0, CAP)}\n[CedarLoom cut the file here; ${text.length - CAP} more characters are in ${FILE}.]` : text}${section && `\n${section}`}`;
 };
