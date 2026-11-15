@@ -1,17 +1,5 @@
 # Playwright MCP snapshots and logs
 .playwright-mcp/
-# CedarLoom workspace (pnpm)
 node_modules/
-packages/*/dist/
-# The app's own extensions, built into the CLI package (pnpm --filter @cedarloom/extension-orca run build)
-packages/cli/extensions/
-# The workflow packages' guard and exit hooks, built into the CLI package (pnpm --filter @cedarloom/orchestration run build)
-packages/cli/hooks/
-packages/*/test-results/
-packages/*/playwright-report/
-coverage/
-*.tsbuildinfo
 # The Claude Code types a session lays beside a loaded mod (docs/development.md#plugin-mod-types)
 plugins/*/.claude-plugin/types/
-# Schemathesis reports (packages/server/scripts/schemathesis.ts)
-.schemathesis/

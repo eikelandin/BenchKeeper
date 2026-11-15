@@ -1,1 +1,0 @@
-- `scripts/dc <command>` runs a command in the dev container (`devcontainer exec --workspace-folder .`, the arguments as given): `scripts/dc npm test`, compound commands as `scripts/dc sh -lc '...'`; `scripts/dc up` starts the container.
