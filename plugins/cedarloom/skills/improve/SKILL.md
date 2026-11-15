@@ -31,7 +31,7 @@ Target: $ARGUMENTS (Codex: the text after the skill name), as in [audit](../audi
    - `remove` findings are not applied here. List them for `/cedarloom:debloat`.
 3. Show the diffs and ask which to apply: all, some by number, none.
 4. Apply the approved diffs file by file. Read the cited lines again first: when they no longer match the quote, skip the diff and report it.
-5. Verify. A failure is fixed or the diff is undone, then reported.
+5. Verify. A failure undoes that diff and is reported; a fix is a new diff shown for approval.
    - Instructions and docs: `node <skill folder>/../debloat/token-budget.mjs check` passes (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`): no protected text lost, no dead link, anchor or import.
    - Code: the changed-files check the repository names in AGENTS.md or its package scripts passes.
    - `git diff --stat` lists only files with an approved diff.

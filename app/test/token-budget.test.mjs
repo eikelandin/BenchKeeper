@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { test } from 'node:test';
 import { addProtected, anchorsOf, check, deadRefs, globRegex, loadConfig, locate, measure, planCuts, run, suggest, tokensOf } from '../../plugins/cedarloom/skills/debloat/token-budget.mjs';
 
@@ -52,7 +52,7 @@ test('a cut that removes protected text is refused and writes nothing', () => {
   const root = repo({ 'AGENTS.md': AGENTS });
   addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);
   const plan = join(root, 'plan.json');
-  writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'AGENTS.md', start: 9, end: 9, reason: 'restates the hook' }] }));
+  writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'AGENTS.md', start: 9, end: 9, reason: 'restates the hook', sha256: measure(root, loadConfig(root)).files['AGENTS.md'].sha256 }] }));
   const lines = [];
   assert.equal(run(['cut', '--root', root, '--plan', plan, '--apply'], (l) => lines.push(l)), 1);
   assert.match(lines.join('\n'), /refused, a cut removes protected text/);
@@ -63,7 +63,7 @@ test('a cut by line range deletes exactly those lines, only with --apply', () =>
   const root = repo({ 'AGENTS.md': AGENTS });
   addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);
   const plan = join(root, 'plan.json');
-  writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'AGENTS.md', start: 3, end: 6, reason: 'history' }] }));
+  writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'AGENTS.md', start: 3, end: 6, reason: 'history', sha256: measure(root, loadConfig(root)).files['AGENTS.md'].sha256 }] }));
   assert.equal(run(['cut', '--root', root, '--plan', plan], () => {}), 0);
   assert.equal(readFileSync(join(root, 'AGENTS.md'), 'utf8'), AGENTS);
   assert.equal(run(['cut', '--root', root, '--plan', plan, '--apply'], () => {}), 0);
@@ -74,8 +74,8 @@ test('a cut by line range deletes exactly those lines, only with --apply', () =>
 
 test('a plan is refused when the file changed, a range overlaps or a reason is missing', () => {
   const root = repo({ 'AGENTS.md': AGENTS });
-  const p = planCuts(root, loadConfig(root), { cuts: [{ file: 'AGENTS.md', start: 3, end: 5, reason: 'history', sha256: 'stale' }, { file: 'AGENTS.md', start: 5, end: 6 }] });
-  assert.equal(p.errors.filter((e) => /changed since|overlaps|no reason/.test(e)).length, 3);
+  const p = planCuts(root, loadConfig(root), { cuts: [{ file: 'AGENTS.md', start: 3, end: 5, reason: 'history', sha256: 'stale' }, { file: 'AGENTS.md', start: 5, end: 6, sha256: 'stale' }] });
+  assert.equal(p.errors.filter((e) => /changed since|overlaps|no reason/.test(e)).length, 4);
 });
 
 test('anchors follow the heading text; a repeated heading gets a number', () => {
@@ -142,4 +142,54 @@ test('a cut into the front matter is refused', () => {
   const root = repo({ 'plugins/p/skills/auto/SKILL.md': skill('auto', 'Picks a tier. Use before an edit.') });
   const p = planCuts(root, loadConfig(root), { cuts: [{ file: 'plugins/p/skills/auto/SKILL.md', start: 3, end: 3, reason: 'long description' }] });
   assert.match(p.errors.join('\n'), /cuts into the front matter \(lines 1-4\)/);
+});
+
+test('a cut outside the instruction files and docs in scope is refused and writes nothing', () => {
+  const root = repo({ 'AGENTS.md': AGENTS, 'src/app.js': 'a\nb\n' });
+  addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);
+  const config = readFileSync(join(root, '.github/token-budget.json'), 'utf8');
+  const outside = `${basename(root)}-outside.md`;
+  writeFileSync(join(root, '..', outside), 'a\nb\n');
+  const plan = join(root, 'plan.json');
+  const hash = '0'.repeat(64);
+  writeFileSync(plan, JSON.stringify({ cuts: [
+    { file: `../${outside}`, start: 1, end: 1, reason: 'r', sha256: hash },
+    { file: 'src/app.js', start: 1, end: 1, reason: 'r', sha256: hash },
+    { file: '.github/token-budget.json', start: 2, end: 9, reason: 'r', sha256: hash },
+  ] }));
+  const out = [];
+  assert.equal(run(['cut', '--root', root, '--plan', plan, '--apply'], (l) => out.push(l)), 1);
+  assert.equal(out.filter((l) => /not an instruction file or doc in scope/.test(l)).length, 3);
+  assert.equal(readFileSync(join(root, '..', outside), 'utf8'), 'a\nb\n');
+  assert.equal(readFileSync(join(root, 'src/app.js'), 'utf8'), 'a\nb\n');
+  assert.equal(readFileSync(join(root, '.github/token-budget.json'), 'utf8'), config);
+});
+
+test('a cut without the sha256 of the file is refused', () => {
+  const root = repo({ 'AGENTS.md': AGENTS });
+  const p = planCuts(root, loadConfig(root), { cuts: [{ file: 'AGENTS.md', start: 3, end: 5, reason: 'history' }] });
+  assert.deepEqual(p.errors, ['AGENTS.md:3-5: no sha256: take it from measure --json']);
+});
+
+test('front matter with CRLF line breaks: the description is listed, suggested and not cut; a cut keeps CRLF', () => {
+  const path = 'plugins/p/skills/auto/SKILL.md';
+  const text = `${skill('auto', 'Picks a tier. Use before an edit.').replace(/\n/g, '\r\n')}More.\r\n`;
+  const root = repo({ [path]: text });
+  assert.equal(measure(root, loadConfig(root)).files[path].listed, 10);
+  const out = [];
+  run(['protect', '--suggest', '--root', root, path], (l) => out.push(l));
+  assert.deepEqual(JSON.parse(out.join('\n')).map((r) => [r.start, r.end, r.reason]), [[3, 3, 'routing description']]);
+  const hash = measure(root, loadConfig(root)).files[path].sha256;
+  assert.match(planCuts(root, loadConfig(root), { cuts: [{ file: path, start: 3, end: 3, reason: 'r', sha256: hash }] }).errors.join('\n'), /cuts into the front matter \(lines 1-4\)/);
+  const p = planCuts(root, loadConfig(root), { cuts: [{ file: path, start: 7, end: 7, reason: 'r', sha256: hash }] });
+  assert.deepEqual(p.errors, []);
+  assert.equal(p.contents[path], '---\r\nname: auto\r\ndescription: "Picks a tier. Use before an edit."\r\n---\r\n\r\nBody text.\r\n');
+});
+
+test('a folded description counts every line and is suggested as a whole', () => {
+  const path = 'plugins/p/skills/auto/SKILL.md';
+  const text = '---\nname: auto\ndescription: >-\n  Picks a tier.\n  Use before an edit.\n---\n\nBody text.\n';
+  const root = repo({ [path]: text });
+  assert.equal(measure(root, loadConfig(root)).files[path].listed, 10);
+  assert.deepEqual(suggest(text.split('\n'), path), [{ start: 3, end: 5, reason: 'routing description' }]);
 });

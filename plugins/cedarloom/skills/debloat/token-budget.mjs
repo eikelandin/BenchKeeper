@@ -28,7 +28,7 @@ const EXCLUDE = ['**/node_modules/**', '**/CHANGELOG.md'];
 export const tokensOf = (text) => Math.ceil(Buffer.byteLength(text, 'utf8') / 4);
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 const norm = (s) => s.replace(/\s+/g, ' ').trim();
-const linesOf = (text) => (text === '' ? [] : text.replace(/\n$/, '').split('\n'));
+const linesOf = (text) => (text === '' ? [] : text.replace(/\r?\n$/, '').split(/\r?\n/));
 const sum = (values) => values.reduce((n, v) => n + v, 0);
 // Code-unit order, the same on every machine: localeCompare would follow the locale and reorder the stored baseline.
 const byCodeUnit = (a, b) => Number(a > b) - Number(a < b);
@@ -86,15 +86,23 @@ export function scope(root, cfg) {
   return [...new Set(repoFiles(root))].filter((p) => inc.some((re) => re.test(p)) && !exc.some((re) => re.test(p)) && existsSync(join(root, p))).sort(byCodeUnit);
 }
 
-// Front matter as `key: value` lines (quotes dropped) and the number of its closing `---` line; end 0 when there is none.
+// Front matter as `key: value` fields (quotes dropped) with their first and last line, and the number of its closing `---` line;
+// end 0 when there is none. Indented lines continue the field above: a folded or literal block, or a wrapped value.
 export function frontMatter(lines) {
   if (lines[0] !== '---') return { fields: {}, end: 0 };
   const close = lines.indexOf('---', 1);
   if (close < 0) return { fields: {}, end: 0 };
   const fields = {};
-  for (const [i, line] of lines.slice(1, close).entries()) {
-    const kv = /^([A-Za-z][\w-]*):(.*)$/.exec(line);
-    if (kv) fields[kv[1]] = { value: kv[2].trimStart().replace(/^(["'])(.*)\1$/, '$2'), line: i + 2 };
+  let last;
+  for (let i = 1; i < close; i++) {
+    const kv = /^([A-Za-z][\w-]*):(.*)$/.exec(lines[i]);
+    if (kv) last = fields[kv[1]] = { parts: [kv[2].trim()], line: i + 1, end: i + 1 };
+    else if (last && /^\s+\S/.test(lines[i])) { last.parts.push(lines[i].trim()); last.end = i + 1; }
+  }
+  for (const f of Object.values(fields)) {
+    const parts = /^[|>][1-9+-]*$/.test(f.parts[0]) ? f.parts.slice(1) : f.parts;
+    f.value = parts.join(' ').replace(/^(["'])(.*)\1$/, '$2');
+    delete f.parts;
   }
   return { fields, end: close + 1 };
 }
@@ -169,7 +177,7 @@ export function suggest(lines, path = '') {
   const ranges = [];
   const text = (n) => lines[n - 1] ?? '';
   const description = routing(path, lines)?.description;
-  if (description) ranges.push({ start: description.line, end: description.line, reason: 'routing description' });
+  if (description) ranges.push({ start: description.line, end: description.end, reason: 'routing description' });
   for (const [no, line] of prose(lines)) {
     const h = HEADING.exec(line);
     if (h && h[1].length > 1 && SECTION.test(h[2])) {
@@ -221,16 +229,20 @@ export function missingProtected(root, cfg, contents = {}) {
   return out;
 }
 
-// A plan is { "cuts": [{ "file", "start", "end", "reason", "sha256"? }] }. Cuts delete whole lines; nothing is reworded.
+// A plan is { "cuts": [{ "file", "start", "end", "reason", "sha256" }] }. Cuts delete whole lines; nothing is reworded.
 export function planCuts(root, cfg, plan) {
   const errors = [];
   const contents = {};
   const rows = [];
+  const inScope = new Set(scope(root, cfg));
   const byFile = Map.groupBy(plan.cuts ?? [], (c) => c.file);
   for (const [file, cuts] of byFile) {
-    if (!existsSync(join(root, file))) { errors.push(`${file}: no such file`); continue; }
+    // The config holds the protect list: a cut there could remove the guard that checks this plan.
+    if (!inScope.has(file) || file === CONFIG) { errors.push(`${file}: not an instruction file or doc in scope`); continue; }
     const text = readFileSync(join(root, file), 'utf8');
     const lines = linesOf(text);
+    // Each line with its own line break, so that the kept lines stay byte for byte (CRLF, a missing last break).
+    const raw = text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
     cuts.sort((a, b) => a.start - b.start);
     const head = frontMatter(lines).end;
     for (const [i, c] of cuts.entries()) {
@@ -238,13 +250,14 @@ export function planCuts(root, cfg, plan) {
       if (!Number.isInteger(c.start) || !Number.isInteger(c.end) || c.start < 1 || c.end > lines.length || c.start > c.end) errors.push(`${at}: not a line range of this file (${lines.length} lines)`);
       if (c.start <= head) errors.push(`${at}: cuts into the front matter (lines 1-${head}); a description or setting changes through a reviewed rewrite, not a cut`);
       if (!c.reason?.trim()) errors.push(`${at}: no reason`);
-      if (c.sha256 && c.sha256 !== sha256(text)) errors.push(`${at}: the file changed since the plan was made; measure again`);
+      if (!c.sha256) errors.push(`${at}: no sha256: take it from measure --json`);
+      else if (c.sha256 !== sha256(text)) errors.push(`${at}: the file changed since the plan was made; measure again`);
       if (i && c.start <= cuts[i - 1].end) errors.push(`${at}: overlaps ${file}:${cuts[i - 1].start}-${cuts[i - 1].end}`);
     }
     const drop = new Set(cuts.flatMap((c) => Array.from({ length: Math.max(0, c.end - c.start + 1) }, (_, k) => c.start + k)));
     const kept = lines.filter((_, i) => !drop.has(i + 1));
-    contents[file] = kept.length ? `${kept.join('\n')}${text.endsWith('\n') ? '\n' : ''}` : '';
-    for (const c of cuts) rows.push({ file, start: c.start, end: c.end, freed: tokensOf(lines.slice(c.start - 1, c.end).join('\n')), reason: c.reason });
+    contents[file] = raw.filter((_, i) => !drop.has(i + 1)).join('');
+    for (const c of cuts) rows.push({ file, start: c.start, end: c.end, freed: tokensOf(raw.slice(c.start - 1, c.end).join('')), reason: c.reason });
     if (!kept.some((l) => l.trim())) errors.push(`${file}: every line would be cut; this tool does not empty or delete files`);
   }
   errors.push(...missingProtected(root, cfg, contents).map((e) => `refused, a cut removes protected text: ${e}`));
