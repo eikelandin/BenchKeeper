@@ -1,8 +1,11 @@
 // Usage: node thread.mjs [--hub=<owner/name>] [--issues-in=<repo|hub>] <project path> <issue number> <file>. Writes the issue's trusted thread to <file>: its title, body and the comments whose author precheck.mjs trusts, oldest first, from the tracker precheck.mjs lists with the same options, then the count of the comments left out, never their text.
 // node thread.mjs <project path> --pull <pull request number> <file> writes the pull request's unresolved review threads the same way: a thread only when its first comment's author is trusted, in it only trusted comments, then the counts left out.
+// <file> lies in .cedarloom/runs/ of the working directory (the run folder); any other path, or one through a link, exits 2.
 // The coordinator pastes these files into the spec, the reviewer's brief and the follow-up: workers and reviewers never read comments themselves.
-import { writeFileSync } from 'node:fs';
+import { lstatSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
+import { runFolder } from './facts.mjs';
 import { errorLine, escaped, isMain, read, sh } from './policy.mjs';
 import { hubTracks, originRepo, TRACKER_OPTIONS, trackerSettings, trusts, writers } from './precheck.mjs';
 
@@ -59,16 +62,19 @@ export function reviewThreads(dir, number, run = sh, env = process.env) {
 
 if (isMain(import.meta.url)) {
   const usage = 'usage: node thread.mjs [--hub=<owner/name>] [--issues-in=<repo|hub>] <project path> [--pull] <number> <file>';
-  let values, positionals, settings;
+  let values, positionals, settings, file;
   try {
     ({ values, positionals } = parseArgs({ args: process.argv.slice(2), options: { ...TRACKER_OPTIONS, pull: { type: 'boolean' } }, allowPositionals: true }));
     settings = trackerSettings(values);
     if (positionals.length !== 3) throw new Error(usage);
+    // The file comes from a session's command line: it is written only in a run folder facts.mjs accepts, never through .. or a link, as approval.mjs reads one.
+    file = resolve(positionals[2]);
+    if (runFolder(dirname(file)) !== dirname(file) || lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`refused: ${positionals[2]} is no file in .cedarloom/runs/ of the working directory`);
   } catch (e) {
-    console.error(e.message);
+    console.error(escaped(e.message.split('\n')[0]));
     process.exit(2);
   }
-  const [dir, number, file] = positionals;
+  const [dir, number] = positionals;
   try {
     writeFileSync(file, values.pull ? reviewThreads(dir, number) : thread(dir, number, sh, process.env, settings));
   } catch (e) {

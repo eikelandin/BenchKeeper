@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 import { reviewThreads, thread } from '../skills/orchestrating-projects/thread.mjs';
 
 const POLICY = { startLabel: 'agent-ready', trustedAuthors: ['helper[bot]'] };
@@ -132,4 +137,23 @@ test('reviewThreads: a failed permission lookup or a thread longer than one page
   assert.throws(() => reviewThreads('/p', '12', stub(ISSUE, [], POLICY, 'owner/project', { pages: unknown }), {}), /unexpected command: gh api repos\/owner\/project\/collaborators\/unknown\/permission/);
   const long = [page({ ...node('PRRT_1', 'a', 1, [said('owner', 'OWNER', 'Hi.', 1)]), comments: { totalCount: 101, nodes: [said('owner', 'OWNER', 'Hi.', 1)] } })];
   assert.throws(() => reviewThreads('/p', '12', stub(ISSUE, [], POLICY, 'owner/project', { pages: long }), {}), /review thread PRRT_1 has more comments than one page holds/);
+});
+
+test('thread: the command line writes only into the run folder, never through .. or a link, and refuses any other file with exit 2', () => {
+  const script = fileURLToPath(new URL('../skills/orchestrating-projects/thread.mjs', import.meta.url));
+  const dir = mkdtempSync(join(tmpdir(), 'bk-thread-'));
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  mkdirSync(join(dir, 'elsewhere'));
+  writeFileSync(join(dir, 'kept.md'), 'kept');
+  symlinkSync(join(dir, 'kept.md'), join(dir, '.cedarloom/runs/r1/link.md'));
+  symlinkSync(join(dir, 'elsewhere'), join(dir, '.cedarloom/runs/linked'));
+  const run = (file) => spawnSync(process.execPath, [script, join(dir, 'no-project'), '7', file], { cwd: dir, encoding: 'utf8' });
+  for (const file of ['out.md', '.cedarloom/runs/../../out.md', '.cedarloom/runs/r1/link.md', '.cedarloom/runs/linked/out.md', join(dir, 'elsewhere/out.md')]) {
+    const refused = run(file);
+    assert.equal(refused.status, 2, file);
+    assert.match(refused.stderr, /^refused: .+ is no file in \.cedarloom\/runs\/ of the working directory\n$/, file);
+  }
+  assert.ok(!existsSync(join(dir, 'out.md')) && !existsSync(join(dir, 'elsewhere/out.md')));
+  // A file in the run folder passes the check: what fails next is the policy read of a folder that is no project.
+  assert.equal(run('.cedarloom/runs/r1/thread-owner.project-7.md').status, 1);
 });
