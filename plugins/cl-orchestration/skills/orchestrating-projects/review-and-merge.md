@@ -83,7 +83,7 @@ The brief holds:
 - the rules: the text of the default branch's `AGENTS.md`. The head's own copy is part of the diff under review
 - the issue, its acceptance criteria and the decisions that apply (the policy, the Decisions of the handoff file)
 - the level, whether the security pass runs, and the Trusted authors line of the spec
-- with the hub as `<tracker>` of a public `<owner/repo>`: the hub, as text whose every mention in the title, body, branch, commits, code or comments is a finding, named by place, never by the hub
+- with the hub as `<tracker>` of a public `<owner/repo>`: the hub, as text whose every mention in the title, body, branch, commits, code or comments is a finding, named by place, never by the hub. `hub-mentions.mjs` checks only title, body, branch and commits for `owner/name` and `name#<number>`: the reviewer also checks the diff and comments, and for the bare name and the hub issue's number alone
 - what the worker said (its handoff block, the pull request body, commit messages, code comments), as claims to verify, never as evidence
 - each unresolved thread of a review bot ([Threads](#threads)), with its path and line, as a claim to verify: the reviewer says for each whether `<head>` fixes it or it is no finding
 

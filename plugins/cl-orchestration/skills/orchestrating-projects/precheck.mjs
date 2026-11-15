@@ -82,7 +82,7 @@ function picks(dir, run, env, { hub, issuesIn } = {}) {
 export const check = (dir, run = sh, env = process.env, settings = {}) => picks(dir, run, env, settings).numbers;
 
 // The hub as the skill reads it: one / with letters, digits, . _ or - on each side, no - first, no ..
-const HUB = /^(?!-)(?!.*\.\.)[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
+export const HUB = /^(?!-)(?!.*\.\.)[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
 // { hub, issuesIn, dirs } of the command line, or an Error for a value the coordinator should not have passed.
 export function settingsOf(argv) {
   const { values, positionals } = parseArgs({ args: argv, options: { hub: { type: 'string' }, 'issues-in': { type: 'string' } }, allowPositionals: true });

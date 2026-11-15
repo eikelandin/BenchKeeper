@@ -77,10 +77,11 @@ const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd,
   if (args[0] === 'remote') return `${origin}\n`;
   if (args[0] === 'ls-tree') return policy ? 'docs/agents/orchestration.json\n' : '';
   if (args[0] === 'show') return JSON.stringify(policy);
-  // The hub's project label, which the project's own repository does not ask for.
-  if (args[0] === 'api') return JSON.stringify([7, 8, 9].map((n) => [issue(n, { labels: [{ name: 'agent-ready' }, { name: 'project:project' }] })]));
-  // 7: a closed pull request and an open one from a fork, which anyone can open; 8: an open one of the project; 9: a merged one from a fork.
+  // The hub's project label, which the project's own repository does not ask for; 10 lacks it, as if GitHub's label filter had let it through.
+  if (args[0] === 'api') return JSON.stringify([7, 8, 9, 10].map((n) => [issue(n, { labels: [{ name: 'agent-ready' }, ...(n === 10 ? [] : [{ name: 'project:project' }])] })]));
+  // 7: a closed pull request and an open one from a fork, which anyone can open; 8: an open one of the project; 9: a merged one from a fork; 10: a merged one.
   return JSON.stringify([
+    { headRefName: 'feat/10-z', state: 'MERGED', isCrossRepository: false },
     { headRefName: 'feat/8-x', state: 'OPEN', isCrossRepository: false },
     { headRefName: 'feat/7-x', state: 'CLOSED', isCrossRepository: false },
     { headRefName: 'fix/7-x', state: 'OPEN', isCrossRepository: true },
@@ -98,7 +99,7 @@ const listed = (policy, settings) => {
 };
 
 test('precheck: the option issuesIn chooses the tracker, the policy\'s issues.tracker overrides it either way, and without a hub it is the repository', () => {
-  // In the hub, issues carry the project label and no pull request hides one: 7, 8 and 9 all pick.
+  // In the hub, issues carry the project label and no pull request hides one: 7, 8 and 9 pick, 10 without the label does not.
   assert.deepEqual(listed(POLICY, { hub: 'owner/hub', issuesIn: 'hub' }), ['hub', false, [7, 8, 9]]);
   assert.deepEqual(listed(POLICY, { hub: 'owner/hub', issuesIn: 'repo' }), ['repo', true, [7]]);
   assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'repo' } }, { hub: 'owner/hub', issuesIn: 'hub' }), ['repo', true, [7]]);
