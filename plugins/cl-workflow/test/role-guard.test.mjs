@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
@@ -11,9 +11,14 @@ const HOOK = fileURLToPath(new URL('../hooks/role-guard/role-guard.mjs', import.
 const ENV = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_') && key !== 'CEDARLOOM_ROLE'));
 
 // trunk: checked out, the remote's default branch (origin/HEAD), with the tag release-candidate and the branch deps-1.2.3.
-// feature: a repository on the branch feat/x.
+// feature: a repository on the branch feat/x whose remote's default branch is trunk.
+// fresh: a repository on the branch feat/y whose remote origin, the bare repository develop with the default branch develop, was never fetched.
+// fork: a repository on the branch develop that pushes to its remote upstream (develop, never fetched); origin's default branch is trunk.
 let trunk;
 let feature;
+let fresh;
+let develop;
+let fork;
 const repo = (branch) => {
   const dir = mkdtempSync(join(tmpdir(), 'role-guard-'));
   const git = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', ...args], { env: ENV });
@@ -21,17 +26,30 @@ const repo = (branch) => {
   git('commit', '-q', '--allow-empty', '-m', 'x');
   return { dir, git };
 };
+const withRemoteHead = (r) => {
+  r.git('update-ref', 'refs/remotes/origin/trunk', 'HEAD');
+  r.git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/trunk');
+  return r;
+};
 before(() => {
-  const t = repo('trunk');
+  const t = withRemoteHead(repo('trunk'));
   t.git('tag', 'release-candidate');
   t.git('branch', 'deps-1.2.3');
-  t.git('update-ref', 'refs/remotes/origin/trunk', 'HEAD');
-  t.git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/trunk');
   trunk = t.dir;
-  feature = repo('feat/x').dir;
+  feature = withRemoteHead(repo('feat/x')).dir;
+  develop = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  execFileSync('git', ['init', '-q', '--bare', '-b', 'develop', develop], { env: ENV });
+  const f = repo('feat/y');
+  f.git('remote', 'add', 'origin', develop);
+  fresh = f.dir;
+  const k = withRemoteHead(repo('develop'));
+  k.git('remote', 'add', 'upstream', develop);
+  k.git('update-ref', 'refs/remotes/upstream/develop', 'HEAD');
+  k.git('branch', '-q', '--set-upstream-to=upstream/develop');
+  fork = k.dir;
 });
 after(() => {
-  for (const dir of [trunk, feature]) rmSync(dir, { recursive: true, force: true });
+  for (const dir of [trunk, feature, fresh, develop, fork]) rmSync(dir, { recursive: true, force: true });
 });
 
 const run = (input, role, home) =>
@@ -57,6 +75,16 @@ const DENIED = [
   'gh api repos/{owner}/{repo}/rulesets -f name=main',
   `gh api graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
   `gh api graphql -f query='mutation { mergeBranch(input: {repositoryId: "R_1", base: "main", head: "x"}) { clientMutationId } }'`,
+  `gh api graphql -f query='mutation { mergePull'"Request"'(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
+  `gh api /graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
+  `gh api https://api.github.com/graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
+  `gh api graphql -f query='mutation { createCommitOnBranch(input: {branch: {repositoryNameWithOwner: "o/r", branchName: "main"}, message: {headline: "x"}, expectedHeadOid: "1", fileChanges: {additions: [{path: "README.md", contents: "aGk="}]}}) { commit { oid } } }'`,
+  "gh api -X PUT 'repos/o/r/pulls/12/%6Derge?x=%zz'",
+  'gh api -X PATCH repos/acme/graphql -F archived=true',
+  'gh api -X PUT repos/o/r/contents/README.md -f message=x -f content=aGk=',
+  'gh api -X PUT repos/o/r/contents/.github/workflows/ci.yml -f message=x -f content=aGk=',
+  'gh api --method DELETE repos/o/r/contents/README.md -f message=x -f sha=1',
+  'gh api -X POST repos/o/r/merge-upstream -f branch=main',
   'gh api --method DELETE repos/owner/repo/actions/secrets/TOKEN',
   'gh workflow run release.yml',
   'gh api -X POST repos/o/r/actions/workflows/npm.yml/dispatches -f ref=main',
@@ -98,6 +126,7 @@ const ALLOWED = [
   'gh api repos/owner/repo/pulls/12/merge',
   'gh api -H "Accept: application/vnd.github+json; charset=utf-8" repos/o/r/pulls/12/merge',
   'gh api repos/owner/repo/pulls/12/comments/3/replies -f body=Fixed',
+  'gh api repos/o/r/contents/README.md',
   'gh api graphql -f query="{ viewer { login } }"',
   'git push -u origin feat/x',
   'git push origin deps-1.2.3',
@@ -172,6 +201,34 @@ test('role guard: a push names its branch unless its folder is the session folde
   assert.equal(decision(`Push-Location ${feature}; git status; Pop-Location; git push origin feat/x`, { tool: 'PowerShell' }), 'none');
 });
 
+test('role guard: denies a push to a remote whose default branch it cannot read: a URL, a path, a remote never fetched', () => {
+  for (const command of [`git push ${develop} develop`, 'git push origin develop', 'git push https://example.com/o/r.git feat/y']) assert.equal(decision(command, { cwd: fresh }), 'deny', command);
+  for (const command of ['git push --repo=https://example.com/o/r.git', 'git push --rep=https://example.com/o/r.git']) assert.equal(decision(command, { cwd: feature }), 'deny', command);
+  assert.equal(decision('git push', { cwd: fork }), 'deny');
+  // The session folder is no repository, and git runs in a folder the guard cannot read.
+  assert.equal(decision('cd "$CLAUDE_PROJECT_DIR" && git push origin feat/y', { cwd: dirname(fresh) }), 'deny');
+  // The session folder is no repository, and git runs in the repository --git-dir names.
+  for (const command of [`git --git-dir=${feature}/.git push origin HEAD:trunk`, `git --git-dir ${feature}/.git push origin HEAD:trunk`]) {
+    assert.equal(decision(command, { cwd: dirname(fresh) }), 'deny', command);
+  }
+});
+
+test('role guard: a push that names no remote is checked against the remote git pushes to', () => {
+  const r = withRemoteHead(repo('feat/z'));
+  r.git('remote', 'add', 'fork', develop);
+  try {
+    r.git('config', 'remote.pushDefault', 'fork');
+    assert.equal(decision('git push', { cwd: r.dir }), 'deny');
+    r.git('config', '--unset', 'remote.pushDefault');
+    r.git('config', 'branch.feat/z.pushRemote', 'fork');
+    assert.equal(decision('git push', { cwd: r.dir }), 'deny');
+    r.git('config', 'branch.feat/z.pushRemote', 'origin');
+    assert.equal(decision('git push', { cwd: r.dir }), 'none');
+  } finally {
+    rmSync(r.dir, { recursive: true, force: true });
+  }
+});
+
 test('role guard: reads the commands of Monitor and PowerShell, PowerShell with its backtick escape', () => {
   for (const tool of ['Monitor', 'PowerShell']) assert.equal(decision('gh pr merge 12 --squash', { tool }), 'deny', tool);
   const powershell = [
@@ -196,8 +253,23 @@ test('role guard: passes everything in the coordinator role, but not in its suba
   assert.equal(decision('gh pr merge 12 --squash', { role: 'coordinator', agent: 'agent_01' }), 'deny');
 });
 
-test('role guard: input it cannot read fails with a non-zero exit, which onFailure "block" turns into a refusal', () => {
-  const r = run('not json');
-  assert.notEqual(r.status, 0);
-  assert.equal(r.stdout, '');
+test('role guard: input it cannot read exits 2, which blocks the call', () => {
+  for (const input of ['', 'not json', 'null']) {
+    const r = run(input);
+    assert.equal(r.status, 2, input);
+    assert.equal(r.stdout, '', input);
+  }
+});
+
+test('role guard: a command it fails to read exits 2, which blocks the call', () => {
+  // A folder without permissions makes the lookup of a cd target inside it throw.
+  const locked = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  chmodSync(locked, 0o000);
+  try {
+    const r = run(JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: `cd ${locked}/x && gh pr merge 12` }, cwd: trunk }));
+    assert.equal(r.status, 2);
+    assert.equal(r.stdout, '');
+  } finally {
+    chmodSync(locked, 0o700);
+  }
 });

@@ -45,6 +45,14 @@ test('ask hook: /clear keeps the window, a resumed conversation starts without i
   assert.equal(decision(data), 'deny');
 });
 
+test('ask hook: input it cannot read exits 2, which blocks the question tool', () => {
+  for (const input of ['', 'not json', 'null']) {
+    const r = spawnSync(process.execPath, [HOOK], { input, env: { ...process.env, CLAUDE_PLUGIN_DATA: mkdtempSync(join(tmpdir(), 'ask-')), CLAUDE_PID: '4242' }, encoding: 'utf8' });
+    assert.equal(r.status, 2, input);
+    assert.equal(r.stdout, '', input);
+  }
+});
+
 test('ask hook: /cl-workflow:questions allows the question tool for the session, until /cl-workflow:ask off', () => {
   const data = mkdtempSync(join(tmpdir(), 'ask-'));
   run(data, { ...typed('cedarloom'), command_name: 'cl-workflow:questions', prompt: '/cl-workflow:questions cedarloom' });
