@@ -5,12 +5,12 @@
 # not recorded yet and either failed (in the last day, or after a recorded failure) or passed after a recorded failure.
 # workflows: file names such as ci.yml, comma separated; empty: all. Exit 0 when it printed a line.
 dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/ci-health
+repo() { case "$1/" in */./*|*/../*) return 1 ;; esac; printf '%s\n' "$1" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*'; }
 repos=$(echo "$1" | tr , ' ')
 [ -n "$repos" ] || repos=$(gh repo view --json nameWithOwner --jq .nameWithOwner) || exit 1
 due=1
 for r in $repos; do
-  case "$r/" in */./*|*/../*) echo "not a repository: $r" >&2; continue ;; esac
-  printf '%s\n' "$r" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*' || { echo "not a repository: $r" >&2; continue; }
+  repo "$r" || { echo "not a repository: $r" >&2; continue; }
   b=$(gh api "repos/$r" --jq .default_branch) || continue
   printf '%s\n' "$b" | grep -qxE '[A-Za-z0-9._/-]+' || continue
   # Newest first: workflow id, run id, attempt, pass or fail, new (created in the last day) or old, workflow path.
