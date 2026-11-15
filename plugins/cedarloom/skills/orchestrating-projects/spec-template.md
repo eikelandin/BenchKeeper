@@ -7,6 +7,7 @@ Copy this file's block, replace each `<...>`, and send it as the worker's task. 
 What the lines take, policy fields as the reader prints them:
 
 - Names: `<owner/repo>` (always the project's repository), `<default branch>`, `<type>` and `<slug>` by the names rule of [SKILL.md](SKILL.md#names). `<tracker>` is `issues.repository`, or `<owner/repo>` where the policy names none.
+- `Branch:` takes "each new from origin/<default branch>". For an issue whose branch exists already ([SKILL.md](SKILL.md#loop), step 3) it takes the existing-branch form instead: "existing: fetch it, check it out from origin/<branch>, and merge origin/<default branch> into it before the first edit".
 - `Agent:` takes `models.worker` at the tier you estimate: per issue the tier of the workflow skill's change-type table, a sensitive change ([review-and-merge.md](review-and-merge.md#sensitive-or-routine)) counting as full, in a batch the highest. A Claude Code worker gets that model and effort; a worker on another agent only a value the policy names (the same in all four tiers), else its agent's default. The estimate only chooses the model: `Tier:` stays as the block says.
 - `Review:` takes `review.depth`, or `review.sensitiveDepth` and the security review for an issue that reads as sensitive, in a batch when one of its issues does.
 - Flow takes each phase the reader prints under `models.phases`; for an issue that reads as sensitive, plan and review take `models.sensitive.plan` and `models.sensitive.review`.
@@ -29,7 +30,7 @@ Shared context: <what the coordinator already knows that saves a re-read: siblin
 
 Authority:
 - Owned paths: <files or folders this worker may change>
-- Branch: <type>/<number>-<slug><a batch: the branch of every issue>, each new from origin/<default branch>. Base: <default branch>. Remote: origin. Pull request target: <default branch>.
+- Branch: <type>/<number>-<slug><a batch: the branch of every issue>, <each new from origin/<default branch>, or the existing-branch form>. Base: <default branch>. Remote: origin. Pull request target: <default branch>.
 - Agent: <agent>, model <model or agent default>, effort <effort or agent default>, permission mode the agent's default.
 - You may: create the branches named above, commit changes to the owned paths, run checks, push those branches, open or update one draft pull request per issue, merge origin/<default branch> into your branch after a fetch, and, after the coordinator updated your branch on the remote, merge the remote branch into the local one before your next push.
 - You may not: merge a pull request, close an issue or write a closing keyword for one (Closes, Fixes, Resolves or a form of them, in a pull request's title or body or a commit message), force-push, stash, reset, clean, push another branch, change a path outside the owned paths, start with a flag that bypasses or skips permission prompts, create a release, tag, package publish, repository, organization, token or GitHub App, or change a repository's visibility.
