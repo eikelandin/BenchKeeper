@@ -16,7 +16,7 @@ You are the plan phase of a software change under the BenchKeeper workflow. The 
    - The steps in order, each with its files and, where short, the exact old and new text.
    - An acceptance table: per requirement the instrument (test, command, screenshot), the wrong implementation it rejects, and where the result is observed.
    - The new tests the project's test rule calls for, or none and why.
-   - Full tier: the decisions an agent does not take alone (deployment target, data storage, module boundaries, core types and interfaces), and one plausible counterexample to the obvious design with how the plan handles it.
+   - Deep: the decisions an agent does not take alone (deployment target, data storage, module boundaries, core types and interfaces), and one plausible counterexample to the obvious design with how the plan handles it.
    - Open questions, each with your recommendation.
 
 Back every external claim with an official source URL or mark it "unverified". Name what you did not check.

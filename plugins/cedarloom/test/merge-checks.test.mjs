@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { both, next, ownerOnly, pin, sensitive, unsafe } from '../skills/orchestrating-projects/merge-checks.mjs';
+import { both, next, ownerOnly, pin, riskClass, risky, sensitive, unsafe } from '../skills/orchestrating-projects/merge-checks.mjs';
+import { facts as riskFacts } from '../skills/orchestrating-projects/risk-facts.mjs';
 import { initRepo } from './git-repo.mjs';
 
 // By code point, so that no editor or tool recomposes them: e with acute in one character, the combining acute, the long s, Escape and the line separator.
@@ -14,14 +15,16 @@ const [E_ACUTE, ACUTE, LONG_S, ESC, LINE_SEPARATOR] = [0xe9, 0x301, 0x17f, 0x1b,
 const POLICY = {
   merge: { ownerOnlyPaths: ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', 'docs/agents/orchestration.json', 'infra/', 'deploy', `caf${E_ACUTE}`], ownerOnlyNames: ['.claude', '.mcp.json'] },
   review: { sensitivePaths: ['src/billing'] },
+  riskyPaths: ['src/auth'],
 };
 
 test('merge checks: an owner-only file is one under a path entry or with a name as a segment, at any depth and in any case', () => {
   const owners = ['.github/workflows/ci.yml', 'CODEOWNERS', 'docs/CODEOWNERS', 'packages/ui/.claude/skills/x/SKILL.md', 'tools/.MCP.json', '.GitHub/workflows/x.yml', 'infra/main.tf', 'infra', 'deploy/run.sh', 'docs/agents/orchestration.json'];
   const others = ['src/CODEOWNERS', '.githubx/y', 'my.claude/x', 'deployment/run.sh', 'README.md'];
   assert.deepEqual(ownerOnly(POLICY, [...others, ...owners]), owners);
-  // A sensitive file is one under review.sensitivePaths, and every owner-only file.
-  assert.deepEqual(sensitive(POLICY, ['src/billing/tax.mjs', 'src/billings.mjs', 'CODEOWNERS', 'README.md']), ['src/billing/tax.mjs', 'CODEOWNERS']);
+  // A sensitive file is one under review.sensitivePaths or riskyPaths, and every owner-only file.
+  assert.deepEqual(sensitive(POLICY, ['src/billing/tax.mjs', 'src/billings.mjs', 'src/auth/login.mjs', 'CODEOWNERS', 'README.md']), ['src/billing/tax.mjs', 'src/auth/login.mjs', 'CODEOWNERS']);
+  assert.deepEqual(risky(POLICY, ['src/billing/tax.mjs', 'SRC/Auth/login.mjs', 'src/authz.mjs', 'CODEOWNERS']), ['SRC/Auth/login.mjs']);
 });
 
 test('merge checks: paths are compared as a file system that ignores case and form opens them', () => {
@@ -66,13 +69,20 @@ const PINS = [
 for (const [name, head, lines, history, expected] of PINS) test(`merge checks: the pin of ${name} is ${expected}`, () => assert.equal(pin('r', head, lines, facts(history)), expected));
 
 test('merge checks: the next step is the owner\'s before a re-review, a re-review before ready, ready before a merge, then by the mode and the shared files', () => {
-  const state = { ownerOnlyFiles: [], unsafePaths: [], pin: 'reviewed', allowed: true, upToDate: true, mode: 'strict', shared: [], additive: [] };
+  const state = { ownerOnlyFiles: [], unsafePaths: [], risk: 'low', autoMergeMax: 'medium', pin: 'reviewed', allowed: true, upToDate: true, mode: 'strict', shared: [], additive: [] };
   assert.equal(next(state), 'merge');
   assert.equal(next({ ...state, pin: 'clean-merges' }), 'merge');
   assert.equal(next({ ...state, ownerOnlyFiles: ['.github/workflows/ci.yml'] }), 'owner');
   assert.equal(next({ ...state, ownerOnlyFiles: ['.github/workflows/ci.yml'], pin: 'fail' }), 'owner');
   assert.equal(next({ ...state, unsafePaths: ['docs/it\'s.md'] }), 'owner');
   assert.equal(next({ ...state, unsafePaths: ['docs/it\'s.md'], allowed: false }), 'owner');
+  // A class above merge.autoMergeMax, and high whatever the limit, is the owner's; so is a class or a limit the script does not know.
+  assert.equal(next({ ...state, risk: 'medium' }), 'merge');
+  assert.equal(next({ ...state, risk: 'low', autoMergeMax: 'low' }), 'merge');
+  assert.equal(next({ ...state, risk: 'medium', autoMergeMax: 'low' }), 'owner');
+  assert.equal(next({ ...state, risk: 'high', pin: 'fail', allowed: false }), 'owner');
+  assert.equal(next({ ...state, risk: undefined }), 'owner');
+  assert.equal(next({ ...state, risk: 'medium', autoMergeMax: undefined }), 'owner');
   assert.equal(next({ ...state, pin: 'fail' }), 're-review');
   assert.equal(next({ ...state, pin: 'fail', allowed: false }), 're-review');
   assert.equal(next({ ...state, pin: 'fail', upToDate: false, mode: 'disjoint' }), 're-review');
@@ -87,6 +97,12 @@ test('merge checks: the next step is the owner\'s before a re-review, a re-revie
   assert.equal(next({ ...state, upToDate: false, mode: 'disjoint', shared: ['schemas/a.json'] }), 'update');
   // An additive entry is matched as written: a file that differs from it in case takes the update.
   assert.equal(next({ ...state, upToDate: false, mode: 'disjoint', shared: ['Schemas/a.json'], additive: ['schemas'] }), 'update');
+});
+
+test('merge checks: a file under riskyPaths raises a low class to medium and lowers none', () => {
+  assert.equal(riskClass('low', ['src/auth/login.mjs']), 'medium');
+  assert.equal(riskClass('high', ['src/auth/login.mjs']), 'high');
+  assert.equal(riskClass('low', []), 'low');
 });
 
 const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/merge-checks.mjs', import.meta.url));
@@ -115,7 +131,7 @@ function world(files) {
 }
 
 test('merge checks: the command line prints the verdict of a head in its scratch clone, and exits 2 without one on a bad argument, a failed git command or a folder that is no clone of its own', () => {
-  const { origin, git, out, commit, clones } = world({ 'docs/agents/orchestration.json': '{ "merge": { "allowed": true, "requiredChecks": ["ci"], "mode": "disjoint" } }', '.github/workflows/ci.yml': 'on: push\n', 'src/a.txt': 'a\n', 'src/b.txt': 'b\n' });
+  const { origin, git, out, commit, clones } = world({ 'docs/agents/orchestration.json': '{ "merge": { "allowed": true, "requiredChecks": ["ci"], "mode": "disjoint" }, "riskyPaths": ["src/a.txt"] }', '.github/workflows/ci.yml': 'on: push\n', 'src/a.txt': 'a\n', 'src/b.txt': 'b\n' });
   git('checkout', '-q', '-b', 'feat/1-workflow');
   const workflow = commit({ '.github/workflows/new.yml': 'on: push\n', 'src/b.txt': 'worker\n' });
   git('checkout', '-q', '-b', 'feat/2-move', 'main');
@@ -139,28 +155,31 @@ test('merge checks: the command line prints the verdict of a head in its scratch
   git('checkout', '-q', 'main');
   const { project, scratch } = clones();
 
-  const verdict = (from, to) => { const r = cli(project, scratch, 'main', from, to); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
+  const verdict = (from, to, risk = 'low') => { const r = cli(project, scratch, 'main', from, to, risk); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
   const refuses = (args) => {
     const r = cli(...args);
     assert.deepEqual([r.status, r.stdout], [2, ''], args.join(' '));
     assert.equal(r.stderr.trim().split('\n').length, 1, r.stderr);
   };
-  const plain = { allowed: true, ownerOnly: [], unsafePaths: [], sensitive: [] };
+  const plain = { allowed: true, ownerOnly: [], unsafePaths: [], sensitive: [], risky: [], risk: 'low' };
+  // The branches that change src/a.txt, a riskyPaths file: a low class becomes medium, which merges under the default autoMergeMax.
+  const touchesA = { ...plain, sensitive: ['src/a.txt'], risky: ['src/a.txt'], risk: 'medium' };
   const workflows = (file) => ({ ...plain, next: 'owner', ownerOnly: [file], sensitive: [file], pin: 'reviewed', upToDate: false });
   assert.deepEqual(verdict(workflow, workflow), { ...workflows('.github/workflows/new.yml'), shared: ['src/b.txt'] });
   // A moved file counts at its old path too: the branch that moves a workflow out of .github touches .github.
   assert.deepEqual(verdict(moved, moved), { ...workflows('.github/workflows/ci.yml'), shared: [] });
   assert.deepEqual(verdict(quoted, quoted), { ...plain, next: 'owner', unsafePaths: ['docs/it\'s.md', 'docs/two\nlines.md'], pin: 'reviewed', upToDate: false, shared: [] });
-  assert.deepEqual(verdict(reviewed, reviewed), { ...plain, next: 'trial', pin: 'reviewed', upToDate: false, shared: [] });
-  const merged = { ...plain, next: 'merge', pin: 'clean-merges', upToDate: true, shared: [] };
+  assert.deepEqual(verdict(reviewed, reviewed), { ...touchesA, next: 'trial', pin: 'reviewed', upToDate: false, shared: [] });
+  const merged = { ...touchesA, next: 'merge', pin: 'clean-merges', upToDate: true, shared: [] };
   assert.deepEqual(verdict(reviewed, clean), merged);
-  assert.deepEqual(verdict(reviewed, resolved), { ...plain, next: 're-review', pin: 'fail', upToDate: true, shared: [] });
+  assert.deepEqual(verdict(reviewed, clean, 'high'), { ...merged, next: 'owner', risk: 'high' });
+  assert.deepEqual(verdict(reviewed, resolved), { ...touchesA, next: 're-review', pin: 'fail', upToDate: true, shared: [] });
   // A tag that answers the short name origin/main names another commit: the default branch is read by its full ref.
   git('-C', scratch, 'update-ref', 'refs/tags/origin/main', workflow);
   assert.deepEqual(verdict(reviewed, clean), merged);
   // The remote's default branch moves on: a clone that was not fetched since gets no verdict, a fetched one sees the head behind.
   commit({ 'src/a.txt': 'a3\n' });
-  refuses([project, scratch, 'main', reviewed, clean]);
+  refuses([project, scratch, 'main', reviewed, clean, 'low']);
   git('-C', scratch, 'fetch', '-q', 'origin');
   assert.deepEqual(verdict(reviewed, clean), { ...merged, next: 'update', upToDate: false, shared: ['src/a.txt'] });
 
@@ -185,10 +204,13 @@ test('merge checks: the command line prints the verdict of a head in its scratch
     [project, project, 'main', reviewed, clean],
     [join(origin, 'no-project'), scratch, 'main', reviewed, clean],
   ];
-  for (const args of refused) refuses(args);
+  for (const args of refused) refuses([...args, 'low']);
+  // The class is one of the three, and never left out.
+  for (const risk of ['critical', 'Low', '']) refuses([project, scratch, 'main', reviewed, clean, risk]);
+  refuses([project, scratch, 'main', reviewed, clean]);
   // A second worktree of the scratch clone can be a checkout that somebody works in.
   git('-C', scratch, 'worktree', 'add', '-q', '--detach', join(folder(), 'worktree'), clean);
-  refuses([project, scratch, 'main', reviewed, clean]);
+  refuses([project, scratch, 'main', reviewed, clean, 'low']);
 });
 
 test('merge checks: a head with several merge bases is the owner\'s to judge, and without merge.allowed a reviewed head is left ready', () => {
@@ -213,11 +235,63 @@ test('merge checks: a head with several merge bases is the owner\'s to judge, an
   elsewhere('commit', '-qm', 'policy');
   git('-C', project, 'config', `url.${other}.insteadOf`, git('-C', project, 'remote', 'get-url', 'origin').toString().trim());
 
-  const r = cli(project, scratch, 'main', hidden, hidden);
+  const r = cli(project, scratch, 'main', hidden, hidden, 'low');
   assert.deepEqual([r.status, r.stdout], [2, '']);
   assert.match(r.stderr, /^the head has several merge bases with the default branch\b.*\n$/);
   // The same tree on one parent, in a project whose policy allows no merge.
-  const ready = cli(project, scratch, 'main', plain, plain);
+  const ready = cli(project, scratch, 'main', plain, plain, 'low');
   assert.equal(ready.status, 0, ready.stderr);
-  assert.deepEqual(JSON.parse(ready.stdout), { next: 'ready', allowed: false, ownerOnly: [], unsafePaths: [], sensitive: [], pin: 'reviewed', upToDate: false, shared: [] });
+  assert.deepEqual(JSON.parse(ready.stdout), { next: 'ready', allowed: false, ownerOnly: [], unsafePaths: [], sensitive: [], risky: [], risk: 'low', pin: 'reviewed', upToDate: false, shared: [] });
+});
+
+test('risk facts: risky files set the floor, and manifests, migrations and code without a test of its name are listed', () => {
+  const changes = [
+    ['src/auth/login.ts', 12], ['src/app.ts', 5], ['src/auth/login.test.ts', 4], ['pkg/x.go', 6], ['tool.py', 1],
+    ['web/package-lock.json', 100], ['db/Migrations/001_init.sql', 20], ['src/gone.ts', 3], ['README.md', 2],
+  ].map(([path, lines]) => ({ path, lines }));
+  const tracked = ['src/auth/login.ts', 'src/auth/login.test.ts', 'src/app.ts', 'pkg/x.go', 'pkg/x_test.go', 'tool.py', 'tests/test_tool.py', 'web/package-lock.json', 'db/Migrations/001_init.sql', 'README.md'];
+  assert.deepEqual(riskFacts({ riskyPaths: ['src/auth'] }, changes, tracked), {
+    lines: 153,
+    files: 9,
+    risky: ['src/auth/login.ts', 'src/auth/login.test.ts'],
+    floor: 'medium',
+    dependencies: ['web/package-lock.json'],
+    migrations: ['db/Migrations/001_init.sql'],
+    untested: ['src/app.ts'],
+  });
+  assert.deepEqual(riskFacts({ riskyPaths: [] }, changes.slice(-1), tracked), { lines: 2, files: 1, risky: [], floor: null, dependencies: [], migrations: [], untested: [] });
+});
+
+const FACTS = fileURLToPath(new URL('../skills/orchestrating-projects/risk-facts.mjs', import.meta.url));
+const factsCli = (...args) => spawnSync(process.execPath, [FACTS, ...args], { encoding: 'utf8' });
+
+test('risk facts: the command line reads the diff of a clone and the policy of its origin, and exits 2 on a bad argument', () => {
+  const origin = folder();
+  const git = initRepo(origin);
+  mkdirSync(join(origin, 'docs/agents'), { recursive: true });
+  writeFileSync(join(origin, 'docs/agents/orchestration.json'), '{ "riskyPaths": ["src"] }');
+  git('add', '-A');
+  git('commit', '-qm', 'policy');
+  const base = git('rev-parse', 'HEAD').toString().trim();
+  git('checkout', '-q', '-b', 'feat/1-change');
+  mkdirSync(join(origin, 'src'));
+  writeFileSync(join(origin, 'src/a.mjs'), 'x\ny\n');
+  writeFileSync(join(origin, 'docs/two words.md'), 'z\n');
+  writeFileSync(join(origin, 'img.bin'), Buffer.from([0, 1, 2, 0]));
+  git('add', '-A');
+  git('commit', '-qm', 'change');
+  const head = git('rev-parse', 'HEAD').toString().trim();
+  git('checkout', '-q', 'main');
+  const clone = join(folder(), 'clone');
+  git('clone', '-q', '--no-checkout', origin, clone);
+
+  const r = factsCli(clone, base, head);
+  assert.equal(r.status, 0, r.stderr);
+  // A binary file counts as a file with no lines.
+  assert.deepEqual(JSON.parse(r.stdout), { lines: 3, files: 3, risky: ['src/a.mjs'], floor: 'medium', dependencies: [], migrations: [], untested: ['src/a.mjs'] });
+  for (const args of [[clone, '--output=x', head], [clone, base, `${head} x`], [clone, base]]) {
+    const refused = factsCli(...args);
+    assert.deepEqual([refused.status, refused.stdout], [2, ''], args.join(' '));
+    assert.equal(refused.stderr.trim().split('\n').length, 1, refused.stderr);
+  }
 });
