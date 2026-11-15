@@ -1,0 +1,5 @@
+interface:
+  display_name: "Improve"
+  short_description: "Apply audit findings as diffs you approve one by one"
+policy:
+  allow_implicit_invocation: false

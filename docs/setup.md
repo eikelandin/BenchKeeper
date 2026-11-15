@@ -28,7 +28,7 @@ Three levels, from the smallest: the BenchKeeper plugin ships no rule file and n
 <!-- generated:levels -->
 | Level | Contains | Writes | Command |
 |---|---|---|---|
-| Lite | the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app` and `reviewing-rules` skills | nothing outside the plugin install, besides the app's run record for undo | `npx @cedarloom/app@6.27.0 apply --level lite` |
+| Lite | the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app`, `reviewing-rules`, `audit`, `improve` and `debloat` skills | nothing outside the plugin install, besides the app's run record for undo | `npx @cedarloom/app@6.27.0 apply --level lite` |
 | Standard | lite plus the local project block: `CLAUDE.local.md`, `AGENTS.override.md` and the git exclude list | local files in each project you run `projects apply` in | `npx @cedarloom/app@6.27.0 apply --level standard && npx @cedarloom/app@6.27.0 projects apply` |
 | Full | standard plus the global rules, Claude Code and Codex settings, packs and the app | global rule files, settings and packs | `npx @cedarloom/app@6.27.0 apply --level full` |
 <!-- /generated:levels -->

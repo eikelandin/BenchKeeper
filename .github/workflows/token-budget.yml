@@ -1,0 +1,69 @@
+name: Token budget
+
+# Comments the estimated token change of instruction files and docs on a pull request; fails only above the budget in
+# .github/token-budget.json. Not a required check: a required check that the paths filter skips would stay pending.
+on:
+  pull_request:
+    paths:
+      - '**/CLAUDE.md'
+      - '**/AGENTS.md'
+      - '.claude/**'
+      - 'plugins/*/skills/**'
+      - 'plugins/*/agents/**'
+      - 'plugins/*/rules/**'
+      - 'README.md'
+      - 'docs/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/token-budget.json'
+      - '.github/workflows/token-budget.yml'
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  token-budget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      LC_ALL: C.UTF-8
+      TB: head/plugins/cedarloom/skills/debloat/token-budget.mjs
+    steps:
+      # Two folders side by side: a base checkout inside the head's tree would count as untracked files of the head.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: head
+          fetch-depth: 2
+          persist-credentials: false
+      # The merge commit's first parent is the base it was built on; the base branch may have moved on since.
+      - name: Check out the base
+        run: git -C head worktree add --detach ../base HEAD^1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.23.4
+      - name: Measure the base
+        run: node "$TB" measure --json --root base > "$RUNNER_TEMP/base.json"
+      - name: Check the head
+        id: check
+        continue-on-error: true
+        run: node "$TB" check --root head --against "$RUNNER_TEMP/base.json" --budget-only > "$RUNNER_TEMP/report.md"
+      - name: Job summary
+        run: cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+      # Pull requests from forks and from Dependabot get a read-only token.
+      - name: Comment on the pull request
+        if: github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --edit-last --create-if-none --body-file "$RUNNER_TEMP/report.md"
+      - name: Budget
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "::error::the token budget check failed: above the budget in .github/token-budget.json, or an error (see the job summary)"
+          exit 1

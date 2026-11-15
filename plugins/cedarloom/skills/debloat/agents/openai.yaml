@@ -1,0 +1,5 @@
+interface:
+  display_name: "Debloat"
+  short_description: "Cut dead text by line range and keep protected text"
+policy:
+  allow_implicit_invocation: false
