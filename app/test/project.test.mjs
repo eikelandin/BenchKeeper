@@ -773,8 +773,8 @@ test('the coordinator\'s files: apply writes the default policy and empty worker
   assert.doesNotMatch(read(join(r.dir, '.git/info/exclude')), /docs/);
   assert.doesNotMatch(read(join(r.dir, '.worktreeinclude')), /docs/);
   assert.deepEqual(localSetup(r.ctx, r.dir).filter((c) => c.path?.includes('docs')), []);
-  // A repository without a remote is enough, and nothing is fetched or kept under refs/cedarloom-app.
-  assert.equal(r.git('for-each-ref', 'refs/cedarloom-app').toString(), '');
+  // A repository without a remote is enough, and nothing is fetched or kept under refs/cedarloom.
+  assert.equal(r.git('for-each-ref', 'refs/cedarloom').toString(), '');
 
   const own = repo();
   mkdirSync(join(own.dir, 'docs/agents'), { recursive: true });
