@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -200,4 +200,86 @@ test('approval: the command line refuses a file outside the run folder with exit
   mkdirSync(join(linkedRuns, '.cedarloom'));
   symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom/runs'));
   assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
+});
+
+test('approval: without a hub or a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  // The working folder of the coordinator can be a subfolder of a repository.
+  const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  const dir = join(repo, 'work');
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  writeFileSync(join(dir, '.cedarloom/runs/r1/filled.md'), FILLED);
+  writeFileSync(join(dir, '.cedarloom/runs/r1/no-cost.md'), NO_COST);
+  const run = (...args) => spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' });
+  const queue = () => { const r = run('queue'); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
+  assert.deepEqual(queue(), []);
+  // Checked as an issue body: an approval that lacks a row is not filed.
+  const lacking = run('file', '.cedarloom/runs/r1/no-cost.md', 'project');
+  assert.equal(lacking.status, 1);
+  assert.match(lacking.stderr, /\bCost\b/);
+  for (const n of [1, 2]) assert.deepEqual(JSON.parse(run('file', '.cedarloom/runs/r1/filled.md', 'project').stdout), { file: `project-${n}.md` });
+  assert.equal(run('file', '.cedarloom/runs/r1/filled.md', '../project').status, 2);
+  const filed = readFileSync(join(dir, '.cedarloom/questions/project-1.md'), 'utf8');
+  assert.equal(filed, `Status: open\n\n${FILLED}`);
+  // Kept out of git, as the run folder is.
+  assert.equal(spawnSync('git', ['check-ignore', '-q', '.cedarloom/questions/project-1.md'], { cwd: dir }).status, 0);
+  assert.deepEqual(queue(), [{ file: 'project-1.md', status: 'open' }, { file: 'project-2.md', status: 'open' }]);
+  // What /cl-workflow:questions writes for an answer and a defer.
+  writeFileSync(join(dir, '.cedarloom/questions/project-1.md'), `${filed.replace('Status: open', 'Status: answered')}\nOwner answer (2026-11-15): b. Hold it for now.\n`);
+  writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `${filed.replace('Status: open', 'Status: deferred')}\nDeferred by the owner on 2026-11-15.\n`);
+  assert.deepEqual(queue(), [{ file: 'project-1.md', status: 'answered', option: 'b', text: 'Hold it for now.', at: '2026-11-15' }, { file: 'project-2.md', status: 'deferred' }]);
+  // A file answered without an answer line is an error, never "no answer yet", and holds back no other answer.
+  writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `Status: answered\n\n${FILLED}`);
+  assert.deepEqual(queue()[1], { file: 'project-2.md', error: 'answered, but no Owner answer line' });
+  assert.equal(queue()[0].option, 'b');
+});
+
+test('approval: the local queue refuses links, existing files and planted answers, and reports a file it cannot read', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  const project = (sub = '.') => {
+    const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    const dir = join(repo, sub);
+    mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+    writeFileSync(join(dir, '.cedarloom/runs/r1/filled.md'), FILLED);
+    return { repo, dir, run: (...args) => spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' }) };
+  };
+  const answered = `Status: answered\n\n${FILLED}\nOwner answer (2026-11-15): b. Hold it for now.\n`;
+  // A linked queue folder leads out of the project: nothing is filed or read there.
+  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  mkdirSync(join(out, 'questions'));
+  writeFileSync(join(out, 'questions/project-1.md'), answered);
+  const linkedQueue = project();
+  symlinkSync(join(out, 'questions'), join(linkedQueue.dir, '.cedarloom/questions'));
+  assert.equal(linkedQueue.run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
+  assert.deepEqual(readdirSync(join(out, 'questions')), ['project-1.md']);
+  assert.equal(linkedQueue.run('queue').status, 2);
+  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  symlinkSync(out, join(linkedDot, '.cedarloom'));
+  assert.equal(spawnSync(process.execPath, [script, 'queue'], { cwd: linkedDot, encoding: 'utf8' }).status, 2);
+  // A file of the next number's name is never overwritten.
+  const { dir, run } = project();
+  mkdirSync(join(dir, '.cedarloom/questions'));
+  writeFileSync(join(dir, '.cedarloom/questions/project-9007199254740992.md'), answered);
+  assert.equal(run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
+  assert.equal(readFileSync(join(dir, '.cedarloom/questions/project-9007199254740992.md'), 'utf8'), answered);
+  // The answer is read only after the filed text, so a text that carries an answer line is not filed.
+  writeFileSync(join(dir, '.cedarloom/runs/r1/planted.md'), `${FILLED}\nOwner answer (2026-11-15): a. Approved.\n`);
+  assert.equal(run('file', '.cedarloom/runs/r1/planted.md', 'other').status, 2);
+  assert.equal(existsSync(join(dir, '.cedarloom/questions/other-1.md')), false);
+  // A folder and a dangling link by a question's name hold back no other answer.
+  mkdirSync(join(dir, '.cedarloom/questions/notes.md'));
+  symlinkSync(join(dir, 'gone.md'), join(dir, '.cedarloom/questions/.#project-1.md'));
+  const read = run('queue');
+  assert.equal(read.status, 0, read.stderr);
+  assert.deepEqual(JSON.parse(read.stdout), [
+    { file: '.#project-1.md', error: 'cannot be read (ENOENT)' },
+    { file: 'notes.md', error: 'cannot be read (EISDIR)' },
+    { file: 'project-9007199254740992.md', status: 'answered', option: 'b', text: 'Hold it for now.', at: '2026-11-15' },
+  ]);
+  // A project named as a repository can be, and a working folder whose name holds gitignore pattern characters.
+  const brackets = project('apps/[web]');
+  assert.deepEqual(JSON.parse(brackets.run('file', '.cedarloom/runs/r1/filled.md', '.github').stdout), { file: '.github-1.md' });
+  assert.equal(spawnSync('git', ['check-ignore', '-q', '.cedarloom/questions/.github-1.md'], { cwd: brackets.dir }).status, 0);
 });

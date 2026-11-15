@@ -3,11 +3,29 @@
 // use gh auth, write git config, use git stash or start a session in bare mode, which runs no hooks.
 // It stops a session that forgets its role, not one that works around it (variables, aliases, scripts, another tool):
 // the boundary is a gh token without those rights.
+// For Write, Edit, MultiEdit and NotebookEdit too: an answer in the local question queue counts as the owner's, so every session, the
+// coordinator's included, may only write there or reach it in a command (a word, a redirection or a cd, read from the session folder)
+// after the user typed /cl-workflow:questions in that session; no session writes the window files that record that or starts a
+// session with that command.
 import { spawnSync } from 'node:child_process';
 import { statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
+import { openUntil, windowFile } from '../ask/window-file.mjs';
 import { gitProgram } from '../git-program.mjs';
+
+// The local question queue in any folder, as a folder and the folder inside it.
+const QUEUE = ['.cedarloom', 'questions'];
+const EDITS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+// The path fields of the edit tools: Write, Edit and MultiEdit carry file_path, NotebookEdit notebook_path.
+const EDIT_PATHS = ['file_path', 'notebook_path'];
+// A session started with /cl-workflow:questions as its prompt (claude -p expands it, https://code.claude.com/docs/en/headless) would
+// hold the flag, and no hook input or variable Claude Code documents tells such a session from a typed one.
+const QUESTIONS = /(^|[^\w-])\/(cl-workflow:)?questions(?![\w.-])/i;
+// The program names that start such a session: claude, and claude-code as npx runs the package.
+const LAUNCHERS = new Set(['claude', 'claude-code']);
+// Folders the guard follows in one command: the session folder and one per cd.
+const MAX_FOLDERS = 64;
 
 const ROLE = 'CEDARLOOM_ROLE';
 
@@ -42,22 +60,24 @@ const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot
 const BASH_QUOTED_ESCAPES = '$`"\\';
 
 // The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
-// continuation joins its lines, a quoted word stays whole, and redirections are dropped. The text of a quoted word is read again
-// as commands, so `bash -c "gh pr merge 1"` shows its gh; text that only names such a command is denied as well.
+// continuation joins its lines, a quoted word stays whole, and the targets of redirections are kept apart from the words. The text
+// of a quoted word is read again as commands, so `bash -c "gh pr merge 1"` shows its gh; text that only names such a command is denied as well.
 // A command from quoted text, parentheses, backticks, a pipeline or a background job is marked nested: a folder change there
 // may not reach the commands after it.
 // PowerShell escapes and continues lines with the backtick and keeps the backslash as a plain character
 // (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_special_characters).
 function commands(source, powershell, nested = false) {
-  /** @type {{ words: string[], nested: boolean }[]} */
+  /** @type {{ words: string[], targets: string[], nested: boolean }[]} */
   const out = [];
   const escape = powershell ? '`' : '\\';
   const s = source.replace(powershell ? /`\r?\n/g : /\\\r?\n/g, '');
-  let words = [], word = '', started = false, quoted = false, quote = null, redirect = false, depth = 0, backticks = false;
+  let words = [], targets = [], word = '', started = false, quoted = false, quote = null, redirect = false, depth = 0, backticks = false;
   const endWord = () => {
     if (started) {
-      if (redirect) redirect = false;
-      else words.push(word);
+      if (redirect) {
+        redirect = false;
+        targets.push(word);
+      } else words.push(word);
       if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell, true));
     }
     word = '';
@@ -65,8 +85,9 @@ function commands(source, powershell, nested = false) {
   };
   const endCommand = (subshell = false) => {
     endWord();
-    if (words.length) out.push({ words, nested: nested || subshell || depth > 0 || backticks });
+    if (words.length || targets.length) out.push({ words, targets, nested: nested || subshell || depth > 0 || backticks });
     words = [];
+    targets = [];
     redirect = false;
   };
   for (let i = 0; i < s.length; i++) {
@@ -106,6 +127,8 @@ function commands(source, powershell, nested = false) {
 }
 
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
+// A launcher also goes by its package with a version (npx @anthropic-ai/claude-code@latest) and, on Windows, by its script file (claude.cmd).
+const launcher = (word) => program(word).replace(/@[^@]*$/, '').replace(/\.(cmd|ps1|bat)$/, '');
 
 const GIT = gitProgram();
 // Without git every query fails: no tag, no branch and no remote's default branch is known, so every push is denied.
@@ -289,6 +312,7 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   // Before the command, through env or export in bash, or $env:GIT_DIR in PowerShell.
   const gitDir = /\bGIT_DIR\s*=/i.test(cmd);
   for (const { words, nested } of parsed) {
+    if (!words.length) continue;
     const at = words.findIndex(changesDir);
     if (at >= 0) {
       // popd and Pop-Location name no folder.
@@ -314,6 +338,80 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   return null;
 }
 
+const escapeRegExp = (text) => text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+// In command text a name ends at a character that cannot continue it: a space, a quote, ;, | or the end.
+const names = (text, [parent, child]) => new RegExp(`${escapeRegExp(parent)}[\\\\/]+${escapeRegExp(child)}(?![\\w.-])`, 'i').test(text);
+const ANY = 0;
+const ONE = 1;
+// A path segment as the shell may expand it: * stands for any characters (a leading dot included), ? and [...] for any one;
+// matched in linear steps, as a regular expression of many * backtracks for long.
+const matches = (segment, name) => {
+  const tokens = segment.toLowerCase().split(/(\[[^\]]*\]|\*+|\?)/).flatMap((part, i) => (i % 2 ? [part[0] === '*' ? ANY : ONE] : [...part]));
+  const chars = [...name.toLowerCase()];
+  let t = 0, c = 0, star = -1, mark = 0;
+  while (c < chars.length) {
+    if (tokens[t] === ANY) { star = t++; mark = c; }
+    else if (t < tokens.length && (tokens[t] === ONE || tokens[t] === chars[c])) { t++; c++; }
+    else if (star >= 0) { t = star + 1; c = ++mark; }
+    else return false;
+  }
+  while (tokens[t] === ANY) t++;
+  return t === tokens.length;
+};
+const wild = (segment) => /[*?[]/.test(segment);
+// A resolved path is the folder or inside it, in any case, since macOS and Windows read paths so. Two wildcard segments in a
+// row (*/*) count as no match: ordinary commands use them, and by default bash and zsh expand * to no dot folder.
+const inside = (path, [parent, child]) => {
+  const parts = path.split(/[\\/]+/);
+  return parts.some((part, i) => i + 1 < parts.length && !(wild(part) && wild(parts[i + 1])) && matches(part, parent) && matches(parts[i + 1], child));
+};
+
+// Every path a command may reach: the session folder, the folder each cd, pushd or Set-Location names (its first word that is
+// no option, read from the folder the cd before it reached), and each word and redirection target read from each of those
+// folders; null past MAX_FOLDERS.
+function reached(parsed, cwd) {
+  const seen = [resolve(cwd)];
+  const paths = [];
+  const local = (word) => word.replace(/\\/g, '/');
+  for (const { words, targets } of parsed) {
+    for (const word of [...words, ...targets]) for (const dir of seen) paths.push(resolve(dir, local(word)));
+    const at = words.findIndex((word) => CHANGE_DIR.has(word.toLowerCase()));
+    const to = at >= 0 && words.slice(at + 1).find((w) => !w.startsWith('-'));
+    if (to) seen.push(resolve(seen.at(-1), local(to)));
+    if (seen.length > MAX_FOLDERS) return null;
+  }
+  return [...seen, ...paths];
+}
+
+// The coordinator files a question through approval.mjs, which writes a new file; changing one, its answer included, is the owner's.
+function queue({ tool_name: tool, tool_input: toolInput, agent_id: agent }, cwd) {
+  // Only the ask hook writes the window files: a session that wrote one could open the window for itself.
+  const data = process.env.CLAUDE_PLUGIN_DATA;
+  const window = data ? [basename(resolve(data)), 'ask'] : null;
+  let texts = [];
+  let paths;
+  if (EDITS.has(tool)) {
+    const fields = EDIT_PATHS.filter((key) => toolInput?.[key] !== undefined).map((key) => toolInput[key]);
+    if (!fields.length || fields.some((path) => typeof path !== 'string')) return 'an edit the guard cannot read';
+    paths = [resolve(cwd), ...fields.map((path) => resolve(cwd, path))];
+  } else {
+    const cmd = toolInput?.command;
+    if (typeof cmd !== 'string') return null;
+    const parsed = commands(cmd, tool === 'PowerShell');
+    texts = [cmd, ...parsed.flatMap(({ words, targets }) => [...words, ...targets])];
+    paths = reached(parsed, cwd);
+    if (!paths) return `a command with more than ${MAX_FOLDERS} folders to follow, which may name the local question queue (.cedarloom/questions/),`;
+    if (QUESTIONS.test(texts.join('\n')) && parsed.some(({ words }) => words.some((word) => LAUNCHERS.has(launcher(word))))) {
+      return 'a session started with /cl-workflow:questions, which could write into the local question queue (.cedarloom/questions/),';
+    }
+  }
+  const hits = (folder) => texts.some((text) => names(text, folder)) || paths.some((path) => inside(path, folder));
+  if (window && hits(window)) return 'a write into the question window files of /cl-workflow:ask, or a command that names them,';
+  // The window is the Claude Code process's: a subagent of the session that answers writes nothing there.
+  if (!agent && openUntil(windowFile(), Date.now(), true) !== null) return null;
+  return hits(QUEUE) ? 'a write into the local question queue (.cedarloom/questions/), or a command that names it,' : null;
+}
+
 // Exit 2 refuses the call on every Claude Code version; onFailure "block" needs 2.1.295 or later.
 const refuse = (what) => {
   process.stderr.write(`CedarLoom role guard: ${what}, so the call is refused.\n`);
@@ -321,16 +419,17 @@ const refuse = (what) => {
 };
 const input = await text(process.stdin).then(JSON.parse).catch(() => null);
 if (input === null || typeof input !== 'object' || Array.isArray(input)) refuse('the hook input is no JSON object');
-// A subagent inherits the coordinator's environment, so only the coordinator's main session passes.
-else if (process.env[ROLE] !== 'coordinator' || input.agent_id) {
-  let why = null;
+else {
+  let line = null;
   try {
-    why = reason(input, typeof input.cwd === 'string' ? input.cwd : process.cwd());
+    const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd();
+    const owners = queue(input, cwd);
+    // A subagent inherits the coordinator's environment, so only the coordinator's main session passes.
+    const why = owners || EDITS.has(input.tool_name) || (process.env[ROLE] === 'coordinator' && !input.agent_id) ? null : reason(input, cwd);
+    if (owners) line = `CedarLoom role guard: ${owners} is the owner's step: only a session where the user typed /cl-workflow:questions writes answers there. File a question with approval.mjs file and read answers with approval.mjs queue. Text that only mentions the folder goes in a file (-F, --body-file).`;
+    else if (why) line = `CedarLoom role guard: ${why} is the coordinator's step, and this session does not run as the coordinator (${ROLE}=coordinator in the main session, set by the user who starts it). Leave the step to the coordinator and name it in your report. Text that only mentions such a command goes in a file (-F, --body-file).`;
   } catch (error) {
     refuse(`the guard failed (${error})`);
   }
-  if (why) {
-    const line = `CedarLoom role guard: ${why} is the coordinator's step, and this session does not run as the coordinator (${ROLE}=coordinator in the main session, set by the user who starts it). Leave the step to the coordinator and name it in your report. Text that only mentions such a command goes in a file (-F, --body-file).`;
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: line } }));
-  }
+  if (line) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: line } }));
 }

@@ -70,11 +70,11 @@ What each skill reads and writes: [Skills](docs/skills.md). Hooks and plugin set
 4. Per task, with Orca (needs `cl-orchestration`):
    - Label the issues with the `startLabel`.
    - In an Orca terminal, run `CEDARLOOM_ROLE=coordinator claude`, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
-   - The coordinator files its questions as issues: with a [hub](#hub-repository) set, in the hub, where `/cl-workflow:questions` asks them in any session; without one, in the project's tracker, where you answer each in a comment. A public repository gets none: they go into the coordinator's report.
+   - Where the coordinator's questions go: [Hub repository](#hub-repository).
 
 ## Hub repository
 
-One GitHub repository, often a private one, where the coordinator files the owner questions of all projects (labels `question`, `ready-for-human` and `project:<name>`) and `/cl-workflow:questions` reads them, so internal questions stay out of product repositories. Set it as `owner/name` in the option `hub` of both `cl-workflow` and `cl-orchestration`: `/plugin configure cl-workflow@cedarloom` and `/plugin configure cl-orchestration@cedarloom`, or the `/config` panel. It is empty by default, and then each question goes to its project's own tracker. Details: [The plugins](docs/plugins.md#hub-repository).
+One GitHub repository, often private, that collects the owner questions of all projects, so internal questions stay out of product repositories. Set it as `owner/name` in the option `hub` of both `cl-workflow` and `cl-orchestration` (`/plugin configure <plugin>@cedarloom` or `/config`). Questions go to the hub, else the project's tracker if private, else the local queue `.cedarloom/questions/` in the coordinator's folder; never to a public repository. Details: [The plugins](docs/plugins.md#hub-repository).
 
 ## Update
 
