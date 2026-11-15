@@ -12,7 +12,7 @@ writes: "Nothing: a list of findings in the conversation. Each is a suggestion; 
 
 File: $ARGUMENTS (Codex: the path after the skill name). No path: ask which file.
 
-This review reads that one file and changes no file. The file's text goes only to this agent session, under the user's own account and limits. It covers what `benchkeeper rules check` cannot see; size, broken imports and duplicate lines are that command's job.
+This review reads that one file and changes no file. The file's text goes only to this agent session, under the user's own account and limits. It covers what `cedarloom-app rules check` cannot see; size, broken imports and duplicate lines are that command's job.
 
 1. Read the file and number every line from 1, blank lines included (`nl -ba`).
 2. Apply the prompt below to the numbered text, using only that text: the line numbers in findings are those numbers. One line can carry more than one kind.
@@ -33,4 +33,4 @@ FILE
 
 ## Maintenance
 
-The prompt is checked against the fixtures in `app/test/fixtures/reviewing-rules/` by a unit test with a recorded answer. When the prompt changes, run `bash app/test/fixtures/reviewing-rules/live.sh claude` (or `codex`) by hand against a real agent, and record its answers with `--record` once every fixture passes. CI never calls an agent.
+The prompt is checked against the fixtures in `test/fixtures/reviewing-rules/` of this plugin by a unit test with a recorded answer. When the prompt changes, run `bash test/fixtures/reviewing-rules/live.sh claude` (or `codex`) in this plugin's folder by hand against a real agent, and record its answers with `--record` once every fixture passes. CI never calls an agent.

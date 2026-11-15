@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('../../plugins/cedarloom/hooks/ask/ask.mjs', import.meta.url));
+const HOOK = fileURLToPath(new URL('../hooks/ask/ask.mjs', import.meta.url));
 // The inputs Claude Code 2.1.316 gave the plugin's hooks in a scratch session, paths and ids replaced.
 const BASE = { session_id: '596beaa6-1d50-456c-aa11-aa29e85e6bcc', transcript_path: '/home/user/.claude/projects/-home-user-proj/596beaa6-1d50-456c-aa11-aa29e85e6bcc.jsonl', cwd: '/home/user/proj', permission_mode: 'acceptEdits' };
 const QUESTION = {
@@ -16,7 +16,7 @@ const QUESTION = {
   tool_input: { questions: [{ question: 'Which color should be written to color.txt?', header: 'Color', options: [{ label: 'Red', description: 'Write red' }, { label: 'Blue', description: 'Write blue' }], multiSelect: false }] },
   tool_use_id: 'toolu_01',
 };
-const typed = (args) => ({ ...BASE, prompt_id: '708efaa2-3c69-4830-9c29-0b03a091a6cb', hook_event_name: 'UserPromptExpansion', expansion_type: 'slash_command', command_name: 'benchkeeper:ask', command_args: args, command_source: 'plugin', prompt: `/benchkeeper:ask ${args}` });
+const typed = (args) => ({ ...BASE, prompt_id: '708efaa2-3c69-4830-9c29-0b03a091a6cb', hook_event_name: 'UserPromptExpansion', expansion_type: 'slash_command', command_name: 'cedarloom:ask', command_args: args, command_source: 'plugin', prompt: `/cedarloom:ask ${args}` });
 const start = (source) => ({ ...BASE, hook_event_name: 'SessionStart', source });
 
 // Every run carries one CLAUDE_PID, as the hooks of one Claude Code process do.
@@ -27,7 +27,7 @@ const run = (data, input) => {
 };
 const decision = (data) => run(data, QUESTION)?.permissionDecision ?? 'none';
 
-test('ask hook: refuses the question tool until /benchkeeper:ask opens a window, and again after off', () => {
+test('ask hook: refuses the question tool until /cedarloom:ask opens a window, and again after off', () => {
   const data = mkdtempSync(join(tmpdir(), 'ask-'));
   assert.equal(decision(data), 'deny');
   run(data, typed('for 30m'));
@@ -45,9 +45,9 @@ test('ask hook: /clear keeps the window, a resumed conversation starts without i
   assert.equal(decision(data), 'deny');
 });
 
-test('ask hook: /benchkeeper:questions allows the question tool for the session, until /benchkeeper:ask off', () => {
+test('ask hook: /cedarloom:questions allows the question tool for the session, until /cedarloom:ask off', () => {
   const data = mkdtempSync(join(tmpdir(), 'ask-'));
-  run(data, { ...typed('cedarloom'), command_name: 'benchkeeper:questions', prompt: '/benchkeeper:questions cedarloom' });
+  run(data, { ...typed('cedarloom'), command_name: 'cedarloom:questions', prompt: '/cedarloom:questions cedarloom' });
   assert.equal(decision(data), 'none');
   run(data, start('compact'));
   assert.equal(decision(data), 'none');

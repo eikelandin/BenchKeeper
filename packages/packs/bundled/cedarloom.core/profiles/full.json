@@ -4,7 +4,7 @@
   "id": "cedarloom.full",
   "version": "0.1.0",
   "name": "Full",
-  "description": "Orchestration and research, plus the Ponytail and Matt Pocock plugins and the docs/agents files Matt Pocock's skills read.",
+  "description": "Orchestration and research, plus the Ponytail plugin and the docs/agents files for the issue tracker, triage labels and domain docs.",
   "license": "MIT",
   "minApp": "0.1.0",
   "extends": [
@@ -39,18 +39,12 @@
           "defaultMode": "full"
         }
       }
-    },
-    "plugin.matt-pocock": {
-      "type": "plugin",
-      "title": "Matt Pocock's skills",
-      "default": "on",
-      "plugin": "mattpocock-skills@claude-plugins-official"
     }
   },
   "project": {
     "agent-docs": {
       "type": "files",
-      "title": "docs/agents for Matt Pocock's skills",
+      "title": "docs/agents: issue tracker, triage labels, domain docs",
       "default": "on",
       "commit": true,
       "requires": ["workspace.hub"],

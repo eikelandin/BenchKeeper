@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { answer, missing } from '../../plugins/cedarloom/skills/orchestrating-projects/approval.mjs';
+import { answer, missing } from '../skills/orchestrating-projects/approval.mjs';
 
-const SKILL = '../../plugins/cedarloom/skills/orchestrating-projects/';
+const SKILL = '../skills/orchestrating-projects/';
 const WHAT = 'What: Approve the design of the streamed export (plan: docs/plans/export.md).';
 const MERGES = '| Merges | the coordinator after green checks; .github stays for the owner |';
 const COST = '| Cost | 2 worker sessions, about 3 hours (unverified) |';
@@ -26,7 +26,7 @@ ${MERGES}
 | Owner steps | none |
 ${COST}
 | Undo | revert each PR |
-| Answer | comment "a", "b" or free text, or run /benchkeeper:questions |
+| Answer | comment "a", "b" or free text, or run /cedarloom:questions |
 
 | Option | What happens | Trade-off |
 |---|---|---|
@@ -95,8 +95,8 @@ for (const [name, text, expected] of CASES) test(`approval: ${name} lacks ${expe
 test('approval: the command line exits 0 for a filled approval and 1 with the missing row on stderr', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
-  mkdirSync(join(dir, '.cedarloom-app/runs/r1'), { recursive: true });
-  const run = (name, text, ...mode) => { writeFileSync(join(dir, '.cedarloom-app/runs/r1', name), text); return spawnSync(process.execPath, [script, ...mode, `.cedarloom-app/runs/r1/${name}`], { cwd: dir, encoding: 'utf8' }); };
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  const run = (name, text, ...mode) => { writeFileSync(join(dir, '.cedarloom/runs/r1', name), text); return spawnSync(process.execPath, [script, ...mode, `.cedarloom/runs/r1/${name}`], { cwd: dir, encoding: 'utf8' }); };
   assert.equal(run('filled.md', FILLED).status, 0);
   const lacking = run('no-cost.md', NO_COST);
   assert.equal(lacking.status, 1);
@@ -156,12 +156,12 @@ for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`a
 test('approval: the command line counts a member\'s answer only with write access to the repository the issue URL names', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
-  mkdirSync(join(dir, '.cedarloom-app/runs/r1'), { recursive: true });
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
   const run = (permission, issue) => {
     writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" > '${bin}/log'\necho '{"permission":"${permission}"}'\n`, { mode: 0o755 });
-    writeFileSync(join(dir, '.cedarloom-app/runs/r1/issue.json'), JSON.stringify({ body: FILLED, comments: [{ ...SECOND, authorAssociation: 'MEMBER' }], ...issue }));
-    return spawnSync(process.execPath, [script, 'answer', '.cedarloom-app/runs/r1/issue.json'], { cwd: dir, encoding: 'utf8', env: { ...process.env, GH_HOST: '', PATH: `${bin}:${process.env.PATH}` } });
+    writeFileSync(join(dir, '.cedarloom/runs/r1/issue.json'), JSON.stringify({ body: FILLED, comments: [{ ...SECOND, authorAssociation: 'MEMBER' }], ...issue }));
+    return spawnSync(process.execPath, [script, 'answer', '.cedarloom/runs/r1/issue.json'], { cwd: dir, encoding: 'utf8', env: { ...process.env, GH_HOST: '', PATH: `${bin}:${process.env.PATH}` } });
   };
   const url = { url: 'https://github.com/owner/tracker/issues/12' };
   assert.equal(run('read', url).status, 1);
@@ -178,31 +178,31 @@ test('approval: the command line counts a member\'s answer only with write acces
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
-  mkdirSync(join(dir, '.cedarloom-app/runs/r1'), { recursive: true });
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   writeFileSync(join(dir, 'filled.md'), FILLED);
-  symlinkSync(join(dir, 'filled.md'), join(dir, '.cedarloom-app/runs/r1/link.md'));
+  symlinkSync(join(dir, 'filled.md'), join(dir, '.cedarloom/runs/r1/link.md'));
   const status = (cwd, file) => spawnSync(process.execPath, [script, file], { cwd, encoding: 'utf8' }).status;
-  const refused = spawnSync(process.execPath, [script, '.cedarloom-app/runs/../../filled.md'], { cwd: dir, encoding: 'utf8' });
+  const refused = spawnSync(process.execPath, [script, '.cedarloom/runs/../../filled.md'], { cwd: dir, encoding: 'utf8' });
   assert.equal(refused.status, 2);
   assert.equal(refused.stderr.trim().split('\n').length, 1);
-  assert.equal(status(dir, '.cedarloom-app/runs/r1/link.md'), 2);
-  // A linked .cedarloom-app or runs folder leads out of the project, so even a filled approval under it is refused.
+  assert.equal(status(dir, '.cedarloom/runs/r1/link.md'), 2);
+  // A linked .cedarloom or runs folder leads out of the project, so even a filled approval under it is refused.
   const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
   mkdirSync(join(out, 'runs/r1'), { recursive: true });
   writeFileSync(join(out, 'runs/r1/filled.md'), FILLED);
   const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
-  symlinkSync(out, join(linkedDot, '.cedarloom-app'));
-  assert.equal(status(linkedDot, '.cedarloom-app/runs/r1/filled.md'), 2);
+  symlinkSync(out, join(linkedDot, '.cedarloom'));
+  assert.equal(status(linkedDot, '.cedarloom/runs/r1/filled.md'), 2);
   const linkedRuns = mkdtempSync(join(tmpdir(), 'bk-approval-'));
-  mkdirSync(join(linkedRuns, '.cedarloom-app'));
-  symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom-app/runs'));
-  assert.equal(status(linkedRuns, '.cedarloom-app/runs/r1/filled.md'), 2);
+  mkdirSync(join(linkedRuns, '.cedarloom'));
+  symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom/runs'));
+  assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
 });
 
 // The coordinator skill also works copied alone, without the questions skill, so it keeps its own copy of the hub rule.
 test('approval: approvals.md quotes the questions skill\'s hub rule word for word', () => {
   const approvals = readFileSync(new URL(`${SKILL}approvals.md`, import.meta.url), 'utf8');
-  const questions = readFileSync(new URL('../../plugins/cedarloom/skills/questions/SKILL.md', import.meta.url), 'utf8');
+  const questions = readFileSync(new URL('../skills/questions/SKILL.md', import.meta.url), 'utf8');
   const quote = approvals.match(/as the `questions` skill reads it[^"]*"([^"]+)"/)?.[1];
   assert.ok(quote?.startsWith('taken only from what CedarLoom writes'), 'approvals.md has no quote of the hub rule');
   assert.ok(questions.includes(quote), 'the quote in approvals.md differs from the questions skill');

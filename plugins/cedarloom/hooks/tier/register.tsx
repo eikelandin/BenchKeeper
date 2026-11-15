@@ -1,6 +1,6 @@
 // Optional status band (userConfig tierBand, off by default): a row with the project, its branch and Ponytail's level (when
-// that plugin is on), and a row with the last test run and the last lint or type check, ASK while /benchkeeper:ask or
-// /benchkeeper:questions allows terminal questions.
+// that plugin is on), and a row with the last test run and the last lint or type check, ASK while /cedarloom:ask or
+// /cedarloom:questions allows terminal questions.
 // It reads the working folder, git, one flag file of Ponytail and the commands and edits of the main loop; it writes and
 // sends nothing.
 import { atom, read, update } from 'claude-code'
@@ -21,7 +21,7 @@ const commands = (list: string) => ({
 const TEST = commands('(?:(?:npm|pnpm|yarn|bun) (?:run )?test(?::\\S+)?|node --test|playwright test|pytest|go test|cargo test|vitest|jest)')
 const LINT = commands('(?:eslint|npm run lint|tsc|ruff|mypy|pyright|go vet|cargo clippy|biome)')
 const EDITS = ['Edit', 'Write', 'NotebookEdit'] as const
-// The window /benchkeeper:ask or /benchkeeper:questions opened, as the plugin's hook (ask/ask.mjs) keeps it per process: a module variable outlives /clear too.
+// The window /cedarloom:ask or /cedarloom:questions opened, as the plugin's hook (ask/ask.mjs) keeps it per process: a module variable outlives /clear too.
 let asking: number | null = null
 
 // The commands of a chain joined by && only, else none: with ||, ;, | or & the exit code can come from another command, and a
@@ -30,7 +30,7 @@ const chain = (command: string) => (/[;|&\n`]|\$\(/.test(command.replaceAll('&&'
 // Without its redirections (> log, 2>&1, &> log), which leave the exit code alone. The lookbehinds start a match only at the
 // first space or digit of a run, so a long run without a redirection is read once (linear time).
 export const plain = (command: string) => command.replace(/(?<!\s)\s*(?:&|(?<!\d)\d+)?>>?\s*(?:&\d+|[^\s;&|'"]+)/g, '')
-// The script of one sh -c '<script>', alone or after a container exec (devcontainer exec ... sh -lc 'cd app && npm test'),
+// The script of one sh -c '<script>', alone or after a container exec (devcontainer exec ... sh -lc 'cd web && npm test'),
 // else the command: in echo sh -c 'npm test' the shell is an argument.
 function script(command: string) {
   const c = plain(command)
@@ -64,7 +64,7 @@ async function refresh($: EngineInterface) {
   await update($, where, () => ({ project: cwd.split(/[\\/]/).filter(Boolean).pop() || cwd, branch: branch || null, ponytail: /^[a-z-]{1,12}$/.test(level) ? level : null }))
 }
 
-const HELP = 'BenchKeeper band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/benchkeeper:ask, /benchkeeper:questions). Nothing leaves this machine. Turn off: set the status band option to false in the plugin options.'
+const HELP = 'CedarLoom band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/cedarloom:ask, /cedarloom:questions). Nothing leaves this machine. Turn off: set the status band option to false in the plugin options.'
 
 export const register: Register = (on, options) => {
   // Off: no hook at all, so tool calls and prompts pass the band by. Changing the option reloads the module.
@@ -113,11 +113,11 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
-    if (e.command?.name === 'benchkeeper:ask') {
+    if (e.command?.name === 'cedarloom:ask') {
       const end = askUntil(e.command.args, await $.clock.now())
       if (end !== undefined) asking = end
     }
-    if (e.command?.name === 'benchkeeper:questions') asking = Infinity
+    if (e.command?.name === 'cedarloom:questions') asking = Infinity
     return next(e)
   }).catch(($, e, next) => next(e))
 

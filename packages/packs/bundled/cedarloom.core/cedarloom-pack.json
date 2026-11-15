@@ -78,7 +78,7 @@
     },
     "profiles/full.json": {
       "kind": "profile",
-      "description": "Preset full: orchestration and research, plus the Ponytail and Matt Pocock plugins"
+      "description": "Preset full: orchestration and research, plus the Ponytail plugin"
     },
     "profiles/default.json": {
       "kind": "profile",

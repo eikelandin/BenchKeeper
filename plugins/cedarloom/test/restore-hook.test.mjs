@@ -6,9 +6,9 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('../../plugins/cedarloom/hooks/rotation/restore.mjs', import.meta.url));
+const HOOK = fileURLToPath(new URL('../hooks/rotation/restore.mjs', import.meta.url));
 const OWNED = '# Handoff\nTerminal: term-a\n\n## Next\nwatch #12\n';
-const RUNS = join('.cedarloom-app', 'runs');
+const RUNS = join('.cedarloom', 'runs');
 
 // A folder holding the coordinator's handoff file, untracked in a git work tree unless `git` is false.
 const folder = ({ text = OWNED, git = true } = {}) => {
@@ -44,7 +44,7 @@ test('restore hook: the drift counts from the edited stamp of the status line, w
   commit('backdated', '1999-01-01T00:00:00Z');
   writeFileSync(join(root, 'README.md'), 'b');
   mkdirSync(join(root, 'sub', RUNS), { recursive: true });
-  writeFileSync(join(root, 'sub', RUNS, 'handoff.md'), `${OWNED}\n<!-- cedarloom-app:status -->\n2026-01-01T00:00:00.000Z compacting; context: 1 tokens; last clear: none; edited: 2000-01-01T00:00:00.000Z; text: ecc034a0\n<!-- /cedarloom-app:status -->\n`);
+  writeFileSync(join(root, 'sub', RUNS, 'handoff.md'), `${OWNED}\n<!-- cedarloom:status -->\n2026-01-01T00:00:00.000Z compacting; context: 1 tokens; last clear: none; edited: 2000-01-01T00:00:00.000Z; text: ecc034a0\n<!-- /cedarloom:status -->\n`);
   const restored = restore(join(root, 'sub'));
   assert.match(restored, /\n## Drift since this file was written \(2000-01-01T00:00:00\.000Z, /);
   // git 2.39 prints %cI in UTC as +00:00, newer as Z.

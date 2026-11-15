@@ -1,6 +1,6 @@
 # Worker spec template
 
-This is the spec of the issue runs this skill coordinates. An attended Orca fan-out without this skill uses another template, the `worker-spec.md` that the BenchKeeper app writes into the `orca` folder of its config folder.
+This is the spec of the issue runs this skill coordinates. An attended Orca fan-out without this skill uses another template, the `worker-spec.md` that the CedarLoom app writes into the `orca` folder of its config folder.
 
 Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets. The repository's rules stay in its `AGENTS.md`; this spec only points to them.
 

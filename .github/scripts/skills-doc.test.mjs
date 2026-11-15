@@ -25,7 +25,7 @@ test('the when column comes from the field, else from the description after its 
   assert.match(agent.start, /^the agent/);
   const user = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'when: "On request."', 'writes: "x"']));
   assert.equal(user.when, 'On request.');
-  assert.match(user.start, /^you: `\/benchkeeper:u`/);
+  assert.match(user.start, /^you: `\/cedarloom:u`/);
 });
 test('the first sentence ends where the earlier /^(.*?\.)(?:\s+(.*))?$/ ended it', () => {
   const FIRST = /^(.*?\.)(?:\s+(.*))?$/;
