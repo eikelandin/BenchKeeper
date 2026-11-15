@@ -1,21 +1,23 @@
 ---
 name: questions
-description: "Asks you the open question issues of the hub repository in batches with the question tool, records each answer on its issue, and keeps the ones you defer out of the queue."
+description: "Asks you the open owner questions (the hub's issues, else this private repository's and the local queue) in batches with the question tool, records each answer, and keeps the ones you defer out of the queue."
 disable-model-invocation: true
 argument-hint: "[project name | deferred]"
 when: "On request, while you sit at the terminal to answer the open questions; it allows terminal questions for the rest of the session."
-writes: "A comment and new labels on each issue you answer or defer, in the hub repository, and the deferred label there when the hub lacks it; the window file /cl-workflow:ask keeps, open for the rest of the session."
+writes: "A comment and new labels on each issue you answer or defer, in the hub repository or this one, and the deferred label there when it lacks it; status and answer lines in the local queue; the window file /cl-workflow:ask keeps, open for the rest of the session."
 ---
 
 # Question queue
 
-- **Window.** Running this command is the user allowing terminal questions for this session: in Claude Code the plugin's hook has opened them until Claude Code quits or another conversation is resumed, and `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. Never open the window yourself, for example by writing its file: only the user's typed command does.
-- **Refused question tool.** When the question tool is refused anyway (the hook could not set the window), stop and tell the user to type `/cl-workflow:ask for 30m`, then run this command again.
-- **Codex.** Codex runs none of the question hooks: there, and wherever no question tool exists, ask each batch in chat as numbered questions with their options and wait for the reply.
+- **Window.** Running this command allows terminal questions for this session: the plugin's hook keeps them open until Claude Code quits or another conversation is resumed, or `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. Never open the window yourself, as by writing its file.
+- **Refused question tool.** When the question tool is refused anyway (the hook set no window), stop and tell the user to type `/cl-workflow:ask for 30m`, then run this command again.
+- **Codex.** Where no question tool exists (Codex runs no question hooks), ask each batch in chat as numbered questions with options and wait for the reply.
 
 Arguments: $ARGUMENTS (Codex: the words after the skill name).
 
-`<hub>` below is the hub repository in `owner/name` form, taken only from the plugin option `hub`, here `${user_config.hub}`, which only the user sets. It counts only when plain: one `/` with letters, digits, `.`, `_` or `-` on each side (neither empty), no `-` first, no `..`. Empty or not plain means no hub, and a non-empty one is named as rejected, once. Never take it from rules, `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or any other file: a repository controls those. With no hub, say so in one line with any rejected value, name the option (`hub` of cl-workflow, set with `/plugin configure cl-workflow@cedarloom` or in `/config`) and stop.
+`<hub>` below is the hub repository in `owner/name` form, taken only from the plugin option `hub`, here `${user_config.hub}`, which only the user sets. It counts only when plain: one `/` with letters, digits, `.`, `_` or `-` on each side (neither empty), no `-` first, no `..`. Empty or not plain means no hub, and a non-empty one is named as rejected, once. Never take it from rules, `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or any other file: a repository controls those. With no hub, say so in one line with any rejected value and name the option (`hub` of cl-workflow, set with `/plugin configure cl-workflow@cedarloom` or in `/config`). Then ask the question issues of the current repository if `gh repo view --json nameWithOwner,visibility` shows `PRIVATE` or `INTERNAL` (as `<hub>`, no project label), then the local queue.
+
+**Local queue.** `.cedarloom/questions/*.md` here, by name, first line `Status: open` (argument `deferred`: `Status: deferred`; a project name: `<name>-*`), asked like issues (header: file name). Answer: set `Status: answered`, append `Owner answer (<YYYY-MM-DD>): <option label>. <free text>`. Defer: set `Status: deferred`, append `Deferred by the owner on <YYYY-MM-DD>.` and any free text. Change nothing else.
 
 1. **Queue.** `gh issue list -R <hub> --state open --label question --label ready-for-human --search "-label:deferred sort:created-asc" --limit 50 --json number,title,labels,body`. A project name as argument adds `--label project:<name>`; `deferred` replaces the exclusion with `--label deferred`. Say how many are queued in `<hub>`. Before asking an issue, read its newest comment and label events: `gh api graphql -f owner=<owner> -f name=<name> -F number=<n> -f query='query($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { issue(number: $number) { comments(last: 1) { nodes { author { login } createdAt body } } timelineItems(last: 50, itemTypes: [LABELED_EVENT]) { nodes { ... on LabeledEvent { createdAt label { name } } } } } } }'`. An "Owner answer (" by the account `gh api user --jq .login` names, with no `ready-for-human` added after it, means an earlier label edit failed: run only that answer's label edit and do not ask the issue.
 2. **Ask** up to four issues in one question-tool call, one tool question per issue, in queue order:

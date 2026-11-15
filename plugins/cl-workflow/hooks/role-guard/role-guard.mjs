@@ -3,11 +3,19 @@
 // use gh auth, write git config, use git stash or start a session in bare mode, which runs no hooks.
 // It stops a session that forgets its role, not one that works around it (variables, aliases, scripts, another tool):
 // the boundary is a gh token without those rights.
+// For Write, Edit, MultiEdit and NotebookEdit too: an answer in the local question queue counts as the owner's, so every session, the
+// coordinator's included, may only write there or name it in a command after the user typed /cl-workflow:questions in that session,
+// and no session writes the window files that record that.
 import { spawnSync } from 'node:child_process';
 import { statSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
+import { openUntil, windowFile } from '../ask/window-file.mjs';
 import { gitProgram } from '../git-program.mjs';
+
+// The local question queue in any folder; any case, since macOS and Windows read paths so.
+const QUEUE = /\.cedarloom[\\/]+questions([\\/]|$)/i;
+const EDITS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 
 const ROLE = 'CEDARLOOM_ROLE';
 
@@ -314,6 +322,20 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   return null;
 }
 
+// The coordinator files a question through approval.mjs, which writes a new file; changing one, its answer included, is the owner's.
+function queue({ tool_name: tool, tool_input: toolInput, agent_id: agent }, cwd) {
+  const edit = EDITS.has(tool);
+  const target = edit ? toolInput?.file_path ?? toolInput?.notebook_path : toolInput?.command;
+  if (typeof target !== 'string') return edit ? 'an edit the guard cannot read' : null;
+  // Only the ask hook writes the window files: a session that wrote one could open the window for itself.
+  const data = process.env.CLAUDE_PLUGIN_DATA;
+  const window = data && new RegExp(`${(edit ? data : basename(data)).replace(/[\\^$.*+?()[\]{}|]/g, '\\$&').replace(/\\\\|\//g, '[\\\\/]+')}[\\\\/]+ask([\\\\/]|$)`, 'i');
+  if (window && window.test(edit ? resolve(cwd, target) : target)) return 'a write into the question window files of /cl-workflow:ask, or a command that names them,';
+  // The window is the Claude Code process's: a subagent of the session that answers writes nothing there.
+  if (!agent && openUntil(windowFile(), Date.now(), true) !== null) return null;
+  return QUEUE.test(edit ? resolve(cwd, target) : target) ? 'a write into the local question queue (.cedarloom/questions/), or a command that names it,' : null;
+}
+
 // Exit 2 refuses the call on every Claude Code version; onFailure "block" needs 2.1.295 or later.
 const refuse = (what) => {
   process.stderr.write(`CedarLoom role guard: ${what}, so the call is refused.\n`);
@@ -321,16 +343,17 @@ const refuse = (what) => {
 };
 const input = await text(process.stdin).then(JSON.parse).catch(() => null);
 if (input === null || typeof input !== 'object' || Array.isArray(input)) refuse('the hook input is no JSON object');
-// A subagent inherits the coordinator's environment, so only the coordinator's main session passes.
-else if (process.env[ROLE] !== 'coordinator' || input.agent_id) {
-  let why = null;
+else {
+  let line = null;
   try {
-    why = reason(input, typeof input.cwd === 'string' ? input.cwd : process.cwd());
+    const cwd = typeof input.cwd === 'string' ? input.cwd : process.cwd();
+    const owners = queue(input, cwd);
+    // A subagent inherits the coordinator's environment, so only the coordinator's main session passes.
+    const why = owners || EDITS.has(input.tool_name) || (process.env[ROLE] === 'coordinator' && !input.agent_id) ? null : reason(input, cwd);
+    if (owners) line = `CedarLoom role guard: ${owners} is the owner's step: only a session where the user typed /cl-workflow:questions writes answers there. File a question with approval.mjs file and read answers with approval.mjs queue.`;
+    else if (why) line = `CedarLoom role guard: ${why} is the coordinator's step, and this session does not run as the coordinator (${ROLE}=coordinator in the main session, set by the user who starts it). Leave the step to the coordinator and name it in your report. Text that only mentions such a command goes in a file (-F, --body-file).`;
   } catch (error) {
     refuse(`the guard failed (${error})`);
   }
-  if (why) {
-    const line = `CedarLoom role guard: ${why} is the coordinator's step, and this session does not run as the coordinator (${ROLE}=coordinator in the main session, set by the user who starts it). Leave the step to the coordinator and name it in your report. Text that only mentions such a command goes in a file (-F, --body-file).`;
-    process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: line } }));
-  }
+  if (line) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: line } }));
 }

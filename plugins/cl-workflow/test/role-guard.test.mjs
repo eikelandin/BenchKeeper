@@ -7,6 +7,7 @@ import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const HOOK = fileURLToPath(new URL('../hooks/role-guard/role-guard.mjs', import.meta.url));
+const ASK = fileURLToPath(new URL('../hooks/ask/ask.mjs', import.meta.url));
 // The hook asks git about the folder it runs in; a GIT_DIR of a surrounding git hook must not answer for it.
 const ENV = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_') && key !== 'CEDARLOOM_ROLE'));
 
@@ -52,11 +53,11 @@ after(() => {
   for (const dir of [trunk, feature, fresh, develop, fork]) rmSync(dir, { recursive: true, force: true });
 });
 
-const run = (input, role, home) =>
-  spawnSync(process.execPath, [HOOK], { input, env: { ...ENV, ...(role !== undefined && { CEDARLOOM_ROLE: role }), ...(home && { HOME: home, USERPROFILE: home }) }, encoding: 'utf8' });
-const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, home, toolInput = { command } } = {}) => {
+const run = (input, role, home, env) =>
+  spawnSync(process.execPath, [HOOK], { input, env: { ...ENV, ...(role !== undefined && { CEDARLOOM_ROLE: role }), ...(home && { HOME: home, USERPROFILE: home }), ...env }, encoding: 'utf8' });
+const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, home, env, toolInput = { command } } = {}) => {
   const input = { hook_event_name: 'PreToolUse', tool_name: tool, tool_input: toolInput, tool_use_id: 'toolu_01', cwd, ...(agent && { agent_id: agent }) };
-  const r = run(JSON.stringify(input), role, home);
+  const r = run(JSON.stringify(input), role, home, env);
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? 'none' : JSON.parse(r.stdout).hookSpecificOutput.permissionDecision;
 };
@@ -272,6 +273,36 @@ test('role guard: passes a Monitor call on a WebSocket', () => {
 test('role guard: passes everything in the coordinator role, but not in its subagents', () => {
   for (const command of ['gh pr merge 12 --squash', 'git push --tags', 'git stash']) assert.equal(decision(command, { role: 'coordinator' }), 'none', command);
   assert.equal(decision('gh pr merge 12 --squash', { role: 'coordinator', agent: 'agent_01' }), 'deny');
+});
+
+test('role guard: only the session where the user typed /cl-workflow:questions writes into the local question queue', () => {
+  const data = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  const env = { CLAUDE_PLUGIN_DATA: data, CLAUDE_PID: '4242' };
+  const typed = (command_name) => spawnSync(process.execPath, [ASK], { input: JSON.stringify({ hook_event_name: 'UserPromptExpansion', command_name, command_args: '', session_id: 's', cwd: trunk }), env: { ...ENV, ...env }, encoding: 'utf8' }).status;
+  const answer = { file_path: '.cedarloom/questions/project-1.md', old_string: 'Status: open', new_string: 'Status: answered' };
+  const calls = [
+    ['Edit', answer],
+    ['Write', { file_path: join(trunk, '.CedarLoom', 'Questions', 'project-2.md'), content: 'Status: open' }],
+    ['Bash', { command: "sed -i 's/open/answered/' .cedarloom/questions/project-1.md" }],
+  ];
+  const decide = (opts) => calls.map(([tool, toolInput]) => decision(undefined, { tool, toolInput, env, ...opts }));
+  // Every session, the coordinator's included, until the user types the command; a window /cl-workflow:ask opened does not count.
+  for (const role of [undefined, 'worker', 'coordinator']) assert.deepEqual(decide({ role }), ['deny', 'deny', 'deny'], role);
+  assert.equal(typed('cl-workflow:ask'), 0);
+  assert.deepEqual(decide({}), ['deny', 'deny', 'deny']);
+  assert.equal(typed('cl-workflow:questions'), 0);
+  assert.deepEqual(decide({}), ['none', 'none', 'none']);
+  // The window is the process's, so a subagent of that session stays out.
+  assert.deepEqual(decide({ agent: 'agent_01' }), ['deny', 'deny', 'deny']);
+  // No session writes the window files, which would open the window for itself.
+  const forged = join(data, 'ask', '4242.json');
+  for (const opts of [{}, { role: 'coordinator' }]) {
+    assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: forged, content: '{}' }, env, ...opts }), 'deny');
+    assert.equal(decision(`echo '{}' > ~/x/${basename(data)}/ask/4242.json`, { env, ...opts }), 'deny');
+  }
+  // Edits anywhere else pass, also in a guarded session.
+  assert.equal(decision(undefined, { tool: 'Edit', toolInput: { ...answer, file_path: '.cedarloom/runs/handoff.md' }, env }), 'none');
+  assert.equal(decision(undefined, { tool: 'Edit', toolInput: { ...answer, file_path: 'docs/questions/a.md' } }), 'none');
 });
 
 test('role guard: input it cannot read exits 2, which blocks the call', () => {

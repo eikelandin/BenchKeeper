@@ -1,7 +1,9 @@
 // Usage: node approval.mjs <file>, the file in .cedarloom/runs/ of the working directory (the run folder, approvals.md); any other path exits 2. Checks an approval or owner question against approval-template.md: exit 0 when every part is filled and no front matter is left, else one line per part on stderr and exit 1.
 // Usage: node approval.mjs answer <file>, the file in the run folder as above. Reads the owner's answer from a filed approval, the file holding what `gh issue view <n> -R <repository> --json labels,comments,author,body,url` printed: the answer as JSON and exit 0, exit 1 while there is none, or exit 2 with one line when the file cannot be read as that output.
-import { readFileSync, realpathSync } from 'node:fs';
-import { join, sep } from 'node:path';
+// Usage: node approval.mjs file <file> <project>, the file in the run folder: checks it as above and files it as the next question of the local queue, .cedarloom/questions/<project>-<n>.md, printing { file }.
+// Usage: node approval.mjs queue: { file, status, option, text, at } of each question in the local queue as JSON, or exit 2 with one line.
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { escaped, isMain, json, sh } from './policy.mjs';
 import { writers } from './precheck.mjs';
 
@@ -101,9 +103,55 @@ export function answer(issue, writes = () => false) {
   if (newest < 0 || comments.slice(newest + 1).some((c) => c.body?.startsWith('Head: ') && (c.author?.login === issue.author?.login || owners(c)))) return null;
   const { body, createdAt: at } = comments[newest];
   if (!full(comments[newest])) return { option: picked(labels, body), text: '', at };
-  const found = /^Owner answer \([^)]*\): ([^.\n]*)\.?([\s\S]*)$/.exec(body);
-  // An answer without a full stop has its whole first line as the option: the coordinator compares it with the option labels and needs no more of it.
-  return found && { option: found[1].trim().slice(0, 200), text: found[2].trim(), at };
+  return fullAnswer(body, at);
+}
+
+// An answer without a full stop has its whole first line as the option: the coordinator compares it with the option labels and needs no more of it.
+const fullAnswer = (body, at) => { const found = /^Owner answer \(([^)]*)\): ([^.\n]*)\.?([\s\S]*)$/.exec(body); return found && { option: found[2].trim().slice(0, 200), text: found[3].trim(), at: at ?? found[1] }; };
+
+// The local question queue (approvals.md): a folder that is a link is refused, as the run folder is.
+const QUEUE = join('.cedarloom', 'questions');
+function queueDir(create) {
+  const root = realpathSync('.');
+  const dir = join(root, QUEUE);
+  // Checked before mkdir, which would follow a link.
+  for (const at of [dirname(dir), dir]) if (existsSync(at) && realpathSync(at) !== at) throw new Error(`refused: ${at.slice(root.length + 1)} is a link`);
+  if (create) mkdirSync(dir, { recursive: true });
+  else if (!existsSync(dir)) return null;
+  return dir;
+}
+
+// Files the approval text as the next question <project>-<n>.md of the queue, never over an existing file, and keeps the queue out of git.
+export function fileQuestion(text, project, run) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(project)) throw new Error(`no plain project name: ${project}`);
+  const dir = queueDir(true);
+  try {
+    run('git', ['check-ignore', '-q', QUEUE]);
+  } catch (e) {
+    // 1: not ignored; 128: no git repository, nothing to keep out.
+    // An exclude pattern with a slash matches from the repository root, so it names the folder from there.
+    if (e.status === 1) { const exclude = resolve(run('git', ['rev-parse', '--git-path', 'info/exclude']).trim()); mkdirSync(dirname(exclude), { recursive: true }); appendFileSync(exclude, `\n/${run('git', ['rev-parse', '--show-prefix']).trim()}${QUEUE.replaceAll(sep, '/')}/\n`); }
+    else if (e.status !== 128) throw e;
+  }
+  const taken = readdirSync(dir).filter((name) => name.startsWith(`${project}-`)).map((name) => /^(\d+)\.md$/.exec(name.slice(project.length + 1))?.[1]).filter(Boolean).map(Number);
+  const name = `${project}-${Math.max(0, ...taken) + 1}.md`;
+  writeFileSync(join(dir, name), `Status: open\n\n${text}`, { flag: 'wx' });
+  return name;
+}
+
+// { file, status, option, text, at } of each question in the queue; option, text and at only for an answered one;
+// { file, error } for a file that is no question, so one broken file holds back no other answer.
+export function readQueue() {
+  const dir = queueDir(false);
+  const names = dir ? readdirSync(dir).filter((name) => name.endsWith('.md')).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })) : [];
+  return names.map((file) => {
+    const body = readFileSync(join(dir, file), 'utf8');
+    const status = /^Status: (open|answered|deferred)\r?$/.exec(body.split('\n', 1)[0])?.[1];
+    if (!status) return { file, error: 'the first line is no Status line (open, answered or deferred)' };
+    if (status !== 'answered') return { file, status };
+    const found = fullAnswer(body.slice(body.lastIndexOf('\nOwner answer (') + 1));
+    return found ? { file, status, ...found } : { file, error: 'answered, but no Owner answer line' };
+  });
 }
 
 // The path comes from a session's command line: a file that resolves outside the run folder, through .. or a link, is not read,
@@ -114,12 +162,16 @@ if (isMain(import.meta.url)) {
   const say = (message) => console.error(escaped(message.split('\n')[0]));
   process.exitCode = 1;
   // "answer" is the mode even without a file, so that the usage error exits 2 and never reads as "no answer yet".
-  const [mode, file] = process.argv.length === 4 || process.argv[2] === 'answer' ? process.argv.slice(2) : ['check', process.argv[2]];
+  const args = process.argv.slice(2);
+  const mode = ['answer', 'file', 'queue'].includes(args[0]) ? args.shift() : 'check';
+  const [file, project] = args;
   try {
-    if (!file || process.argv.length > 4 || !['check', 'answer'].includes(mode)) throw new Error('usage: node approval.mjs <file>, or node approval.mjs answer <file>');
-    const real = inRuns(file);
-    if (!real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
-    const text = readFileSync(real, 'utf8');
+    if (args.length !== { check: 1, answer: 1, file: 2, queue: 0 }[mode]) throw new Error('usage: node approval.mjs [answer] <file>, node approval.mjs file <file> <project>, or node approval.mjs queue');
+    // The queue mode reads no file of the command line.
+    const real = mode === 'queue' ? null : inRuns(file);
+    if (mode === 'queue') console.log(json(readQueue()));
+    else if (!real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
+    const text = real ? readFileSync(real, 'utf8') : '';
     const issue = mode === 'answer' ? JSON.parse(text) : null;
     // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.
     const [, host, named] = /^https:\/\/([^/]+)\/([^/]+\/[^/]+)\/issues\/\d+$/.exec(issue?.url ?? '') ?? [];
@@ -131,7 +183,8 @@ if (isMain(import.meta.url)) {
     else if (host.toLowerCase() !== gh) writes = () => { throw new Error(`the issue is on ${host}, and gh asks ${gh}: set GH_HOST for an approval on another host`); };
     const found = mode === 'answer' ? answer(issue, writes) : null;
     if (found) console.log(json(found));
-    const lacks = mode === 'check' ? missing(text) : [];
+    const lacks = mode === 'answer' || mode === 'queue' ? [] : missing(text);
+    if (mode === 'file' && !lacks.length) console.log(json({ file: fileQuestion(text, project, (cmd, cmdArgs) => sh('.', cmd, cmdArgs)) }));
     for (const name of lacks) {
       if (name === FRONT) say('remove the front matter: its labels go on the command line');
       else if (name === 'Recommended') say('missing, unfilled or not starting with the label of the first option row, such as (a): Recommended');
@@ -141,6 +194,6 @@ if (isMain(import.meta.url)) {
   } catch (e) {
     say(e.message);
     // An answer that cannot be read is an error, not "no answer yet".
-    if (mode === 'answer') process.exitCode = 2;
+    if (mode !== 'check') process.exitCode = 2;
   }
 }

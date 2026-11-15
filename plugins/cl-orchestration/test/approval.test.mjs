@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -200,4 +200,37 @@ test('approval: the command line refuses a file outside the run folder with exit
   mkdirSync(join(linkedRuns, '.cedarloom'));
   symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom/runs'));
   assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
+});
+
+test('approval: without a hub or a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  // The working folder of the coordinator can be a subfolder of a repository.
+  const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  const dir = join(repo, 'work');
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  writeFileSync(join(dir, '.cedarloom/runs/r1/filled.md'), FILLED);
+  writeFileSync(join(dir, '.cedarloom/runs/r1/no-cost.md'), NO_COST);
+  const run = (...args) => spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' });
+  const queue = () => { const r = run('queue'); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
+  assert.deepEqual(queue(), []);
+  // Checked as an issue body: an approval that lacks a row is not filed.
+  const lacking = run('file', '.cedarloom/runs/r1/no-cost.md', 'project');
+  assert.equal(lacking.status, 1);
+  assert.match(lacking.stderr, /\bCost\b/);
+  for (const n of [1, 2]) assert.deepEqual(JSON.parse(run('file', '.cedarloom/runs/r1/filled.md', 'project').stdout), { file: `project-${n}.md` });
+  assert.equal(run('file', '.cedarloom/runs/r1/filled.md', '../project').status, 2);
+  const filed = readFileSync(join(dir, '.cedarloom/questions/project-1.md'), 'utf8');
+  assert.equal(filed, `Status: open\n\n${FILLED}`);
+  // Kept out of git, as the run folder is.
+  assert.equal(spawnSync('git', ['check-ignore', '-q', '.cedarloom/questions/project-1.md'], { cwd: dir }).status, 0);
+  assert.deepEqual(queue(), [{ file: 'project-1.md', status: 'open' }, { file: 'project-2.md', status: 'open' }]);
+  // What /cl-workflow:questions writes for an answer and a defer.
+  writeFileSync(join(dir, '.cedarloom/questions/project-1.md'), `${filed.replace('Status: open', 'Status: answered')}\nOwner answer (2026-11-15): b. Hold it for now.\n`);
+  writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `${filed.replace('Status: open', 'Status: deferred')}\nDeferred by the owner on 2026-11-15.\n`);
+  assert.deepEqual(queue(), [{ file: 'project-1.md', status: 'answered', option: 'b', text: 'Hold it for now.', at: '2026-11-15' }, { file: 'project-2.md', status: 'deferred' }]);
+  // A file answered without an answer line is an error, never "no answer yet", and holds back no other answer.
+  writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `Status: answered\n\n${FILLED}`);
+  assert.deepEqual(queue()[1], { file: 'project-2.md', error: 'answered, but no Owner answer line' });
+  assert.equal(queue()[0].option, 'b');
 });
