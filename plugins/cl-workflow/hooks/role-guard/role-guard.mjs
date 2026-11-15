@@ -42,35 +42,52 @@ const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot
 const BASH_QUOTED_ESCAPES = '$`"\\';
 // Bash's ANSI-C quoting $'...' (https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html).
 const ANSI_C = /\$'((?:[^'\\]|\\[\s\S])*)'?/y;
-const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x\{([\da-fA-F]*)\}?|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c([\s\S]))/g;
+// bash 5.2 reads \c\\ as one escape.
+const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x\{([\da-fA-F]*)\}?|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c(\\\\|[\s\S]))/g;
 // zsh's $'...': an unknown escape and \c drop the backslash, \x, \u and \U without digits are NUL, there is no \x{...},
-// and \C, \C-, \M and \M- make a control or meta character of the character after them.
-const ZSH_ANSI_C_ESCAPE = /((?:\\[CM]-?)*)(?:\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\da-fA-F]{0,2})|u([\da-fA-F]{0,4})|U([\da-fA-F]{0,8})|([\s\S]))|([\s\S])|$)/g;
+// and \x reads the two characters after it as a number, so it skips blanks and takes a sign. \C, \C-, \M and \M- make
+// a control or meta character of the next character or escape other than \u and \U, and of nothing at the end of the text.
+const ZSH_ANSI_C_ESCAPE = /\\(?:([CM])-?|([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\s\S]{0,2})|u([\da-fA-F]{0,4})|U([\da-fA-F]{0,8})|([\s\S]))|([\s\S])/g;
+const ZSH_HEX = /^[ \t]*([-+]?)([\da-fA-F]*)/;
 const ANSI_C_CHARS = { a: '\x07', b: '\b', e: '\x1b', E: '\x1b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
 // U+FFFD stands for text that is no ASCII: a \U value above U+10FFFF, which bash 5.2 and zsh write as bytes of no character,
 // and a zsh meta character.
 const NOT_ASCII = String.fromCharCode(0xfffd);
 // bash 5.2 drops a \U value above 0x7FFFFFFF.
 const codePoint = (code, zsh) => (code <= 0x10ffff ? String.fromCodePoint(code) : code > 0x7fffffff && !zsh ? '' : NOT_ASCII);
+// The text of $'...' with its escapes decoded as zsh 5.9 reads them.
+function zshAnsiC(body) {
+  let out = '', control = false, meta = false;
+  for (let m; (m = ZSH_ANSI_C_ESCAPE.exec(body)); ) {
+    const [, prefix, char, octal, hex, u, U, unknown, plain] = m;
+    if (prefix === 'C') control = true;
+    else if (prefix) meta = true;
+    // zsh writes a \u or \U character without applying a prefix, which then waits for the next one.
+    else if (u !== undefined || U !== undefined) out += codePoint(parseInt(u || U || '0', 16), true);
+    else {
+      let text = char ? (ANSI_C_CHARS[char] ?? char) : octal ? String.fromCharCode(parseInt(octal, 8) & 0xff) : (unknown ?? plain);
+      if (hex !== undefined) {
+        const [read, sign, digits] = ZSH_HEX.exec(hex);
+        ZSH_ANSI_C_ESCAPE.lastIndex = m.index + 2 + read.length;
+        text = String.fromCharCode((sign === '-' ? -1 : 1) * parseInt(digits || '0', 16) & 0xff);
+      }
+      const code = text.charCodeAt(0);
+      out += !control && !meta ? text : meta || code > 0x7f ? NOT_ASCII : String.fromCharCode(code === 0x3f ? 0x7f : code & 0x9f);
+      control = meta = false;
+    }
+  }
+  return out;
+}
 // The text of $'...' with its escapes decoded as bash reads them, or as zsh does: bash keeps the backslash of an unknown escape,
 // and both keep the low byte of an octal or (bash) \x{...} value.
 const ansiC = (body, zsh) =>
   zsh
-    ? body.replace(ZSH_ANSI_C_ESCAPE, (_, prefix, char, octal, hex, u, U, unknown, plain) => {
-        const text =
-          char ? (ANSI_C_CHARS[char] ?? char)
-          : octal ? String.fromCharCode(parseInt(octal, 8) & 0xff)
-          : (hex ?? u ?? U) !== undefined ? codePoint(parseInt(hex || u || U || '0', 16), true)
-          : (unknown ?? plain ?? '');
-        if (!prefix || !text) return text;
-        const code = text.charCodeAt(0);
-        return prefix.includes('M') || code > 0x7f ? NOT_ASCII : String.fromCharCode(code === 0x3f ? 0x7f : code & 0x9f);
-      })
+    ? zshAnsiC(body)
     : body.replace(ANSI_C_ESCAPE, (_, char, octal, braced, hex, u, U, control) => {
         if (char) return ANSI_C_CHARS[char] ?? char;
         if (octal) return String.fromCharCode(parseInt(octal, 8) & 0xff);
         if (braced !== undefined) return String.fromCharCode(parseInt(braced.slice(-2) || '0', 16));
-        if (control) return String.fromCharCode(control.charCodeAt(0) & 0x1f);
+        if (control) return String.fromCharCode(control === '?' ? 0x7f : control.charCodeAt(0) & 0x1f);
         return codePoint(parseInt(hex ?? u ?? U, 16), false);
       });
 
