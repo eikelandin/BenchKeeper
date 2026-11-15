@@ -2,13 +2,13 @@
 
 ## Steps
 
-Standard and full tier. The order per tier is the checklist in [SKILL.md](SKILL.md), and its change-type table and Verify apply; full tier also [full-tier.md](full-tier.md). Standard: for a refactor the suite passes before and after with tests unchanged. Detail:
+Standard and deep. The order per depth is the checklist in [SKILL.md](SKILL.md), and its change-type table and Verify apply; deep also [deep.md](deep.md). Standard: for a refactor the suite passes before and after with tests unchanged. Detail:
 
 - **Installed skills** that match a step run it: a test first where the [test rule](SKILL.md#verify) calls for one, bug diagnosis, interface design, prototypes, domain docs, spec review, pull request text. A skill only the user starts is suggested, then wait. None installed: do the step directly.
-- **Review before pushing** standard, full or risky work.
+- **Review before pushing** standard, deep or risky work.
   - First a scope line: the branch or diff range and the issue it implements, when one exists.
-  - Depth: standard one correctness pass, fixes made once; full the rounds in [full-tier.md](full-tier.md), plus a security pass when risky; quick none.
-  - Claude Code: the built-in `/code-review <level> <range>` with the scope line's range as the target (for example `refs/remotes/origin/<default branch>...HEAD`, since with no target it skips commits already pushed) and the level always written, `high` unless a spec's `Review:` line names another (without a level the command reuses the one typed last on that machine).
+  - Passes: standard one correctness pass, fixes made once; deep the rounds in [deep.md](deep.md), plus a security pass when risky; quick none.
+  - Claude Code: the built-in `/code-review <level> <range>` with the scope line's range as the target (for example `refs/remotes/origin/<default branch>...HEAD`, since with no target it skips commits already pushed) and the level always written, `high` at standard and `xhigh` at deep unless a spec's `Review:` line names another (without a level the command reuses the one typed last on that machine).
   - Claude Code, risky changes and a change whose `Review:` line asks for it: also `/security-review`.
   - Codex, or no `origin`: a correctness pass and, for risky changes and a change whose `Review:` line asks for it, a security pass by subagents over the changed assets, trust boundaries and failure modes (authentication, permissions, secrets and input handling among them).
   - Docs-only changes skip this unless risky.
@@ -16,7 +16,7 @@ Standard and full tier. The order per tier is the checklist in [SKILL.md](SKILL.
 
 ## Phases
 
-Standard and full tier, except a change that only deletes: this session is the phase orchestrator.
+Standard and deep, except a change that only deletes: this session is the phase orchestrator.
 
 - It runs each phase as a subagent with a fresh context and keeps the decision after each phase and the questions to the user, which a subagent cannot ask ([Claude Code withholds the question tool from subagents](https://code.claude.com/docs/en/sub-agents#available-tools)).
 - Where the plugin's agent named for a phase below is available (Claude Code), the phase runs as that agent, which sets its tools and effort.
@@ -27,11 +27,11 @@ Standard and full tier, except a change that only deletes: this session is the p
 - A phase whose model the account refuses reruns once on `opus`, and the report says so.
 - Codex, or a setup without the plugin: a general subagent briefed with the phase step below.
 
-1. **Plan** (`cedarloom:plan`, model `opus`): the read-only exploration of step 2 of [SKILL.md](SKILL.md). It returns the plan with an acceptance table as step 1 of [full-tier.md](full-tier.md) defines it (full tier: that whole spec) and the open questions, each with a recommendation. The session saves the plan outside the repository and names its path in every later phase.
+1. **Plan** (`cedarloom:plan`, model `opus`): the read-only exploration of step 2 of [SKILL.md](SKILL.md). It returns the plan with an acceptance table as step 1 of [deep.md](deep.md) defines it (deep: that whole spec) and the open questions, each with a recommendation. The session saves the plan outside the repository and names its path in every later phase.
 2. **Implement** (`cedarloom:implement`, model `opus`): the existing tests of the touched code, the change with the tests the [test rule](SKILL.md#verify) calls for, written first, fast checks after each edit, commits; it stops and reports stuck on the signals of step 6 of [the implement agent](../../agents/implement.md).
 3. **Test** (`cedarloom:test`, model `sonnet`): the long checks of step 5 of [SKILL.md](SKILL.md), by a subagent that did not write the code, which then tries to break the change against the acceptance table and returns failures and key lines.
-4. **Review** (`cedarloom:review`, model `opus`): a subagent that did not write the code gets the task, its acceptance table, the decisions that apply and the diff, and receives the implementer's statements as claims to verify. It runs the acceptance rows that CI does not run, and checks the diff against the plan (full tier: the spec review of step 4 of [full-tier.md](full-tier.md)), then the review before pushing (above).
+4. **Review** (`cedarloom:review`, model `opus`): a subagent that did not write the code gets the task, its acceptance table, the decisions that apply and the diff, and receives the implementer's statements as claims to verify. It runs the acceptance rows that CI does not run, and checks the diff against the plan (deep: the spec review of step 4 of [deep.md](deep.md)), then the review before pushing (above).
 
-After each phase the session goes on, loops back with the report (a failed check or a finding to fix goes back to implement, a plan the code contradicts back to plan), or stops and reports (full tier: the drift rule and the round limit of [full-tier.md](full-tier.md); the rule for rounds: [full-tier.md](full-tier.md#review-rounds)).
+After each phase the session goes on, loops back with the report (a failed check or a finding to fix goes back to implement, a plan the code contradicts back to plan), or stops and reports (deep: the drift rule and the round limit of [deep.md](deep.md); the rule for rounds: [deep.md](deep.md#review-rounds)).
 
 An implement phase that reports stuck reruns once on a stronger model or a higher effort (for example sonnet to opus, opus to fable, or an effort below high to high; xhigh only where the spec or the user asks for it); a second stuck report, or a first one with no step left, stops and goes to the user.

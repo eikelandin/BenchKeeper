@@ -2,7 +2,7 @@
 
 What BenchKeeper installs, where it writes and how to update or undo it. The short version is the [README](../README.md).
 
-Terms: a **tier** is how much process the `workflow` skill gives a software change (quick, standard or full). A **pack** is a named set of skills and plugins you choose per machine or project ([packs](../plugins/cedarloom/library/README.md#packs)). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
+Terms: a **depth** is how much process the `workflow` skill gives a task (quick, standard or deep). A **pack** is a named set of skills and plugins you choose per machine or project ([packs](../plugins/cedarloom/library/README.md#packs)). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
 
 ## Prerequisites
 
@@ -28,7 +28,7 @@ Three levels, from the smallest: the BenchKeeper plugin ships no rule file and n
 <!-- generated:levels -->
 | Level | Contains | Writes | Command |
 |---|---|---|---|
-| Lite | the BenchKeeper plugin: the `workflow`, `tier`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app` and `reviewing-rules` skills | nothing outside the plugin install, besides the app's run record for undo | `npx @cedarloom/app@6.27.0 apply --level lite` |
+| Lite | the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app` and `reviewing-rules` skills | nothing outside the plugin install, besides the app's run record for undo | `npx @cedarloom/app@6.27.0 apply --level lite` |
 | Standard | lite plus the local project block: `CLAUDE.local.md`, `AGENTS.override.md` and the git exclude list | local files in each project you run `projects apply` in | `npx @cedarloom/app@6.27.0 apply --level standard && npx @cedarloom/app@6.27.0 projects apply` |
 | Full | standard plus the global rules, Claude Code and Codex settings, packs and the app | global rule files, settings and packs | `npx @cedarloom/app@6.27.0 apply --level full` |
 <!-- /generated:levels -->
@@ -144,7 +144,7 @@ Where the agent runs (`--env`):
 
 Guards (`--no-guards` turns them off for the project; default on, Claude Code only): project setup adds deny rules for `--no-verify` and `-n` on `git commit` and `git push`, `git push --force` and `-f`, `sudo`, `terraform apply`, `kubectl apply` and `helm upgrade` to `permissions.deny`, and registers `.claude/hooks/benchkeeper-guard.mjs` as a `PreToolUse` hook for Bash, which denies the forms a rule cannot match (combined flags, `bash -c`, heredocs). A local setup writes them to the ignored `.claude/settings.local.json`, a shared one to `.claude/settings.json`; your own entries stay, except one identical to a rule or the hook above, which is the same entry and goes out with them when guards are turned off (`--guards` turns them on again), and undo removes only what the run added. The effect on auto mode and the sandbox is in [security](security.md#guards-in-claude-code).
 
-Workflow load (`--no-workflow-load` turns it off for the project; default on): the project block starts with a rule line that loads the `workflow` skill before a change, issue or pull request work, or research with two or more items. That load adds the skill's `SKILL.md` to every such task, a typo fix included; standard and full work and docs or research passes also read the guide they need, such as `software.md`. Turned off, the line is left out of the block and the skill still loads when its description matches the task or you name it; `--workflow-load` puts the line back. The choice is kept in `.cedarloom-app/state.json` as `workflowLoad: false`.
+Workflow load (`--no-workflow-load` turns it off for the project; default on): the project block starts with a rule line that loads the `workflow` skill before a change, issue or pull request work, or research with two or more items. That load adds the skill's `SKILL.md` to every such task, a typo fix included; standard and deep work and docs or research passes also read the guide they need, such as `software.md`. Turned off, the line is left out of the block and the skill still loads when its description matches the task or you name it; `--workflow-load` puts the line back. The choice is kept in `.cedarloom-app/state.json` as `workflowLoad: false`.
 
 Setup scopes container mounts to the project: no host home, engine socket, privileged mode or credential forwarding beyond the sign-in variable. VS Code can forward Git credentials and SSH agents automatically ([credential sharing](https://github.com/microsoft/vscode-docs/blob/main/remote/advancedcontainers/sharing-git-credentials.md)). MCP, browser and language-server connections need container launchers; a host plugin or binary alone does not run in the container.
 
@@ -160,7 +160,7 @@ Several logins per agent, for example work and personal, each in a folder of its
 - Usage, Claude Code: `accounts track <name>` adds a status line script and a `StopFailure` hook to the account's folder.
   - It is a plan with a diff and undo.
   - An account that already has a status line of its own is refused, except one that only runs Ponytail's `ponytail-statusline.sh` or `.ps1`: that one is replaced and comes back with `benchkeeper undo <run>` or `accounts track <name> --off`. A dev container account has no undo run: there `--off` is the way back.
-  - The status line prints what the plugin option `statusStyle` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it with `/plugin` in a session of that account):
+  - The status line prints what the key `statusStyle` under `pluginConfigs."cedarloom@cedarloom".options` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it in its own `settings.json`):
     - `merged` (default): the windows and Ponytail's level from the account's `.ponytail-active` (`[PONYTAIL]`, or `[PONYTAIL:LITE]` and `[PONYTAIL:ULTRA]`, coloured as Ponytail's own badge)
     - `plugin`: the level only
     - `benchkeeper`: the windows only
@@ -274,25 +274,20 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
 
 ## The status band
 
-Three rows of text above the prompt in the Claude Code terminal and desktop app; the VS Code extension does not draw it. It is off by default.
+Two rows of text above the prompt in the Claude Code terminal and desktop app; the VS Code extension does not draw it. It is off by default.
 
 - Top row: the project folder, its git branch, and the level of Ponytail (a separate, optional plugin for lean code) when it is installed.
-- Checks row: the last test run and the last lint or type check of the main loop, each `passed`, `failed`, `not run` or `stale (N edits since)`, then a verdict.
+- Checks row: the last test run and the last lint or type check of the main loop, each `passed`, `failed`, `not run` or `stale (N edits since)`, then `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the button `?`.
   - Test runs: `npm test`, `pnpm test`, `yarn test`, `bun test` (also with `run` and as `npm run test:<name>`), `node --test`, `playwright test`, `pytest`, `go test`, `cargo test`, `vitest` or `jest`.
   - Lint or type checks: `eslint`, `npm run lint`, `tsc`, `ruff`, `mypy`, `pyright`, `go vet`, `cargo clippy` or `biome`.
   - Stale: an edit by the main loop (Edit, Write, MultiEdit, NotebookEdit; not a subagent's, not a failed one) after a result makes it stale.
   - A command counts when it starts the command or a part of a chain joined by `&&`, also after `npx`, `pnpm`, `pnpm exec`, `yarn`, `bunx`, `uv run` or `python -m` (`npx vitest run`, `python -m pytest`).
   - Redirections (`> test.log`, `2>&1`, `&> test.log`) are ignored, and one `sh -c '<script>'` (also `sh -lc`, as in `devcontainer exec ... sh -lc 'cd app && npm test'`) is read as its script.
   - `not run`: a chain with `||`, `;`, `|` or `&`, a quoted name, a background run, or a failed chain that is not the check alone.
-  - The verdict is for the tier (the override when set, else the tier of the last answer): `ready` when the checks the tier asks for before pushing passed after the last edit, else `checks needed:` and the missing ones.
-    - Quick asks for the tests or a lint or type check; standard and full ask for the tests and show `ready, review is yours`, as no hook sees a review.
-    - A check that failed after the last edit is always named.
-    - Research and no tier show no verdict.
-- Third row: the tier of the last answer (the `Tier:` line the BenchKeeper workflow skill writes at the start of a task; `none yet` before the first), the session's override, `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the buttons `quick`, `standard`, `full`, `auto`, `board`, `doctor` and `?`.
 
-The tier buttons run `/cedarloom:tier` (a skill of the BenchKeeper plugin) for this session (`auto` ends the override); the override survives compaction and resume. `board` opens the sessions board the app last wrote (`$HOME/.config/benchkeeper/board.html`; run `benchkeeper sessions board` or open Sessions in the app first). `doctor` asks the agent to run `benchkeeper doctor` for the project and list the findings, so the agent runs the command and the usual permission prompt applies. `?` shows a short version of this text.
+`?` shows a short version of this text.
 
-Turn it on: `benchkeeper apply` and accept the change "BenchKeeper status band", the switch Terminal tier strip in the app's Preferences view, or set `tierBand` to `true` for `cedarloom@cedarloom` under `pluginConfigs` in `$HOME/.claude/settings.json`. Turn it off: the same switch, set that value to `false` (or `benchkeeper undo <run>` for the run that turned it on; `benchkeeper history` lists the run ids). Start a new Claude Code session after changing the option. The band reads the working folder, git, Ponytail's flag file `.ponytail-active` and the commands and edits of the main loop; it keeps the session's tier override in the plugin's own store, writes nothing else and sends nothing, and what it shows stays on this machine.
+Turn it on: `benchkeeper apply` and accept the change "BenchKeeper status band", the switch Terminal tier strip in the app's Preferences view, or set `tierBand` to `true` for `cedarloom@cedarloom` under `pluginConfigs` in `$HOME/.claude/settings.json`. Turn it off: the same switch, set that value to `false` (or `benchkeeper undo <run>` for the run that turned it on; `benchkeeper history` lists the run ids). Start a new Claude Code session after changing the option. The band reads the working folder, git, Ponytail's flag file `.ponytail-active` and the commands and edits of the main loop; it writes and sends nothing, and what it shows stays on this machine.
 
 Ponytail draws a band of its own, so with both on the two stack. `benchkeeper doctor` warns (check `ponytail`) when both would show, and the plan offers to hide Ponytail's: it writes `off` to `$HOME/.claude/.ponytail-band` (what `/ponytail band off` does) and `hideStatus: true` to `$HOME/.config/ponytail/config.json`, which hides Ponytail's level in BenchKeeper's status line (Ponytail's own Claude Code status line does not read it). Ponytail's mode and skills stay active. Nothing is written until you apply that change, it is off unless chosen, and `benchkeeper undo <run>` restores both files. `/ponytail band on` shows Ponytail's band again. These are the files of Ponytail 5.3.2 (`hooks/band/register.tsx`, `hooks/ponytail-config.js` in its plugin folder); a later version may move them (unverified). Setup follows the default folders only, not `CLAUDE_CONFIG_DIR` or `XDG_CONFIG_HOME`.
 
@@ -324,7 +319,7 @@ Set the options with `/plugin` or under `pluginConfigs` for `cedarloom@cedarloom
 
 ## Sessions board
 
-`benchkeeper sessions board` writes `$HOME/.config/benchkeeper/board.html` and opens it; the browser UI shows the same page under Sessions and rewrites the file on each scan, and the status band's board button opens it.
+`benchkeeper sessions board` writes `$HOME/.config/benchkeeper/board.html` and opens it; the browser UI shows the same page under Sessions and rewrites the file on each scan.
 
 Per Claude Code and Codex session on this machine, the board shows:
 

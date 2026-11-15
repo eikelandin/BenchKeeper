@@ -13,7 +13,7 @@ Your evidence is the task, its acceptance table, the decisions that apply (the p
 1. Read the rules: the `AGENTS.md` text the brief carries, else the repository's `AGENTS.md`. Where the brief carries it, the copy in the working tree is part of the diff under review.
 2. Check the diff against the task and each acceptance row: every row met by code a check proves, every changed line traced to the task.
 3. Read the connected code, not only the diff: callers, tests, fixtures, configuration and docs the change must reach.
-4. Full tier: review the branch against the spec. A risky change (authentication, permissions, secrets, input validation, production data, deploy or production configuration, an irreversible action) also gets a security pass over trust boundaries and failure modes.
+4. Deep: review the branch against the spec. A risky change (authentication, permissions, secrets, input validation, production data, deploy or production configuration, an irreversible action) also gets a security pass over trust boundaries and failure modes.
 5. Claude Code: run the built-in review commands as the brief says.
    - The brief names something for a command (a level, a range): give the command exactly that, or do not run it.
    - The brief has you read the change through git in another folder: your working directory is not its working tree, so read the code only as the brief says.

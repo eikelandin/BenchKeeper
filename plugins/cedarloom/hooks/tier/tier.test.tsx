@@ -1,8 +1,8 @@
 import type { On } from 'claude-code'
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { lastTier, plain } from './register'
+import { plain } from './register'
 
 const BAND = {
   plugin: 'cedarloom',
@@ -10,39 +10,23 @@ const BAND = {
   props: { hasSurvey: false, isWorking: false, maxRows: 12, bodyColumns: 100, scroll: { offset: 0, bodyRows: 12 }, view: {} },
 } as const
 const ON = { options: { tierBand: true } }
-// /cedarloom:tier as the person types it at the prompt.
-const tierCommand = (args: string) =>
-  ({ text: `/cedarloom:tier ${args}`, command: { name: 'cedarloom:tier', args }, wait: false, origin: { kind: 'composer' } }) as const
-const COMPOSE = { model: 'claude-sonnet-5-5', promptModel: 'claude-sonnet-5-5', surfaces: ['terminal'], tools: [], outputStyle: null, traits: [] } as const
 
-// The engine beneath: a session id, a store, an empty system prompt, another mod's band, and a step that answers text.
-function engine(on: On, store: Record<string, unknown> = {}) {
-  mock.store(on, store)
-  on('session.id', () => ({ value: 's1' }))
-  on('prompt.compose', () => ({ sections: [] }))
+// The engine beneath: another mod's band and a step that answers.
+function engine(on: On) {
   on('prompt.submit', (_, e) => ({ text: e.text }))
   on('ui.render', ($, e) => {
     const { Text } = $.ui.resolve(e)
     return <Text>other band</Text>
   })
-  let answer = ''
   on('turn.step', async function* (_, e) {
-    return { turnId: e.turnId, index: e.index, answer, toolUses: [], stopReason: 'end_turn', usage: null }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: null }
   })
-  return { answer: (text: string) => { answer = text } }
 }
-async function step($: Engine, agentId?: string) {
-  const s = $.turn.step({ turnId: 't1', index: 0, model: 'claude-sonnet-5-5', messageCount: 1, ...(agentId ? { agentId } : {}) })
+async function step($: Engine) {
+  const s = $.turn.step({ turnId: 't1', index: 0, model: 'claude-sonnet-5-5', messageCount: 1 })
   for await (const _ of s) { /* chunks */ }
   return s.result
 }
-const sections = async ($: Engine) => (await $.prompt.compose(COMPOSE)).sections.filter(x => x.id === 'cedarloom:tier')
-
-test('reads the last tier line and its change type', () => {
-  expect(lastTier('Reading.\nTier: quick (docs, typo)\nTier: full (feature)\ndone')).toEqual({ tier: 'full', changeType: 'feature' })
-  expect(lastTier('Tier: research')).toEqual({ tier: 'research', changeType: null })
-  expect(lastTier('The Tier: quick line is mid-sentence')).toBeNull()
-})
 
 test('drops redirections in linear time', () => {
   expect(plain('npm test > test.log 2>&1')).toBe('npm test')
@@ -54,108 +38,24 @@ test('drops redirections in linear time', () => {
   expect(Date.now() - start).toBeLessThan(100)
 })
 
-test('off by default: no band, no prompt section, no override kept', async ($, on) => {
-  const e = engine(on)
-  e.answer('Tier: standard (bug, known cause)')
+test('off by default: no band', async ($, on) => {
+  engine(on)
   await step($)
-  await $.prompt.submit(tierCommand('full'))
-  expect(await sections($)).toEqual([])
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await ui.find({ type: 'Text', text: /^Tier:/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /^tests:/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /other band/ })).toBeDefined()
   await ui.unmount()
 })
 
-test('on: the band shows the tier of the main loop, above the other mods', ON, async ($, on) => {
-  const e = engine(on)
+test('on: the band draws above the other mods, in the terminal and the desktop app', ON, async ($, on) => {
+  engine(on)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  expect(await ui.find({ type: 'Text', text: /Tier: none yet/ })).toBeDefined()
-  e.answer('Tier: standard (bug, known cause)')
-  await step($)
-  e.answer('Tier: full (feature)')
-  await step($, 'subagent-1')
-  expect(await ui.find({ type: 'Text', text: /Tier: standard \(bug, known cause\)/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /override: none/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^tests: not run/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /other band/ })).toBeDefined()
   await ui.unmount()
   const desktop = await $.ui.mount({ ...BAND, surface: 'desktop' })
-  expect(await desktop.find({ type: 'Text', text: /Tier: standard/ })).toBeDefined()
+  expect(await desktop.find({ type: 'Text', text: /^tests: not run/ })).toBeDefined()
   await desktop.unmount()
-})
-
-test('on: /cedarloom:tier sets a session override that every prompt carries, also after compaction and resume', ON, async ($, on) => {
-  engine(on)
-  await $.prompt.submit(tierCommand('full'))
-  expect((await sections($))[0]?.text).toMatch(/Tier override for this session .*: full/)
-  // A compaction composes the prompt again: the section is still there.
-  expect((await sections($)).length).toBe(1)
-  // A typo leaves the override; the skill then asks which tier was meant.
-  await $.prompt.submit(tierCommand('fulll'))
-  expect((await sections($))[0]?.text).toMatch(/: full\./)
-  await $.prompt.submit(tierCommand('Auto'))
-  expect(await sections($)).toEqual([])
-})
-
-test('on: a resumed session finds its override in the store', ON, async ($, on) => {
-  engine(on, { 'override:s1': 'standard' })
-  expect((await sections($))[0]?.text).toMatch(/: standard\./)
-})
-
-test('on: the buttons run /cedarloom:tier as a person types it', ON, async ($, on) => {
-  engine(on)
-  const sent: string[] = []
-  on('command.run', (_, e) => {
-    sent.push(`/${e.command} ${e.args}`)
-    return { text: '' }
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'full' })
-  expect(sent).toEqual(['/cedarloom:tier full'])
-  expect(await ui.find({ type: 'Text', text: /override: full/ })).toBeDefined()
-  await ui.press({ key: 'auto' })
-  expect(await ui.find({ type: 'Text', text: /override: none/ })).toBeDefined()
-  await ui.unmount()
-})
-
-test('on: the board button opens the board the app wrote, or says how to get one', ON, async ($, on) => {
-  engine(on)
-  const ran: string[][] = []
-  const toasts: string[] = []
-  let written = false
-  on('env.get', (_, e) => ({ value: e.name === 'HOME' ? '/home/u' : undefined }))
-  on('fs.exists', (_, e) => ({ value: written && e.path === '/home/u/.config/cedarloom-app/board.html' }))
-  on('process.run', (_, e) => {
-    ran.push([...e.argv])
-    return { value: { exitCode: 0, stdout: 'Linux\n', stderr: '' } } as never
-  })
-  on('ui.toast', (_, e) => {
-    toasts.push(e.text)
-    return { value: undefined } as never
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'board' })
-  expect(toasts).toEqual(['No sessions board yet: open Sessions in the CedarLoom app, or run cedarloom-app sessions board'])
-  expect(ran).toEqual([])
-  written = true
-  await ui.press({ key: 'board' })
-  expect(ran).toEqual([['uname'], ['xdg-open', '/home/u/.config/cedarloom-app/board.html']])
-  await ui.unmount()
-})
-
-test('on: on Windows the board button opens the board through explorer, never cmd', ON, async ($, on) => {
-  engine(on)
-  const ran: string[][] = []
-  const env: Record<string, string> = { OS: 'Windows_NT', USERPROFILE: 'C:/Users/A&B %PATH%' }
-  on('env.get', (_, e) => ({ value: env[e.name] }))
-  on('fs.exists', () => ({ value: true }))
-  on('process.run', (_, e) => {
-    ran.push([...e.argv])
-    return { value: { exitCode: 0, stdout: '', stderr: '' } } as never
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'board' })
-  expect(ran).toEqual([['explorer.exe', 'C:\\Users\\A&B %PATH%\\.config\\cedarloom-app\\board.html']])
-  await ui.unmount()
 })
 
 test('on: the band names the project, branch, last test run and Ponytail level; no Ponytail file, no Ponytail text', ON, async ($, on) => {
@@ -243,26 +143,6 @@ test('on: the project row comes back after /clear, /resume and /branch', ON, asy
   await ui.unmount()
 })
 
-test('on: doctor asks the agent to run the doctor, ? explains the band and how to turn it off', ON, async ($, on) => {
-  engine(on)
-  const sent: string[] = []
-  const toasts: string[] = []
-  on('command.run', (_, e) => {
-    sent.push(`/${e.command} ${e.args}`)
-    return { text: '' }
-  })
-  on('ui.toast', (_, e) => {
-    toasts.push(e.text)
-    return { value: undefined } as never
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'doctor' })
-  expect(sent).toEqual(['/cedarloom:operating-cedarloom-app run cedarloom-app doctor for this project and list the findings'])
-  await ui.press({ key: 'help' })
-  expect(toasts[0]).toMatch(/Nothing leaves this machine\. Turn off: set Tier band to false/)
-  await ui.unmount()
-})
-
 // One stub answers every tool call: Bash with the outcome set, the edit tools with it too.
 function tools($: Engine, on: On) {
   let outcome: { isError?: true; text: string } = { text: 'ok' }
@@ -319,55 +199,5 @@ test('on: a lint or type check is read with the chain rules of a test run; a quo
   await t.bash('pyright')
   expect(await ui.find({ type: 'Text', text: /lint\/types: failed/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /tests: not run/ })).toBeDefined()
-  await ui.unmount()
-})
-
-test('on: the verdict follows the tier of the last answer or the override, and the checks since the last edit', ON, async ($, on) => {
-  const e = engine(on)
-  const t = tools($, on)
-  on('command.run', () => ({ text: '' }))
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  const verdict = async () => (await ui.find({ type: 'Text', text: /^tests: / }))?.text.replace(/^.*lint\/types: (?:not run|passed|failed|stale \(\d+ edits? since\))\s*/, '')
-  expect(await verdict()).toBe('')
-  e.answer('Tier: research')
-  await step($)
-  expect(await verdict()).toBe('')
-  e.answer('Tier: quick (typo)')
-  await step($)
-  expect(await verdict()).toBe('checks needed: tests or lint/types')
-  await t.bash('tsc')
-  expect(await verdict()).toBe('ready')
-  await t.edit()
-  expect(await verdict()).toBe('checks needed: tests or lint/types')
-  await t.bash('npm test')
-  expect(await verdict()).toBe('ready')
-  t.set({ isError: true, text: 'Exit code 1' })
-  await t.bash('eslint .')
-  expect(await verdict()).toBe('checks needed: lint/types')
-  t.set({ text: 'ok' })
-  e.answer('Tier: standard (bug, known cause)')
-  await step($)
-  await t.bash('eslint .')
-  await t.edit()
-  await t.bash('tsc')
-  expect(await verdict()).toBe('checks needed: tests')
-  await t.bash('npm test')
-  expect(await verdict()).toBe('ready, review is yours')
-  // The override wins over the tier line: quick needs only the fast checks.
-  await t.edit()
-  await t.bash('tsc')
-  expect(await verdict()).toBe('checks needed: tests')
-  await ui.press({ key: 'quick' })
-  expect(await verdict()).toBe('ready')
-  await ui.press({ key: 'full' })
-  expect(await verdict()).toBe('checks needed: tests')
-  t.set({ isError: true, text: 'Exit code 1' })
-  await t.bash('npm test')
-  await t.bash('tsc')
-  expect(await verdict()).toBe('checks needed: tests, lint/types')
-  t.set({ text: 'ok' })
-  await t.bash('npm test')
-  await t.bash('tsc')
-  expect(await verdict()).toBe('ready, review is yours')
   await ui.unmount()
 })

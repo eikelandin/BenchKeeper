@@ -1,4 +1,4 @@
-# Full tier
+# Deep
 
 Parentheses name the kind of skill that runs a step when installed; one only the user starts is suggested, then wait. None installed: do the step directly.
 

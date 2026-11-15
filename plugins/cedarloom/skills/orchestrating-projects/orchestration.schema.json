@@ -19,6 +19,7 @@
     "keepRunning": { "type": "boolean" },
     "permissionPrompts": { "enum": ["block", "decline"] },
     "minPlugin": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "riskyPaths": { "type": "array", "items": { "type": "string", "pattern": "^(?!\\s)(?!\\.{1,2}(?:/|$))[^/\\\\*\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]+(?<!\\s)(?:/(?!\\s)(?!\\.{1,2}(?:/|$))[^/\\\\*\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]+(?<!\\s))*/?$" } },
     "issues": {
       "type": "object",
       "additionalProperties": false,
@@ -86,6 +87,7 @@
         "allowed": { "type": "boolean" },
         "requiredChecks": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "mode": { "enum": ["strict", "disjoint"] },
+        "autoMergeMax": { "enum": ["low", "medium"] },
         "additivePaths": { "type": "array", "items": { "type": "string", "pattern": "^(?!\\s)(?!\\.{1,2}(?:/|$))[^/\\\\*\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]+(?<!\\s)(?:/(?!\\s)(?!\\.{1,2}(?:/|$))[^/\\\\*\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]+(?<!\\s))*/?$" } },
         "ownerOnlyPaths": { "type": "array", "items": { "type": "string", "pattern": "^(?!\\s)(?!\\.{1,2}(?:/|$))[^/\\\\*\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]+(?<!\\s)(?:/(?!\\s)(?!\\.{1,2}(?:/|$))[^/\\\\*\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}\\u00A0\\u1680\\u2000-\\u200A\\u202F\\u205F\\u3000]+(?<!\\s))*/?$" } }
       }

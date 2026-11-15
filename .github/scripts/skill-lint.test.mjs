@@ -67,9 +67,9 @@ test('a plugin agent needs a name and description, a model alias, and no key plu
   assert.match(agent('name: a\ndescription: "x'), /front matter/);
   assert.match(agent('name: a\ndescription: x: y'), /front matter/);
 });
-test('a Tier line naming the Default tier line ahead of the workflow skill fails', () => {
-  assert.match(lintSkill(skill('a', { body: '```text\nTier: <issue tier, else the Default tier line of AGENTS.md, else the workflow skill decides>\n```' })).join(), /Default tier line ahead/);
-  assert.deepEqual(lintSkill(skill('a', { body: 'Tier: <issue tier, else leave this line out: the workflow skill decides>' })), []);
+test('a Depth line naming the Depth minimum line ahead of the workflow skill fails', () => {
+  assert.match(lintSkill(skill('a', { body: '```text\nDepth: <issue depth, else the Depth minimum line of AGENTS.md, else the workflow skill decides>\n```' })).join(), /Depth minimum line ahead/);
+  assert.deepEqual(lintSkill(skill('a', { body: 'Depth: <issue depth, else leave this line out: the workflow skill decides>' })), []);
 });
 test('a skill naming a skills CLI version fails, inside a code block too', () => {
   for (const body of ['Run `npx -y skills@npm:skills@1.7.2 find x`.', '```sh\nnpx skills@1.8.0 add a/b\n```'])
