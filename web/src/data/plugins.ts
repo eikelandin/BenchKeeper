@@ -79,14 +79,14 @@ export const defaults: { title: string; text: string }[] = [
   { title: 'Skills that change things wait for you', text: 'Every skill except workflow starts only when you call it.' },
   { title: 'No merges from a worker', text: 'A session that does not run as the coordinator, and every subagent, cannot merge, release, push tags or push to the default branch. The guard stops a session that forgets its role; the hard boundary is a gh token without those rights.' },
   { title: 'The status band is off', text: 'The band above the prompt appears only after you turn on its plugin option. It reads your working folder and git, and stores and sends nothing.' },
-  { title: 'Coordinator rotation needs a handoff file', text: 'An idle coordinator is cleared and resumed only in an Orca terminal whose project holds the handoff file of orchestrating-projects.' },
+  { title: 'Coordinator rotation needs a handoff file', text: 'An idle coordinator is cleared and resumed only in the session whose id the handoff file of orchestrating-projects names.' },
 ];
 
 export const hooks: { plugin: string; name: string; when: string; does: string }[] = [
   { plugin: 'cl-workflow', name: 'Terminal questions', when: 'Session start, /cl-workflow:ask and /cl-workflow:questions, and before the question tool or plan mode', does: 'Refuses the question tool and plan mode outside the window you opened. Keeps the window in one small file per Claude Code process in the plugin data folder, and removes ended windows at startup and resume.' },
   { plugin: 'cl-workflow', name: 'Role guard', when: 'Before Bash, Monitor and PowerShell commands', does: 'In a session that does not run as the coordinator (CEDARLOOM_ROLE=coordinator) and in every subagent, refuses merges, releases, tag pushes, pushes to the default branch, repository settings and security changes, gh auth, git config writes, git stash and sessions in bare mode. Writes nothing.' },
   { plugin: 'cl-workflow', name: 'Status band', when: 'Only with the tierBand option on', does: 'Shows project, branch, the last test run and lint or type check above the prompt. Reads your working folder, git, one Ponytail flag file and the commands and edits of the main loop; stores and sends nothing.' },
-  { plugin: 'cl-orchestration', name: 'Coordinator rotation', when: 'When an idle coordinator in an Orca terminal ends a turn, and after /clear and compaction', does: 'With the handoff file .cedarloom/runs/handoff.md present, clears a coordinator whose context passed the configured size with /clear and resumes it from the file; at most once every 10 minutes. After a clear or compaction it hands the file back. Without the file nothing happens.' },
+  { plugin: 'cl-orchestration', name: 'Coordinator rotation', when: 'When an idle coordinator ends a turn, and after /clear and compaction', does: 'With the handoff file .cedarloom/runs/handoff.md present, clears a coordinator whose context passed the configured size with /clear and resumes it from the file; at most once every 10 minutes. After a clear or compaction it hands the file back. Without the file nothing happens.' },
 ];
 
 export const planned = {
