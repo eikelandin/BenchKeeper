@@ -179,7 +179,7 @@ export function removeToml(text, table, key) {
   return checkedToml(lines.join('\n'), before, table ? table.split('.') : [], key, `${table || 'root'}.${key}`);
 }
 
-// Removes a whole [a."b"] table: its header line and the lines up to the next header; comments above stay.
+// Removes a whole [a."b"] table: its header line and the lines up to the next header; comment lines stay.
 export function removeTable(text, path) {
   const src = text ?? '';
   const before = parsed(src);
@@ -193,7 +193,7 @@ export function removeTable(text, path) {
   if (from < 0) throw new MergeError(`${path.join('.')}: this form needs manual editing`);
   let to = lines.slice(from + 1).findIndex((l) => /^\s*\[/.test(l));
   to = to < 0 ? lines.length : from + 1 + to;
-  lines.splice(from, to - from);
+  lines.splice(from, to - from, ...lines.slice(from, to).filter((l) => /^\s*#/.test(l)));
   return checkedToml(lines.join('\n'), before, path.slice(0, -1), path.at(-1), path.join('.'));
 }
 

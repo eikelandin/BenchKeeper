@@ -118,3 +118,15 @@ test('removeTable: nested and quoted headers, an implied parent goes, a kept hea
   assert.throws(() => removeTable('[p]\r\n', ['p']), /^Error: CRLF line endings: edit by hand$/);
   assert.throws(() => removeTable('[p', ['p']), /^Error: invalid TOML: /);
 });
+
+test('removeTable: comment lines in the removed range stay', () => {
+  assert.equal(
+    removeTable('model = "o3"\n\n[projects."/a"]\ntrust_level = "trusted"\n\n# my own server: keep\n[mcp_servers.mine]\ncommand = "x"\n', ['projects', '/a']),
+    'model = "o3"\n\n# my own server: keep\n[mcp_servers.mine]\ncommand = "x"\n',
+  );
+  assert.equal(
+    removeTable('[projects."/a"]\ntrust_level = "trusted"\n\n# old settings I may want back:\n# model = "gpt-5"\n', ['projects', '/a']),
+    '# old settings I may want back:\n# model = "gpt-5"\n',
+  );
+  assert.equal(removeTable('[p]\n  # about p\nx = 1\n[r]\ny = 2\n', ['p']), '  # about p\n[r]\ny = 2\n');
+});
