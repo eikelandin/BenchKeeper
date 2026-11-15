@@ -201,10 +201,10 @@ test('the profile falls back to the bundled copy when repo-standards is unreacha
   const { ctx } = machine({ baselineDown: true });
   const r = loadProfile(ctx, 'oss');
   assert.deepEqual(r.profile, OSS);
-  assert.match(r.source, /bundled copy of ESchuderer\/repo-standards@/);
+  assert.match(r.source, /bundled copy of eikelandin\/repo-standards@/);
   const odd = machine({ baselineInvalid: true });
   assert.match(loadProfile(odd.ctx, 'oss').source, /repo-standards: not a valid profile file/);
-  assert.throws(() => loadProfile(ctx, 'oss', 'feature/x'), /cannot read profile oss at ESchuderer\/repo-standards@feature\/x/);
+  assert.throws(() => loadProfile(ctx, 'oss', 'feature/x'), /cannot read profile oss at eikelandin\/repo-standards@feature\/x/);
   assert.throws(() => loadProfile(ctx, 'oss', '--evil'), /not a ref/);
   assert.throws(() => loadProfile(ctx, '../oss'), /profile must be one of/);
   const live = machine(compliant());

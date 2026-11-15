@@ -1,6 +1,6 @@
 // Latest release (or newest tag), stars and forks of the repository, read from the GitHub API once per build.
 // Any failure (offline, rate limit, timeout) leaves the fact out; the header then shows icon and name only.
-export const SLUG = 'ESchuderer/BenchKeeper';
+export const SLUG = 'eikelandin/BenchKeeper';
 export type RepoFacts = { tag?: string; stars?: string; forks?: string };
 
 const get = async (path: string) => {

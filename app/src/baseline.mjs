@@ -1,5 +1,5 @@
 // Drift of a repository's GitHub settings and caller workflows against a repo-standards profile (the shared desired
-// state in ESchuderer/repo-standards). Reads only: GET requests through gh, files of the checkout. Applying a profile is
+// state in eikelandin/repo-standards). Reads only: GET requests through gh, files of the checkout. Applying a profile is
 // repo-standards's script (dry run, snapshot, restore), never this app. Without gh, a login or the network the check says
 // so and nothing else fails.
 import { readdirSync, readFileSync } from 'node:fs';
@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { exists, readText } from './fsx.mjs';
 import { git } from './git.mjs';
 
-export const BASELINE_REPO = 'ESchuderer/repo-standards';
+export const BASELINE_REPO = 'eikelandin/repo-standards';
 // The repo-standards commit the bundled copy in ./baseline/ and the caller files come from (scripts/baseline-sync.mjs).
 export const REF = 'c252959a101a1623ee46b0f8d980e59273e7ecfb';
 export const PROFILES = ['oss', 'private-advisory'];

@@ -49,7 +49,7 @@ const packPlugins = (a) => library().packs.filter((p) => p.plugins?.[a]).map((p)
   const x = p.plugins[a];
   return { id: x.id, marketplace: x.id.split('@')[1], ...(x.marketplace ? { source: x.marketplace } : {}), pack: p.id };
 });
-const OWN = { id: 'cedarloom@cedarloom', marketplace: 'cedarloom', source: 'ESchuderer/BenchKeeper', ref: 'stable', version: 'app', sparse: ['.claude-plugin', 'plugins'] };
+const OWN = { id: 'cedarloom@cedarloom', marketplace: 'cedarloom', source: 'eikelandin/BenchKeeper', ref: 'stable', version: 'app', sparse: ['.claude-plugin', 'plugins'] };
 export const PLUGINS = Object.fromEntries(['claude', 'codex'].map((a) => [a, [OWN, ...packPlugins(a)]]));
 // The ref and version a plugin is pinned to, for this app version.
 // BenchKeeper installed the plugin a removal argv names: the newest done, not undone command of the ledger on it installs it.

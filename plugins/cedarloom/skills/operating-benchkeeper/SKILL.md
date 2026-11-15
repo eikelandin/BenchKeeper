@@ -40,7 +40,7 @@ Never run `apply`, `undo`, `restore` or `projects update` against a home folder 
 
 ## Commands
 
-`--json` prints one document on stdout (`schemaVersion`, `command`, the keys; a failure has `error`), logs go to stderr. Exit 0 clean, 1 a finding of level `error`, a failed check or a change that cannot be made, 2 a usage or read failure. [app/README.md](https://github.com/ESchuderer/BenchKeeper/blob/main/app/README.md#machine-readable-output) has the keys of each document: read only that section (it ends at `## Web UI`).
+`--json` prints one document on stdout (`schemaVersion`, `command`, the keys; a failure has `error`), logs go to stderr. Exit 0 clean, 1 a finding of level `error`, a failed check or a change that cannot be made, 2 a usage or read failure. [app/README.md](https://github.com/eikelandin/BenchKeeper/blob/main/app/README.md#machine-readable-output) has the keys of each document: read only that section (it ends at `## Web UI`).
 
 | Need | Command |
 |---|---|

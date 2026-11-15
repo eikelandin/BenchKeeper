@@ -39,7 +39,7 @@ After either path, restart the agents. `npx benchkeeper@6.27.0 history` lists wh
 Node.js 22 or newer, and at least one agent. Linux and macOS are tested; Windows runs only a CI smoke test (start, plan, apply with a ledger run) and is untested by the owner.
 
 - From npm: `npx benchkeeper@6.27.0 <command>`. A clone of the branch `stable` runs the latest release (each release moves it); to run a change that is not on npm yet, clone the default branch (`--branch main`).
-- From a clone: `git clone --depth 1 --branch stable https://github.com/ESchuderer/BenchKeeper.git && npm ci --prefix BenchKeeper/app --omit=dev`, then `node BenchKeeper/app/bin/benchkeeper.mjs <command>`. The web UI needs a build first: `npm ci --prefix BenchKeeper/app && npm run build --prefix BenchKeeper/app`.
+- From a clone: `git clone --depth 1 --branch stable https://github.com/eikelandin/BenchKeeper.git && npm ci --prefix BenchKeeper/app --omit=dev`, then `node BenchKeeper/app/bin/benchkeeper.mjs <command>`. The web UI needs a build first: `npm ci --prefix BenchKeeper/app && npm run build --prefix BenchKeeper/app`.
 
 Runtime dependencies, pinned: [jsonc-parser](https://github.com/microsoft/node-jsonc-parser) 3.3.1 (JSON settings with comments), [smol-toml](https://github.com/squirrelchat/smol-toml) 1.9.1 (Codex TOML), [yaml](https://github.com/eemeli/yaml) 2.9.1 (workflow files for `projects audit`). The web UI (React, Mantine) is built into `dist/` and ships in the package.
 
@@ -144,7 +144,7 @@ Runtime dependencies, pinned: [jsonc-parser](https://github.com/microsoft/node-j
   - A skill whose own `SKILL.md` sets `paths:` keeps its key: globs for it are refused, and an entry kept from before is not written, which the plan warns about.
 - `--tier`
 - `--share` or `--local`: see [Local and shared setup](#local-and-shared-setup).
-- `--caller lint-js|lint-python|sonar`: writes that [repo-standards](https://github.com/ESchuderer/repo-standards) caller workflow as a file in the checkout; one that differs from yours is offered, not preselected; no GitHub setting is ever changed.
+- `--caller lint-js|lint-python|sonar`: writes that [repo-standards](https://github.com/eikelandin/repo-standards) caller workflow as a file in the checkout; one that differs from yours is offered, not preselected; no GitHub setting is ever changed.
 
 #### Local and shared setup
 
