@@ -295,7 +295,7 @@ Usage: benchkeeper <command> [options]
                                     doctor findings, versions behind; the session signal needs 20 sessions
                                     of the last 90 days and reports nothing below that; nothing is written, except with --narrative --yes: the
                                     findings go to the agent in one session and its answer is cached on this machine
-  knowledge show [dir]              what the maintaining-repos skill stored for the project (.cedarloom-app/knowledge/,
+  knowledge show [dir]              what the maintaining-repos skill stored for the project (.cedarloom/knowledge/,
                                     ignored by git): entries per file; a file that does not parse is listed as ignored
   knowledge clear [dir] [--yes]
                                     removes that folder after a question and nothing else of the project
@@ -1570,7 +1570,7 @@ async function knowledgeCommand({ o, positionals, out, ask }) {
   if (!['show', 'clear'].includes(sub)) { out.write('knowledge needs show or clear\n'); return 2; }
   if (positionals.length > 3) { out.write(`unexpected argument ${positionals[3]}\n`); return 2; }
   const dir = resolve(where ?? '.');
-  if (sub === 'clear' && linkedParent(dir)) { out.write(`${join(dir, '.cedarloom-app')} is a link: nothing removed\n`); return 1; }
+  if (sub === 'clear' && linkedParent(dir)) { out.write(`${join(dir, '.cedarloom')} is a link: nothing removed\n`); return 1; }
   let found;
   try { found = readKnowledge(dir); } catch (e) { out.write(`cannot read ${knowledgeDir(dir)}: ${e.code ?? e.message}\n`); return 2; }
   const { path, present, files, ignored } = found;
