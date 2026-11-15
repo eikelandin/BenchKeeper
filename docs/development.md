@@ -4,7 +4,7 @@ How the checks, the workflows and the local agent setup of this repository work.
 
 ## Workflows
 
-- `checks.yml` runs `checks-core`, `app-ui-tests` and `plugin-checks` in parallel; the job `checks` gates all three.
+- `checks.yml` runs `checks-core`, `app-ui-tests`, `plugin-checks` and `plugin-tests` in parallel; the job `checks` gates all four. `plugin-tests` runs the tests in `plugins/*/test/` with Node.js alone (no install, no app) on Linux and macOS.
 - Every workflow has `permissions: {}` at the top and per job, `timeout-minutes` on every job and a `concurrency` group that cancels superseded pull request runs.
 - Every required check runs on pull requests into `main` and on pushes to `main`, except `conventional` (the pull request title) and `dependency-review`, which run on pull requests only, and `check`, which runs on pull requests, the merge queue and weekly.
 - The rulesets name the required checks: `checks`, `app (ubuntu-latest)`, `app (macos-latest)`, `app-windows-smoke`, `build`, `check` (the CedarLoom gate of `cedarloom.yml`), `conventional`, `dependency-review`. A job change keeps these names.
