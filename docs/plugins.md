@@ -86,6 +86,14 @@ A long-running coordinator of `/cl-orchestration:orchestrating-projects` starts 
 
 The options are those of `cl-orchestration@cedarloom` (see the top of this page). The hooks read and write only the handoff file, run `git ls-files` in its project folder (and, with `rotateAfterTasks`, `orca orchestration task-list --json`), and send nothing.
 
+## Code Mode (optional)
+
+[Code Mode](https://code.claude.com/docs/en/code-mode) is an experimental Claude Code feature in which Claude writes JavaScript that makes several tool calls in one step. It is off by default and may change or be removed in any release.
+
+- Needs: Claude Code v2.1.323 or later on the native build, an interactive terminal session, and Opus 5.5, Sonnet 5.5, Haiku 5.5 or Fable 5.2.
+- Turn it on: set `"CLAUDE_CODE_EXPERIMENTAL_CODE_MODE": "1"` in the `env` block of `$HOME/.claude/settings.json`. Claude Code ignores it in a project's settings. A Code Mode session resumes only with it on.
+- The hooks of these plugins keep working: each tool call the code makes still reaches the `PreToolUse` hooks, and a hook that fails or times out refuses that call.
+
 ## Untrusted input
 
 Issue and pull request text can carry instructions. `/cl-orchestration:orchestrating-projects` passes workers and reviewers only text by trusted authors: the repository owner, the policy's `trustedAuthors`, and members or collaborators with `admin` or `write` on the [permission endpoint](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user). A failed lookup passes nothing.
