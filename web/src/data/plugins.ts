@@ -14,7 +14,7 @@ export const requirements: [string, string][] = [
   ['Claude Code', '2.1.295 or later'],
   ['Node.js on the PATH', 'the hooks of the plugins run node'],
   ['Git and the GitHub CLI (gh)', 'for setting up repositories and for coordinating issue work'],
-  ['Orca', 'for cl-orca only: cl-orchestration runs without it'],
+  ['Orca', 'with its orchestration skill, for cl-orca only: cl-orchestration runs without it'],
 ];
 
 export type Skill = { name: string; args?: string; text: string };
@@ -60,7 +60,7 @@ export const plugins: PluginInfo[] = [
     ],
     notes: [
       'Needs cl-workflow, which installing it brings along.',
-      'Runs with or without Orca: workers start as background agents of Claude Code, or in Orca terminals when cl-orca is installed and Orca is running. The runner option picks one by name.',
+      'Runs with or without Orca: workers start as background agents of Claude Code, or in Orca terminals with cl-orca. The runner plugin option sets claude-code or orca; left empty, Orca is used when cl-orca is installed and Orca answers, otherwise background agents.',
       'A handoff file lets a coordinator that was cleared or compacted resume its run.',
     ],
   },
