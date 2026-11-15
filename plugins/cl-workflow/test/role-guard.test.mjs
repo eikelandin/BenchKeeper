@@ -129,6 +129,19 @@ const DENIED = [
   "# $'\\0\ngh pr merge 12",
   "# $'\n\\\\;gh pr merge 12",
   "eval $'true\\0; gh pr merge 12'",
+  "$'g\\h' pr merge 12",
+  "gh pr $'\\merge' 12",
+  "git $'\\push' origin HEAD:main",
+  "gh api -X PUT $'repos/o/r/\\contents/README.md' -f message=x -f content=aGk=",
+  "gh $'\\config' set editor vim",
+  "$'gh\\C' pr merge 12",
+  "bash -c $'echo ok\\C-Jgh pr merge 12'",
+  "$'g\\UFFFFFFFFh' pr merge 12",
+  "$'g\\U80000000h' pr merge 12",
+  '$"gh" pr merge 12',
+  'gh pr $"merge" 12',
+  "gh pr $'merge\\0'x 12",
+  "git push origin $'main\\0'-x",
   'git config user.email a@example.com',
   'git -C ../other config --unset core.hooksPath',
   'git -c core.hooksPath=/dev/null commit -m x',
@@ -158,7 +171,6 @@ const ALLOWED = [
   'git -C ../other log --oneline',
   'git commit -m "explain the merge"',
   'claude -p "review 12" 2>&1 | tee out.txt',
-  "echo $'\\U110000'",
 ];
 
 test('role guard: denies coordinator steps outside the coordinator role, unset or another role', () => {

@@ -43,18 +43,36 @@ const BASH_QUOTED_ESCAPES = '$`"\\';
 // Bash's ANSI-C quoting $'...' (https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html).
 const ANSI_C = /\$'((?:[^'\\]|\\[\s\S])*)'?/y;
 const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x\{([\da-fA-F]*)\}?|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c([\s\S]))/g;
+// zsh's $'...': an unknown escape and \c drop the backslash, \x, \u and \U without digits are NUL, there is no \x{...},
+// and \C, \C-, \M and \M- make a control or meta character of the character after them.
+const ZSH_ANSI_C_ESCAPE = /((?:\\[CM]-?)*)(?:\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\da-fA-F]{0,2})|u([\da-fA-F]{0,4})|U([\da-fA-F]{0,8})|([\s\S]))|([\s\S])|$)/g;
 const ANSI_C_CHARS = { a: '\x07', b: '\b', e: '\x1b', E: '\x1b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
-// The text of $'...' with its escapes decoded; an unknown escape keeps its backslash. Bash keeps the low byte of an octal
-// or \x{...} value, and a value above U+10FFFF stays as written.
-const ansiC = (body) =>
-  body.replace(ANSI_C_ESCAPE, (escape, char, octal, braced, hex, u, U, control) => {
-    if (char) return ANSI_C_CHARS[char] ?? char;
-    if (octal) return String.fromCharCode(parseInt(octal, 8) & 0xff);
-    if (braced !== undefined) return String.fromCharCode(parseInt(braced.slice(-2) || '0', 16));
-    if (control) return String.fromCharCode(control.charCodeAt(0) & 0x1f);
-    const code = parseInt(hex ?? u ?? U, 16);
-    return code > 0x10ffff ? escape : String.fromCodePoint(code);
-  });
+// U+FFFD stands for text that is no ASCII: a \U value above U+10FFFF, which bash 5.2 and zsh write as bytes of no character,
+// and a zsh meta character.
+const NOT_ASCII = String.fromCharCode(0xfffd);
+// bash 5.2 drops a \U value above 0x7FFFFFFF.
+const codePoint = (code, zsh) => (code <= 0x10ffff ? String.fromCodePoint(code) : code > 0x7fffffff && !zsh ? '' : NOT_ASCII);
+// The text of $'...' with its escapes decoded as bash reads them, or as zsh does: bash keeps the backslash of an unknown escape,
+// and both keep the low byte of an octal or (bash) \x{...} value.
+const ansiC = (body, zsh) =>
+  zsh
+    ? body.replace(ZSH_ANSI_C_ESCAPE, (_, prefix, char, octal, hex, u, U, unknown, plain) => {
+        const text =
+          char ? (ANSI_C_CHARS[char] ?? char)
+          : octal ? String.fromCharCode(parseInt(octal, 8) & 0xff)
+          : (hex ?? u ?? U) !== undefined ? codePoint(parseInt(hex || u || U || '0', 16), true)
+          : (unknown ?? plain ?? '');
+        if (!prefix || !text) return text;
+        const code = text.charCodeAt(0);
+        return prefix.includes('M') || code > 0x7f ? NOT_ASCII : String.fromCharCode(code === 0x3f ? 0x7f : code & 0x9f);
+      })
+    : body.replace(ANSI_C_ESCAPE, (_, char, octal, braced, hex, u, U, control) => {
+        if (char) return ANSI_C_CHARS[char] ?? char;
+        if (octal) return String.fromCharCode(parseInt(octal, 8) & 0xff);
+        if (braced !== undefined) return String.fromCharCode(parseInt(braced.slice(-2) || '0', 16));
+        if (control) return String.fromCharCode(control.charCodeAt(0) & 0x1f);
+        return codePoint(parseInt(hex ?? u ?? U, 16), false);
+      });
 
 // The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
 // continuation joins its lines, a quoted word stays whole, and redirections are dropped. The text of a quoted word is read again
@@ -63,17 +81,22 @@ const ansiC = (body) =>
 // may not reach the commands after it.
 // PowerShell escapes and continues lines with the backtick and keeps the backslash as a plain character
 // (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_special_characters).
-function commands(source, powershell, nested = false) {
+// reading: 'bash' or 'zsh' reads $'...', $"..." and $$ as that shell does (zsh keeps the $ of $"..."), 'plain' reads $ as
+// a plain character, as a shell without these quotes does.
+function commands(source, powershell, nested = false, reading = 'bash') {
   /** @type {{ words: string[], nested: boolean }[]} */
   const out = [];
+  const zsh = reading === 'zsh';
+  const dollar = !powershell && reading !== 'plain';
   const escape = powershell ? '`' : '\\';
   const s = source.replace(powershell ? /`\r?\n/g : /\\\r?\n/g, '');
   let words = [], word = '', started = false, quoted = false, quote = null, redirect = false, depth = 0, backticks = false;
   const endWord = () => {
     if (started) {
       if (redirect) redirect = false;
-      else words.push(word);
-      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell, true));
+      // A program gets a zsh word up to its first NUL.
+      else words.push(zsh ? word.split('\0')[0] : word);
+      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell, true, reading));
     }
     word = '';
     started = quoted = false;
@@ -90,21 +113,27 @@ function commands(source, powershell, nested = false) {
       if (c === quote) quote = null;
       else if (c === escape && quote === '"' && i + 1 < s.length && (powershell || BASH_QUOTED_ESCAPES.includes(s[i + 1]))) word += s[++i];
       else word += c;
-    } else if (!powershell && c === '$' && s[i + 1] === '$') {
+    } else if (dollar && c === '$' && s[i + 1] === '$') {
       // $$ is the shell's process id, so a quote after it is a plain one.
       word += '$$';
       i++;
       started = true;
-    } else if (!powershell && c === '$' && s[i + 1] === "'") {
+    } else if (dollar && c === '$' && s[i + 1] === "'") {
       ANSI_C.lastIndex = i;
       const [whole, body] = ANSI_C.exec(s);
-      const [text, ...rest] = ansiC(body).split('\0');
-      word += text;
-      // In a comment or here-document $' is no quote, so the text as written is read as well; bash ends the word at a NUL,
-      // zsh keeps the text after it.
-      if (/[\s;&|()`<>]/.test(body)) out.push(...commands(body, powershell, true));
-      if (rest.length) out.push(...commands(rest.join('\n'), powershell, true));
+      const decoded = ansiC(body, zsh);
+      const [text, ...rest] = decoded.split('\0');
+      word += zsh ? decoded : text;
+      // In a comment or here-document $' is no quote, so the text as written is read as well; bash drops the text after a NUL,
+      // zsh keeps it.
+      if (/[\s;&|()`<>]/.test(body)) out.push(...commands(body, powershell, true, reading));
+      if (rest.length) out.push(...commands(rest.join('\n'), powershell, true, reading));
       i += whole.length - 1;
+      started = quoted = true;
+    } else if (dollar && !zsh && c === '$' && s[i + 1] === '"') {
+      // Bash reads the locale string $"..." as "..." in the C locale.
+      quote = '"';
+      i++;
       started = quoted = true;
     } else if (c === '"' || c === "'") {
       quote = c;
@@ -310,6 +339,17 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   if (typeof cmd !== 'string') return 'a command the guard cannot read';
   const powershell = tool === 'PowerShell';
   const parsed = commands(cmd, powershell);
+  // The hook cannot tell which shell runs the command: where zsh or the plain reading gives other words, it checks those too,
+  // as nested commands.
+  if (!powershell) {
+    const readings = new Set([JSON.stringify(parsed.map((c) => c.words))]);
+    for (const reading of ['zsh', 'plain']) {
+      const other = commands(cmd, false, true, reading);
+      const key = JSON.stringify(other.map((c) => c.words));
+      if (!readings.has(key)) parsed.push(...other);
+      readings.add(key);
+    }
+  }
   const source = [cmd, ...parsed.flatMap((c) => c.words)].join('\n');
   // A guarded session must not start another one as the coordinator; Windows reads the name in any case.
   if (source.replace(/["'\\`]/g, '').toUpperCase().includes(ROLE)) return `a command that names ${ROLE}`;
