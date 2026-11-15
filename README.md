@@ -60,6 +60,22 @@ The role guard refuses merges, releases and pushes to the default branch in ever
 
 What each skill reads and writes: [Skills](docs/skills.md). Hooks and plugin settings: [The plugins](docs/plugins.md). How the coordinator's rules are split between policy, skills and worker rules: [Coordinator workflow](docs/coordinator-workflow.md).
 
+## Typical flow
+
+Without Orca:
+
+1. Install the `cedarloom` bundle, or `cl-workflow` plus `cl-setup`.
+2. Once per repository, run `/cl-setup:setting-up-projects`.
+3. For each task, just ask: the workflow picks the kind and the depth. Start a bigger task with `/cl-workflow:plan <task>`.
+4. Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
+
+With Orca:
+
+1. Install the `cedarloom` bundle (or add `cl-orchestration`), set up each repository as above and label the issues the coordinator may start ([policy](docs/coordinator-workflow.md)).
+2. Start one coordinator session with `CEDARLOOM_ROLE=coordinator claude`, then run `/cl-orchestration:orchestrating-projects <project paths>`.
+3. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction.
+4. Answer open questions with `/cl-workflow:questions`. Merges and releases happen only in the coordinator session.
+
 ## Update
 
 Marketplaces other than Anthropic's have auto-update off, so a plugin changes only when you update it, and only when its version changed in a release ([Claude Code docs](https://code.claude.com/docs/en/discover-plugins#keep-plugins-updated)).
