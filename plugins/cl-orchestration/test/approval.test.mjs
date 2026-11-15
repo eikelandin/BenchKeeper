@@ -173,6 +173,9 @@ test('approval: the command line counts a member\'s answer only with write acces
   writeFileSync(join(bin, 'log'), '');
   assert.equal(run('write', { url: 'https://ghe.example.com/owner/tracker/issues/12' }).status, 2);
   assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
+  // A repository named . or .. is none: gh would ask another path of the API.
+  assert.equal(run('write', { url: 'https://github.com/o/../issues/1' }).status, 2);
+  assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
 });
 
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
