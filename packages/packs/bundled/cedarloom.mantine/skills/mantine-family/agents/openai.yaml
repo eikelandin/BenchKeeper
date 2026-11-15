@@ -1,5 +1,0 @@
-interface:
-  display_name: "Mantine traps and checks"
-  short_description: "Component traps, forms, tables, a11y checks, docs"
-policy:
-  allow_implicit_invocation: true

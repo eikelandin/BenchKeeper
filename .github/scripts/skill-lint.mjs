@@ -1,4 +1,4 @@
-// Structural checks for BenchKeeper's own skills (plugin skills and the bundled packs' skills) and the plugin's agents.
+// Structural checks for BenchKeeper's own skills (plugin skills) and the plugin's agents.
 // Usage: node .github/scripts/skill-lint.mjs [skill folders...]   (default: every own skill and agent), exit 1 on any error.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -131,21 +131,8 @@ export function pluginFiles() {
     .flatMap(({ name }) => filesIn(join(plugins, name)).filter((p) => !p.slice(plugins.length).split(sep).includes('test')));
 }
 
-// Copied unchanged from another repository: its conventions, not ours.
-const VENDORED = ['packages/packs/bundled/cedarloom.mantine/skills/mantine-form'].map((d) => join(root, d));
-
-// The skills a bundled pack carries in its own folder, as its manifest lists them (one with a Git source is fetched).
-function packSkills() {
-  const bundled = join(root, 'packages/packs/bundled');
-  return readdirSync(bundled, { withFileTypes: true }).filter((entry) => entry.isDirectory()).flatMap(({ name: pack }) => {
-    const { entries } = JSON.parse(readFileSync(join(bundled, pack, 'cedarloom-pack.json'), 'utf8'));
-    return Object.keys(entries).filter((path) => entries[path].kind === 'skill' && !entries[path].source).map((path) => join(bundled, pack, path));
-  });
-}
-
 export function ownSkills() {
-  const own = pluginParts('skills').flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
-  return [...own, ...packSkills().filter((dir) => !VENDORED.includes(dir))];
+  return pluginParts('skills').flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
 }
 
 if (isMain(import.meta.url)) {
