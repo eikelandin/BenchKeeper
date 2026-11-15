@@ -198,7 +198,7 @@ const noAgentCli = (argv, o) => (['claude', 'codex'].includes(argv[0]) ? { code:
 // fails() is true), the source has no known commit.
 const skillsCli = (fails = () => false) => (argv, o) => {
   if (argv[1]?.endsWith('verify.mjs')) return { code: 0, stdout: '', stderr: '' };
-  if (argv[0] === 'npx' && argv[3] === 'add') {
+  if (argv[0] === 'npx' && argv.includes('add')) {
     const skill = join(o.cwd, '.claude/skills', argv[argv.indexOf('-s') + 1]);
     mkdirSync(skill, { recursive: true });
     writeFileSync(join(skill, fails() ? 'README.md' : 'SKILL.md'), '---\nname: x\n---\n');

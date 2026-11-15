@@ -13,7 +13,8 @@ import { mask } from './redact.mjs';
 import { pick, registryHosts, srtVerify, starts, wrap } from './sandbox.mjs';
 import { exists, isDir, listFiles, readText } from './fsx.mjs';
 
-export const rehearsable = (c) => c.kind === 'command' && c.argv?.[2]?.startsWith('skills@npm:skills@') === true;
+// The package npx runs is its first argument that is not an option.
+export const rehearsable = (c) => c.kind === 'command' && c.argv?.slice(1).find((a) => !a.startsWith('-'))?.startsWith('skills@npm:skills@') === true;
 
 // Folders npx and npm fill in the scratch home; not part of what the command installs.
 const SKIP = ['.npm', '.cache', join('.config', 'npm')];

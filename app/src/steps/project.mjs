@@ -1,7 +1,7 @@
 // Project setup: where the agent runs, AGENTS.md and CLAUDE.md, packs and library skills, the project state file.
 // Steps that need judgement (stack skills, AGENTS.md commands, the dev container) run in an agent session the app
 // records (session.mjs).
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import nodePath, { isAbsolute, join, relative, resolve } from 'node:path';
 import { listAccounts } from '../accounts.mjs';
 import { agent, forAgent, skillDirs } from '../agents.mjs';
@@ -123,6 +123,8 @@ export const usesContainer = (env) => ['container', 'host-agent'].includes(env);
 // The skills CLI runs in the project: a project .npmrc must not choose where it comes from.
 // Per call: the cooldown date moves with the clock, and a server runs for days.
 export const npxEnv = () => ({ DO_NOT_TRACK: '1', npm_config_registry: 'https://registry.npmjs.org/', npm_config_ignore_scripts: 'true', ...cooldownEnv() });
+// npm then reads the .npmrc of the app's own folder, not the project's, whose keys (node-options, script-shell) run code.
+const npxPrefix = (ctx) => { mkdirSync(ctx.config, { recursive: true, mode: 0o700 }); return `--prefix=${ctx.config}`; };
 
 const tryJson = (t) => { try { return t == null ? null : parseJson(t); } catch { return null; } };
 // Whether edit changes the settings text (a file that does not parse is left alone).
@@ -634,7 +636,7 @@ export function projectPlan({ ctx, dir, answers, plugins = {} }) {
       const note = held ? ' (edited here: reset the skill to replace it)' : targets.some(({ dir: d }) => unfinishedHere(d, s.name)) ? ' (again: the last install did not finish)' : '';
       add(`skill:${s.name}`, `skill ${s.name} from ${s.source}${refresh && was ? ` (installed ${was.slice(0, 12)})` : ''}${note}`, {
         kind: 'command', installUnit, outdated: refresh && !!was, cwd: dir, env: npxEnv(), verify: skillsVerify(ctx), snapshot: [...targets.map((x) => join(x.dir, s.name)), at(LOCK)], ...(held ? { selected: false, held: true } : {}),
-        argv: ['npx', '-y', skillsSpec(ctx), 'add', `https://github.com/${s.source}`, '-s', s.name, ...flags, '--copy', '-y'],
+        argv: ['npx', npxPrefix(ctx), '-y', skillsSpec(ctx), 'add', `https://github.com/${s.source}`, '-s', s.name, ...flags, '--copy', '-y'],
       });
     }
   }
@@ -652,7 +654,7 @@ export function projectPlan({ ctx, dir, answers, plugins = {} }) {
     if (s && !copied(s) && present.length) {
       const flags = [...new Set(present.flatMap((x) => x.agents).map((x) => SKILLS_FLAG[x]))].flatMap((f) => ['-a', f]);
       add(`remove:${name}`, `remove skill ${name}${why}`, { kind: 'command', installUnit, cwd: dir, env: npxEnv(), verify: skillsVerify(ctx), selected: true, snapshot: [...present.map((x) => join(x.dir, name)), join(dir, LOCK)],
-        argv: ['npx', '-y', skillsSpec(ctx), 'remove', name, ...flags, '-y'] });
+        argv: ['npx', npxPrefix(ctx), '-y', skillsSpec(ctx), 'remove', name, ...flags, '-y'] });
     // A name the library does not know is not one BenchKeeper installed: offered, not preselected.
     } else for (const { dir: d } of present) add(`remove:${name}`, `remove ${rel(join(d, name))}${why}`, { kind: 'remove', path: join(d, name), selected: !!s, installUnit });
   };

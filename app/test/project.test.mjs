@@ -14,6 +14,8 @@ import { ledgerIssues } from '../src/integrity.mjs';
 import { SKILLS_SPEC } from '../src/steps/global.mjs';
 import { ENVS, STATE, localSetup, projectCtx, projectPlan, quote, readState, slashRel, suggest, tryState } from '../src/steps/project.mjs';
 import { classify } from '../src/inventory.mjs';
+import { childEnv } from '../src/childenv.mjs';
+import { rehearsable } from '../src/prerun.mjs';
 import { initRepo } from './helpers.mjs';
 // Links resolved: the registry keeps canonical paths (macOS: /var is /private/var).
 const TMP = realpathSync(tmpdir());
@@ -44,8 +46,8 @@ test('shared: AGENTS.md block, CLAUDE.md import, own skill copies, community ski
   for (const d of ['.claude/skills', '.agents/skills']) assert.ok(existsSync(join(r.dir, d, 'designing-technical-uis/SKILL.md')), d);
   const cmd = changes.find((c) => c.title.startsWith('skill frontend-design'));
   // An alias spec: npx never takes a skills package from the project's node_modules.
-  assert.deepEqual(cmd.argv.slice(0, 3), ['npx', '-y', SKILLS_SPEC]);
-  assert.deepEqual(cmd.argv.slice(3, 9), ['add', 'https://github.com/anthropics/skills', '-s', 'frontend-design', '-a', 'claude-code']);
+  assert.deepEqual(cmd.argv.slice(0, 4), ['npx', `--prefix=${r.ctx.config}`, '-y', SKILLS_SPEC]);
+  assert.deepEqual(cmd.argv.slice(4, 10), ['add', 'https://github.com/anthropics/skills', '-s', 'frontend-design', '-a', 'claude-code']);
   assert.ok(cmd.argv.includes('codex') && cmd.cwd === r.dir && cmd.env.DO_NOT_TRACK === '1' && cmd.env.npm_config_registry === 'https://registry.npmjs.org/' && Math.abs(Date.parse(cmd.env.npm_config_before) - (Date.now() - 7 * 864e5)) < 60e3 && cmd.snapshot.includes(join(r.dir, 'skills-lock.json')));
   const state = readState(r.dir);
   assert.deepEqual([state.contentVersion, state.env, state.tier, state.packs], [appVersion, 'host-agent', 'quick', ['frontend']]);
@@ -709,6 +711,33 @@ test('a skill the library no longer lists is offered for removal, not preselecte
   const gone = plan(r, {}).changes.filter((c) => c.step === 'remove:docx');
   assert.equal(gone.length, 1);
   assert.ok(!gone[0].selected && gone[0].kind === 'remove');
+});
+
+test('the skills CLI add and remove run in the project without its .npmrc, which would run the project\'s code', () => {
+  const r = repo();
+  writeFileSync(join(r.dir, 'package.json'), '{}\n');
+  writeFileSync(join(r.dir, '.npmrc'), 'node-options=--require ./x.cjs\nscript-shell=./shell.sh\n');
+  writeFileSync(join(r.dir, 'x.cjs'), "require('fs').appendFileSync(__dirname + '/ran', 'node-options\\n');\n");
+  writeFileSync(join(r.dir, 'shell.sh'), '#!/bin/sh\necho script-shell >> "$(dirname "$0")/ran"\nexec /bin/sh "$@"\n', { mode: 0o755 });
+  // A local package stands in for the skills CLI, so npx installs nothing from the registry: it prints the folder it runs in.
+  const pkg = mkdtempSync(join(TMP, 'bk-skills-cli-'));
+  writeFileSync(join(pkg, 'package.json'), '{"name":"skills","version":"1.0.0","bin":{"skills":"bin.js"}}\n');
+  writeFileSync(join(pkg, 'bin.js'), '#!/usr/bin/env node\nconsole.log(process.cwd());\n', { mode: 0o755 });
+  const cache = mkdtempSync(join(TMP, 'bk-npm-cache-'));
+  const runLocal = (c) => runCommand(c.argv.map((a) => (a.startsWith('skills@npm:skills@') ? `file:${pkg}` : a)), { cwd: c.cwd, env: childEnv({ ...c.env, npm_config_cache: cache }) });
+  const add = plan(r, { agents: ['claude'], env: 'host', packs: ['frontend'] }).changes.find((c) => c.title.startsWith('skill frontend-design'));
+  mkdirSync(join(r.dir, '.cedarloom-app'));
+  writeFileSync(join(r.dir, STATE), JSON.stringify({ agents: ['claude'], env: 'host', skills: [{ name: 'frontend-design' }] }));
+  mkdirSync(join(r.dir, '.claude/skills/frontend-design'), { recursive: true });
+  const remove = plan(r, { packs: [] }).changes.find((c) => c.title.startsWith('remove skill frontend-design'));
+  for (const c of [add, remove]) {
+    // The plan still offers a preview of each.
+    assert.ok(rehearsable(c), c.title);
+    const out = runLocal(c);
+    assert.equal(out.code, 0, out.stderr);
+    assert.equal(out.stdout.trim(), r.dir);
+  }
+  assert.equal(existsSync(join(r.dir, 'ran')) ? read(join(r.dir, 'ran')) : '', '');
 });
 
 test('a session started in a subfolder records and undoes paths from the repository root', () => {
