@@ -101,7 +101,7 @@ Issue and pull request text can carry instructions. `/cl-orchestration:orchestra
 
 | Text | How it reaches an agent | Check |
 |---|---|---|
-| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it. With `issues.repository`, access counts in that tracker | `thread.test.mjs` |
+| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it. With the hub as tracker (`issues.tracker`, else `--issues-in`, is `hub`, with `--hub`), the issue and access come from the hub | `thread.test.mjs` |
 | Unresolved review threads | `thread.mjs --pull` writes each thread a trusted author opened, with its trusted comments, and counts the rest; the reviewer's brief and the worker's follow-up carry it. Access counts in the project's repository | `thread.test.mjs` |
 | Any other comment or review | not passed: the spec and `rules/worker.md` tell workers and reviewers to read none themselves | wording only |
 

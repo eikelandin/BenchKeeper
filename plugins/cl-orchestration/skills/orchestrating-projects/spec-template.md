@@ -9,7 +9,7 @@ What the lines take, policy fields as the reader prints them:
 - Names: `<owner/repo>` (always the project's repository), `<default branch>`, `<type>` and `<slug>` by the names rule of [SKILL.md](SKILL.md#names). `<tracker>` is that of [SKILL.md](SKILL.md#names). With the hub as `<tracker>`, `Branch:` takes `<type>/<slug>`; for a public `<owner/repo>` see [below](#public-project-with-the-hub-as-tracker).
 - `Branch:` takes "each new from origin/<default branch>". For an issue whose branch exists already ([SKILL.md](SKILL.md#loop), step 3) it takes the existing-branch form instead: "existing: fetch it, check it out from origin/<branch>, and merge origin/<default branch> into it before the first edit; when a local branch of that name differs from origin/<branch>, or none exists on origin, report BLOCKED".
 - `Agent:` takes `models.worker` at the depth you estimate: per issue the depth of step 1 of the workflow skill, or `research` for a research issue, a sensitive change ([review-and-merge.md](review-and-merge.md#sensitive-or-routine)) counting as deep, in a batch the highest. A Claude Code worker gets that model and effort; a worker on another agent only a value the policy names (the same in all four rows), else its agent's default. The estimate only chooses the model: `Depth:` stays as the block says.
-- `Thread:` takes the file `node <skill folder>/thread.mjs <project path> <number> <run folder>/thread-<tracker owner>.<tracker repo>-<number>.md` writes, whole and unchanged, in a batch each issue's. Where it fails, start no worker for that issue.
+- `Thread:` takes the file `node <skill folder>/thread.mjs --issues-in=<issues in> --hub=<hub> <project path> <number> <run folder>/thread-<tracker owner>.<tracker repo>-<number>.md` (no hub: without `--hub=`) writes, whole and unchanged, in a batch each issue's. Where it fails, start no worker for that issue.
 - `Risk:` takes the class of [SKILL.md](SKILL.md#risk-class), in a batch the highest.
 - `Review:` takes `review.depth`, or `review.sensitiveDepth` and the security review for an issue that reads as sensitive, in a batch when one of its issues does.
 - Flow takes each phase the reader prints under `models.phases`; for an issue that reads as sensitive, plan and review take `models.sensitive.plan` and `models.sensitive.review`.
@@ -95,7 +95,8 @@ Follow-up: the coordinator can send a message about a pull request you opened (r
 
 With the hub as `<tracker>` of a public `<owner/repo>`, the spec names no hub, hub URL or hub issue: a draft pull request is public too. These lines change:
 
-- Issue: the task and its acceptance in your words, without "Read the issue and its comments before anything else"; Batch drops "reading each issue and its comments before you start it".
+- Issue: the task and its acceptance in your words, without "Read the Thread block below before anything else"; Batch drops "reading each issue's thread before you start it".
+- Thread: left out, since the thread file names the hub and its URLs; you read it and state the task from it.
 - Trusted authors: without the "with the hub as tracker add" clause.
 - You may: "name a follow-up under Next step" in place of filing one.
 - Flow: the draft pull request's body describes the change, with no issue reference.

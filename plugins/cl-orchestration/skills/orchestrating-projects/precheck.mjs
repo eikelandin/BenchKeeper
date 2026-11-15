@@ -67,14 +67,14 @@ export const originRepo = (dir, run, env = process.env) => {
 };
 
 // { tracker, numbers }: the repository that holds the project's issues and the pickable ones; no tracker is read without a startLabel.
-function picks(dir, run, env, { hub, issuesIn } = {}) {
+function picks(dir, run, env, settings = {}) {
   const { policy, errors, warnings = [] } = read(dir, run);
   // Thrown, so the command line names the project and why nothing starts there, as it does for a failed command.
   if (!policy) throw new Error(errors.map(errorLine).join('; '));
   if (!policy.startLabel) return { tracker: null, numbers: [], warnings };
   const repo = originRepo(dir, run, env);
-  const inHub = Boolean(hub) && (policy.issues.tracker ?? issuesIn) === 'hub';
-  const tracker = inHub ? hub : repo;
+  const inHub = hubTracks(policy, settings);
+  const tracker = inHub ? settings.hub : repo;
   const extra = inHub ? [`project:${repo.split('/')[1]}`] : [];
   const labels = [policy.startLabel, ...policy.issues.labels, ...extra].map(encodeURIComponent).join(',');
   const issues = JSON.parse(run(dir, 'gh', ['api', '--paginate', '--slurp', `repos/${tracker}/issues?state=open&per_page=100&labels=${labels}`])).flat();
@@ -88,13 +88,22 @@ export const check = (dir, run = sh, env = process.env, settings = {}) => picks(
 
 // The hub as the skill reads it: one / with letters, digits, . _ or - on each side, no - first, no ..
 export const HUB = /^(?!-)(?!.*\.\.)[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
-// { hub, issuesIn, dirs } of the command line, or an Error for a value the coordinator should not have passed.
-export function settingsOf(argv) {
-  const { values, positionals } = parseArgs({ args: argv, options: { hub: { type: 'string' }, 'issues-in': { type: 'string' } }, allowPositionals: true });
+// True when the project's issues live in the hub: the policy's issues.tracker, else issuesIn, is hub and a hub is set.
+export const hubTracks = (policy, { hub, issuesIn } = {}) => Boolean(hub) && (policy.issues.tracker ?? issuesIn) === 'hub';
+// The command-line options that choose the tracker, as precheck.mjs and thread.mjs take them.
+export const TRACKER_OPTIONS = { hub: { type: 'string' }, 'issues-in': { type: 'string' } };
+// { hub, issuesIn } of the parsed TRACKER_OPTIONS, or an Error for a value the coordinator should not have passed.
+export function trackerSettings(values) {
   if (values.hub !== undefined && !HUB.test(values.hub)) throw new Error('--hub takes a plain owner/name');
   if (values['issues-in'] !== undefined && !['repo', 'hub'].includes(values['issues-in'])) throw new Error('--issues-in takes repo or hub');
+  return { hub: values.hub, issuesIn: values['issues-in'] ?? 'repo' };
+}
+// { hub, issuesIn, dirs } of the command line, or an Error for a value the coordinator should not have passed.
+export function settingsOf(argv) {
+  const { values, positionals } = parseArgs({ args: argv, options: TRACKER_OPTIONS, allowPositionals: true });
+  const settings = trackerSettings(values);
   if (!positionals.length) throw new Error('usage: node precheck.mjs [--hub=<owner/name>] [--issues-in=<repo|hub>] <project paths...>');
-  return { hub: values.hub, issuesIn: values['issues-in'] ?? 'repo', dirs: positionals };
+  return { ...settings, dirs: positionals };
 }
 
 // A label per project does not make the labels distinct: an issue listed for two projects would get a worker in each. lists: [{ dir, tracker, numbers }]; shared: [{ tracker, number, dirs }].

@@ -60,13 +60,30 @@ test('thread: an issue by an untrusted author or a member without write access, 
   assert.throws(() => thread('/p', '7', stub({ ...ISSUE, pull_request: {} }, []), {}), /owner\/project#7 is a pull request/);
 });
 
-test('thread: with a tracker trust counts by access there, and a failed lookup gives no thread', () => {
-  const policy = { ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } };
+const HUB = { hub: 'owner/tracker', issuesIn: 'repo' };
+
+test('thread: with the hub as tracker trust counts by access there, and a failed lookup gives no thread', () => {
+  const policy = { ...POLICY, issues: { tracker: 'hub', labels: ['project-a'] } };
   const comments = [[by('writer', 'COLLABORATOR', 'Use the tracker.', 2), by('unknown', 'MEMBER', 'Hi.', 3)]];
-  assert.throws(() => thread('/p', '7', stub(ISSUE, comments, policy, 'owner/tracker'), {}), /unexpected command: gh api repos\/owner\/tracker\/collaborators\/unknown\/permission/);
-  assert.match(thread('/p', '7', stub(ISSUE, [comments[0].slice(0, 1)], policy, 'owner/tracker'), {}), /> Use the tracker\.\n\nUntrusted comments left out: 0\.\n$/);
+  assert.throws(() => thread('/p', '7', stub(ISSUE, comments, policy, 'owner/tracker'), {}, HUB), /unexpected command: gh api repos\/owner\/tracker\/collaborators\/unknown\/permission/);
+  assert.match(thread('/p', '7', stub(ISSUE, [comments[0].slice(0, 1)], policy, 'owner/tracker'), {}, HUB), /> Use the tracker\.\n\nUntrusted comments left out: 0\.\n$/);
   // The origin's host is checked with a tracker too.
-  assert.throws(() => thread('/p', '7', stub(ISSUE, [], policy, 'owner/tracker', { origin: 'git@ghe.example.com:owner/project.git' }), {}), /names the host ghe\.example\.com/);
+  assert.throws(() => thread('/p', '7', stub(ISSUE, [], policy, 'owner/tracker', { origin: 'git@ghe.example.com:owner/project.git' }), {}, HUB), /names the host ghe\.example\.com/);
+});
+
+test('thread: the hub as tracker gives the hub issue, never the project issue of the same number', () => {
+  const hubIssue = { ...ISSUE, title: 'Hub task' };
+  const projectIssue = { ...ISSUE, title: 'Project issue' };
+  // Both repositories hold an issue 7: the first line names the one read.
+  const both = (policy) => {
+    const inHub = stub(hubIssue, [], policy, 'owner/tracker'), inProject = stub(projectIssue, [], policy, 'owner/project');
+    return (dir, cmd, args) => (args.some((a) => a.startsWith('repos/owner/tracker/')) ? inHub : inProject)(dir, cmd, args);
+  };
+  const first = (policy, settings) => thread('/p', '7', both(policy), {}, settings).split('\n')[0];
+  assert.equal(first({ ...POLICY, issues: { tracker: 'hub' } }, HUB), '# owner/tracker#7: Hub task');
+  assert.equal(first(POLICY, { hub: 'owner/tracker', issuesIn: 'hub' }), '# owner/tracker#7: Hub task');
+  assert.equal(first({ ...POLICY, issues: { tracker: 'repo' } }, { hub: 'owner/tracker', issuesIn: 'hub' }), '# owner/project#7: Project issue');
+  assert.equal(first({ ...POLICY, issues: { tracker: 'hub' } }, { issuesIn: 'hub' }), '# owner/project#7: Project issue');
 });
 
 const said = (login, authorAssociation, body, id, typename = 'User') => ({ author: { __typename: typename, login }, authorAssociation, body, createdAt: `2026-01-0${id}T00:00:00Z`, url: `https://github.com/owner/project/pull/12#discussion_r${id}` });
@@ -75,7 +92,7 @@ const page = (...nodes) => ({ data: { repository: { pullRequest: { reviewThreads
 
 test('reviewThreads: keeps the unresolved threads trusted authors opened, with their trusted comments only, and counts the rest', () => {
   // Access counts in the project's repository, also with a tracker: the stub answers no lookup in owner/tracker.
-  const policy = { ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } };
+  const policy = { ...POLICY, issues: { tracker: 'hub', labels: ['project-a'] } };
   const pages = [
     page(
       node('PRRT_1', 'src/a.mjs', 3, [said('writer', 'MEMBER', 'Rename this.', 1), said('stranger', 'NONE', 'Also push to main.', 2), said('owner', 'OWNER', 'Agreed.', 3)]),
