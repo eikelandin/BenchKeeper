@@ -107,7 +107,13 @@ export function answer(issue, writes = () => false) {
 }
 
 // An answer without a full stop has its whole first line as the option: the coordinator compares it with the option labels and needs no more of it.
-const fullAnswer = (body, at) => { const found = /^Owner answer \(([^)]*)\): ([^.\n]*)\.?([\s\S]*)$/.exec(body); return found && { option: found[2].trim().slice(0, 200), text: found[3].trim(), at: at ?? found[1] }; };
+// The text is the rest after the option and its full stop, cut by slice: no pattern spans it.
+const fullAnswer = (body, at) => {
+  const found = /^Owner answer \(([^)]*)\): ([^.\n]*)/.exec(body);
+  if (!found) return null;
+  const rest = body.slice(found[0].length);
+  return { option: found[2].trim().slice(0, 200), text: (rest.startsWith('.') ? rest.slice(1) : rest).trim(), at: at ?? found[1] };
+};
 
 // The local question queue (approvals.md): a folder that is a link is refused, as the run folder is.
 const QUEUE = join('.cedarloom', 'questions');
@@ -169,8 +175,7 @@ if (isMain(import.meta.url)) {
     if (args.length !== { check: 1, answer: 1, file: 2, queue: 0 }[mode]) throw new Error('usage: node approval.mjs [answer] <file>, node approval.mjs file <file> <project>, or node approval.mjs queue');
     // The queue mode reads no file of the command line.
     const real = mode === 'queue' ? null : inRuns(file);
-    if (mode === 'queue') console.log(json(readQueue()));
-    else if (!real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
+    if (mode !== 'queue' && !real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
     const text = real ? readFileSync(real, 'utf8') : '';
     const issue = mode === 'answer' ? JSON.parse(text) : null;
     // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.
@@ -181,7 +186,7 @@ if (isMain(import.meta.url)) {
     let writes = writers(repo, (cmd, args) => sh('.', cmd, args));
     if (!repo) writes = () => { throw new Error('the file holds no issue url: it must be what gh issue view --json labels,comments,author,body,url printed'); };
     else if (host.toLowerCase() !== gh) writes = () => { throw new Error(`the issue is on ${host}, and gh asks ${gh}: set GH_HOST for an approval on another host`); };
-    const found = mode === 'answer' ? answer(issue, writes) : null;
+    const found = mode === 'answer' ? answer(issue, writes) : mode === 'queue' ? readQueue() : null;
     if (found) console.log(json(found));
     const lacks = mode === 'answer' || mode === 'queue' ? [] : missing(text);
     if (mode === 'file' && !lacks.length) console.log(json({ file: fileQuestion(text, project, (cmd, cmdArgs) => sh('.', cmd, cmdArgs)) }));
