@@ -12,7 +12,7 @@ Standard and deep. The order per depth is the checklist in [SKILL.md](SKILL.md),
   - Claude Code, risky changes and a change whose `Review:` line asks for it: also `/security-review`.
   - Codex, or no `origin`: a correctness pass and, for risky changes and a change whose `Review:` line asks for it, a security pass by subagents over the changed assets, trust boundaries and failure modes (authentication, permissions, secrets and input handling among them).
   - Docs-only changes skip this unless risky.
-- **Pull request**, when the project uses them: the body from step 3 of [SKILL.md](SKILL.md). After pushing, wait for the checks (step 5 of [SKILL.md](SKILL.md)). Review comments and failing checks: fixes on the same branch, committed by the project's convention. Under an orchestration spec, review findings come only in the coordinator's follow-up: read no pull request comment yourself.
+- **Pull request**, when the project uses them: the body from step 3 of [SKILL.md](SKILL.md). After pushing, wait for the checks (step 5 of [SKILL.md](SKILL.md)). Review comments and failing checks: fixes on the same branch, committed by the project's convention. Under an orchestration spec, review findings come only in the coordinator's follow-up, never from the pull request's comments.
 
 ## Phases
 
