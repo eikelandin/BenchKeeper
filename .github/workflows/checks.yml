@@ -64,7 +64,7 @@ jobs:
           else
             node .github/scripts/plugin-boundary.mjs
           fi
-      # npm.yml builds the release commit; release.yml never lets a later push cancel the release job.
+      # release.yml never lets a later push cancel the release job.
       - name: Release workflows
         run: node --test .github/scripts/release-workflows.test.mjs
       # The docs/skills.md table is generated from the skills' front matter.

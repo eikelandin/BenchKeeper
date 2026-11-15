@@ -1,6 +1,6 @@
 name: CedarLoom
 
-# Gates of the CedarLoom pnpm workspace (packages/ and the root files in PATHS); app/ and web/ keep checks.yml.
+# Gates of the CedarLoom pnpm workspace (packages/ and the root files in PATHS); pages.yml checks web/.
 # `check` is the one aggregate result: it fails when a gate failed or was cancelled, and a gate skipped because no
 # CedarLoom path changed passes. A pull request builds and tests only the packages it changed plus their dependents
 # (pnpm's `...[<base>]` selector without the root project `!{.}`, whose test script runs every package, and which owns

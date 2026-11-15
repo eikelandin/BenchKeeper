@@ -9,15 +9,14 @@ test('plugin install lines that name a release tag get the plugins version; app 
 
 test('files under plugins/ are not rewritten: their pins name the 0.x minor range', () => {
   assert.ok(SKIP.test('plugins/cl-setup/skills/setting-up-projects/SKILL.md'));
-  assert.ok(SKIP.test('plugins/cedarloom/content.json'));
   assert.ok(!SKIP.test('README.md'));
 });
 
 test('a package whose @playwright/test differs from the dev container is reported', () => {
   const dockerfile = 'npm i -g @playwright/mcp@0.0.83 && npm i -g playwright@1.64.1';
   const pkg = (v) => ({ devDependencies: { '@playwright/test': v } });
-  assert.deepEqual(playwrightDrift(dockerfile, { 'web/package.json': pkg('1.64.1'), 'app/package.json': pkg('1.64.1') }), { image: '1.64.1', drift: [] });
-  assert.deepEqual(playwrightDrift(dockerfile, { 'web/package.json': pkg('1.64.1'), 'app/package.json': pkg('1.65.0') }).drift, ['app/package.json']);
+  assert.deepEqual(playwrightDrift(dockerfile, { 'web/package.json': pkg('1.64.1'), 'packages/ui/package.json': pkg('1.64.1') }), { image: '1.64.1', drift: [] });
+  assert.deepEqual(playwrightDrift(dockerfile, { 'web/package.json': pkg('1.64.1'), 'packages/ui/package.json': pkg('1.65.0') }).drift, ['packages/ui/package.json']);
   assert.deepEqual(playwrightDrift('npm i -g playwright@1.64.1-beta.0', { 'web/package.json': pkg('1.64.1') }).drift, ['web/package.json']);
   assert.equal(playwrightDrift('# was playwright@1.64.1\nRUN npm i -g playwright@1.65.0', {}).image, '1.65.0');
   assert.equal(playwrightDrift('  # RUN npm i -g playwright@1.64.1\nRUN npm i -g playwright@1.65.0', {}).image, '1.65.0');

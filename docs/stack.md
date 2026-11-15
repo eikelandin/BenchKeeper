@@ -2,7 +2,7 @@
 
 CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/cl-workflow), [setup](../plugins/cl-setup) and [orchestration](../plugins/cl-orchestration), installed together by the [cedarloom](../plugins/cedarloom) bundle). Install steps: [README](../README.md#install).
 
-The rest of this page describes what the BenchKeeper app in [app](../app) sets up for what a plugin cannot carry (project setup, the global rules and settings, history and undo), which a command-line tool and browser UI replace in 0.2: the components, where each file lives and why these were chosen. Steps: [setup guide](setup.md).
+The rest of this page describes what the BenchKeeper app (`benchkeeper` on npm; its source is on the branch `archive/pre-cedarloom-0.1`) sets up for what a plugin cannot carry (project setup, the global rules and settings, history and undo), which a command-line tool and browser UI replace in 0.2: the components, where each file lives and why these were chosen.
 
 ## Components
 
@@ -26,7 +26,7 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | [.claude-plugin/marketplace.json](../.claude-plugin/marketplace.json) | the marketplace, read by Claude Code and Codex | `$HOME/.claude/plugins/`, `$HOME/.codex/plugins/` |
 | [plugins/cl-setup/rules/project.md](../plugins/cl-setup/rules/project.md) | repository rules (standard level and up) | the CedarLoom block `setting-up-projects` writes, and part of the project block the app writes (`CLAUDE.local.md`, `AGENTS.override.md`, or `AGENTS.md` with `--share`) |
 | [plugins/cl-orchestration/rules/worker.md](../plugins/cl-orchestration/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `orchestrating-projects`; no setup installs it as a rule file |
-| [app](../app) | the installer: global setup, project setup, history and undo, CLI and browser UI ([README](../app/README.md)) | `npx @cedarloom/app@6.27.0` |
+| `benchkeeper` (source on the branch `archive/pre-cedarloom-0.1`) | the installer: global setup, project setup, history and undo, CLI and browser UI | `npx benchkeeper@6.27.0` |
 | [plugins/cl-setup/skills/setting-up-projects](../plugins/cl-setup/skills/setting-up-projects/SKILL.md) | set up or update one repo after `projects apply`: devcontainer, the project parts of AGENTS.md with footgun docs (`docs/agents/`), stack skills, other configuration to remove | plugin skill `cl-setup:setting-up-projects` |
 | [plugins/cl-workflow/skills/workflow](../plugins/cl-workflow/skills/workflow/SKILL.md) | task kind and depth, then the playbook for software changes, docs passes or research, batch mode, long checks at the end | plugin skill `cl-workflow:workflow` |
 | [plugins/cl-workflow/agents](../plugins/cl-workflow/agents) | the phase agents the workflow starts at standard and deep (plan, implement, test, review) and per item when research runs items in parallel, each with its effort and tools; the workflow skill passes the model in the call | Claude Code plugin agents `cl-workflow:<role>`; Codex and app installs use general subagents |
@@ -42,7 +42,7 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | [plugins/cl-setup/skills/audit](../plugins/cl-setup/skills/audit/SKILL.md) | reports findings in agent instructions, docs or code with `file:line`, the exact quote, a pattern and a confidence; changes nothing | plugin skill `/cl-setup:audit`, user-invoked |
 | [plugins/cl-setup/skills/improve](../plugins/cl-setup/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-setup:improve`, user-invoked |
 | [plugins/cl-setup/skills/debloat](../plugins/cl-setup/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-setup/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-setup:debloat`, user-invoked; the script also runs the `token-budget` CI job |
-| [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then `app/CHANGELOG.md` (tags `app-v*`) and the changelog of each plugin, `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`, content up to 6.27 under `setup-v*`), see [Releasing](releasing.md) | not linked |
+| [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then the app's changelog (tags `app-v*`, on the branch `archive/pre-cedarloom-0.1`) and the changelog of each plugin, `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`, content up to 6.27 under `setup-v*`), see [Releasing](releasing.md) | not linked |
 | [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 
 ## How this stack was selected
