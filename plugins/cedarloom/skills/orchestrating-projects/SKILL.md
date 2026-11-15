@@ -70,6 +70,7 @@ Every session of a run has one role: the owner, the coordinator (this session), 
 2. **Spec**: copy [spec-template.md](spec-template.md) into the run folder and fill its fields as its head says. Build every spec from the template; a spec copied or edited from the previous one carries that issue's details into the next.
 3. **Start** one worker per free slot, up to `workersPerProject` and `hostWorkerLimit`, in its agent's default permission mode ([Rules](#rules)).
    - Projects run in parallel; a project with no free slot waits.
+   - Before a project's first start in the run, take its baseline ([Reconciliation](#reconciliation)).
    - Before each start, check the branch of each issue: `git -C <project path> ls-remote --heads origin <branch>`, `git -C <project path> worktree list` and `gh pr list -R <owner/repo> --head <branch> --state open --json number,isCrossRepository`. A row with `isCrossRepository` true does not count: anyone can open a pull request from a fork under that branch name.
    - When the issue's branch or an open PR for it exists, a follow-up goes to the worker that owns it as a runner message, and a new worker starts on that branch only after the owning one is released, with the existing-branch form of the spec's Branch line.
 4. **Watch** until every worker has settled.
@@ -154,9 +155,9 @@ A headless job is a session without a terminal (`claude -p`), such as a consult 
 
 ## Reconciliation
 
-Once a day while a run is open, and when it closes, compare GitHub against the merge log ([review-and-merge.md](review-and-merge.md#merge-log)) for each project. It finds a breach after the fact and changes nothing:
+Once a day while a run is open, and when it closes, compare GitHub against the merge log ([review-and-merge.md](review-and-merge.md#merge-log)) for each project. It finds a breach after the fact and changes nothing. Each project starts with a baseline, taken before its first worker starts in the run: steps 2 to 5 once, with nothing to compare against, so that the first daily or closing check has its base. A change made after the baseline is a finding.
 
-1. Merges: each pull request that `gh pr list -R <owner/repo> --state merged --base <default branch> --search "merged:>=<date of the last reconciliation, else of the run's start>" --limit 100 --json number,mergeCommit,mergedAt,mergedBy` prints needs a merge log line with its merge commit. A result of exactly 100 may be cut off: report it to the owner as a finding and reconcile the interval again in smaller date ranges.
+1. Merges: each pull request that `gh pr list -R <owner/repo> --state merged --base <default branch> --search "merged:>=<date of the last reconciliation>" --limit 100 --json number,mergeCommit,mergedAt,mergedBy` prints needs a merge log line with its merge commit. A result of exactly 100 may be cut off: report it to the owner as a finding and reconcile the interval again in smaller date ranges.
 2. Tags: `gh api repos/<owner/repo>/tags --paginate --jq '.[].name'` against the list of the last reconciliation.
 3. Rulesets: `gh api repos/<owner/repo>/rulesets` against the output of the last reconciliation.
 4. Local state: `git -C <project path> config --local --list | grep -v '^branch\.'` against `.cedarloom/runs/git-config-<owner>-<repo>.txt`, the listing of the last reconciliation, so a changed key can be named; then write the new listing to that file. The `branch.` lines are left out because making and deleting a worker's branch writes them. And `shasum -a 256 ~/.claude/settings.json` against the last hash.
