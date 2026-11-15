@@ -3,7 +3,7 @@ import { SLUG } from '../lib/repo-facts';
 
 const REPO = `https://github.com/${SLUG}`;
 
-// The footer of every page: license, the build's commit when known, what the plugins write, the changelog, the benchmark, the repository and its security policy.
+// The footer of every page: license, the build's commit when known, what the plugins write, the changelog, the repository and its security policy.
 export default function SiteFooter({ base, size = 'lg', updated, commit }: { base: string; size?: string; updated?: string; commit?: string }) {
   return (
     <Box component="footer" className="band" py="xl">
@@ -16,7 +16,6 @@ export default function SiteFooter({ base, size = 'lg', updated, commit }: { bas
           <Group gap="md">
             <Anchor href={`${base}/writes/`} size="sm">What the plugins write</Anchor>
             <Anchor href={`${base}/changelog/`} size="sm">Changelog</Anchor>
-            <Anchor href={`${base}/benchmark/`} size="sm">Benchmark</Anchor>
             <Anchor href={`${REPO}/blob/main/SECURITY.md`} size="sm">Security policy</Anchor>
             <Anchor href={REPO} size="sm">github.com/{SLUG}</Anchor>
           </Group>
