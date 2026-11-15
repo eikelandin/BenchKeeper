@@ -95,6 +95,22 @@ test('the app\'s registry package fails even when the allow list names it', () =
   ]);
 });
 
+test('Orca is found in every plugin but cl-orca, its orca.yaml file is not, and the cl-orca name passes in the bundle alone', () => {
+  const orca = (plugin, text) => offences(`${plugin}/a.md`, text, plugin);
+  for (const text of ['Run `orca task-create --spec-file spec.md`.', 'echo "$ORCA_TERMINAL_HANDLE"', 'Orca opens a terminal.']) {
+    assert.deepEqual(orca('plugins/cl-orchestration', text), ['runner-orca'], text);
+    assert.deepEqual(orca('plugins/cedarloom', text), ['runner-orca'], text);
+    assert.deepEqual(orca('plugins/cl-orca', text), [], text);
+  }
+  assert.deepEqual(orca('plugins/cl-orchestration', 'Never edit orca.yaml or orca.yml; cl-orchestration orchestrates.'), []);
+  assert.deepEqual(orca('plugins/cedarloom', '{"dependencies": ["cl-orca"]}'), []);
+  assert.deepEqual(orca('plugins/cl-orchestration', 'Install `cl-orca`.'), ['runner-orca']);
+});
+
+test('an Orca reference outside cl-orca fails even when the allow list names it', () => {
+  assert.deepEqual(differences({ 'p/a.md': ['runner-orca'] }, { 'p/a.md': ['runner-orca'] }), ['p/a.md: runner-orca names the Orca runner: move the text to plugins/cl-orca']);
+});
+
 test('a difference is named for a new reference and for an allow entry that no longer matches', () => {
   assert.deepEqual(differences({ 'p/a.md': ['app-path'], 'p/b.md': ['app-package'] }, { 'p/a.md': ['app-path'], 'p/c.md': ['app-state'] }), [
     "p/b.md: app-package is a new reference to the app, a path outside the plugin or another plugin's matcher prefix",
