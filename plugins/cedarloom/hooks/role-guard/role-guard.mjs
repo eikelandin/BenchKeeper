@@ -6,6 +6,7 @@
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
+import { gitProgram } from '../git-program.mjs';
 
 const ROLE = 'CEDARLOOM_ROLE';
 
@@ -81,7 +82,9 @@ function commands(source) {
 
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
 
-const gitIn = (dir, args) => spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 });
+const GIT = gitProgram();
+// Without git every query fails: no tag and no branch is known, and the version names and main and master still hold.
+const gitIn = (dir, args) => (GIT ? spawnSync(GIT, ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }) : { status: 1 });
 const hasRef = (dir, ref) => gitIn(dir, ['show-ref', '--verify', '--quiet', ref]).status === 0;
 const gitLine = (dir, args) => {
   const r = gitIn(dir, args);
@@ -146,6 +149,7 @@ function git(args, cwd) {
 
 // gh api's flags as gh reads them: grouped short flags (-iX PUT), values joined (-XPUT, --method=PUT) or in the next word.
 function apiCall(args) {
+  /** @type {{ method: string | null, fields: string[], input: boolean, positionals: string[] }} */
   const call = { method: null, fields: [], input: false, positionals: [] };
   const take = (flag, value = '') => {
     if (flag === 'X' || flag === 'method') call.method = value.toUpperCase();
@@ -154,12 +158,13 @@ function apiCall(args) {
   };
   for (let j = 0; j < args.length; j++) {
     const w = args[j];
-    const long = /^--([^=]+)(=?)(.*)$/.exec(w);
     if (w === '--') {
       call.positionals.push(...args.slice(j + 1));
       break;
-    } else if (long) {
-      if (API_VALUE_FLAGS.has(long[1])) take(long[1], long[2] ? long[3] : args[++j]);
+    } else if (w.startsWith('--')) {
+      const eq = w.indexOf('=');
+      const name = eq < 0 ? w.slice(2) : w.slice(2, eq);
+      if (API_VALUE_FLAGS.has(name)) take(name, eq < 0 ? args[++j] : w.slice(eq + 1));
     } else if (w.startsWith('-') && w.length > 1) {
       const k = [...w.slice(1)].findIndex((ch) => ch !== 'i') + 1;
       if (k > 0) take(w[k], w.slice(k + 1).replace(/^=/, '') || args[++j]);
