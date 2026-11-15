@@ -55,10 +55,9 @@ const blocks = {
   ],
 };
 
-// Each block lives in one file. The README and app/README.md hold the description and quickstart, docs/ the reference blocks (links in them are relative to docs/).
+// Each block lives in one file. The root README is written by hand (it describes the plugins); app/README.md holds the quickstart, docs/ the reference blocks (links in them are relative to docs/).
 const pick = (names) => Object.fromEntries(names.map((n) => [n, blocks[n]]));
 const targets = [
-  ['README.md', pick(['description', 'quickstart'])],
   ['docs/setup.md', pick(['prerequisites', 'levels', 'support'])],
   ['docs/stack.md', pick(['core', 'reasons', 'tools', 'openhands'])],
   ['app/README.md', { quickstart: quickstart('../docs/setup.md') }],

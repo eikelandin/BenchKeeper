@@ -2,20 +2,22 @@
 
 This setup keeps one coordinator for a run through usage limits, account switches and restarts. A loop without a model handles routine messages, a short non-interactive cycle makes the decisions, and a watchdog relaunches only after proof that nothing else owns the run.
 
-BenchKeeper ships this guide and the facts generator, not the other scripts: you write, place and enable the loop, the watchdog and the timer that starts them. The reasons and sources are in the research issue [#678](https://github.com/eikelandin/BenchKeeper/issues/678).
+CedarLoom ships this guide and the facts generator, not the other scripts: you write, place and enable the loop, the watchdog and the timer that starts them. The reasons and sources are in the research issue [#678](https://github.com/eikelandin/BenchKeeper/issues/678).
+
+The account folders and the usage tracking below (`benchkeeper accounts`) come from the BenchKeeper app, which is not part of CedarLoom 0.1: without it, create the profile folders and record the limit windows yourself.
 
 ## Before you start
 
 - Claude Code v2.1.259 or later, for `--permission-prompts` ([headless mode](https://code.claude.com/docs/en/headless#turn-off-permission-prompts-in-unattended-runs)).
 - One profile folder per account, each signed in once interactively: `/login` is not available in `-p` ([headless mode](https://code.claude.com/docs/en/headless)). Each folder has "its own settings, session history, and claude.ai login or API key" ([authentication](https://code.claude.com/docs/en/authentication)). BenchKeeper's accounts make these folders ([setup](setup.md#accounts)).
 - Usage tracking on each account: `benchkeeper accounts track <name>`. It records the reset times of the 5-hour and 7-day windows from the status line and every `rate_limit` stop ([setup](setup.md#accounts)).
-- The run's folder `.benchkeeper/runs/<run id>/` in the coordinator's checkout, ignored by Git.
+- The run's folder `.cedarloom/runs/<run id>/` in the coordinator's checkout, ignored by Git.
 - GNU `timeout`. On macOS, `brew install coreutils` adds it under that name ([formula](https://github.com/Homebrew/homebrew-core/blob/main/Formula/c/coreutils.rb)).
 
 ## Set it up
 
 1. **One owner.** Write a new random token to `<run folder>/owner` at every launch. Every cycle of the loop and the watchdog reads it first; a process whose token differs stops itself. Never stop another session without proof that it exited.
-2. **Handover in two files.** `<run folder>/facts.md` is generated, never written by the model: after every cycle and every job result the loop runs `node <skill folder>/facts.mjs write --run <run folder> --repo <owner/repo>` from the checkout, with `--run` relative to the working directory, as `.benchkeeper/runs/<run id>`: an absolute path is refused when a link lies on it, and `/tmp` is one on macOS ([facts.mjs](../plugins/cl-orchestration/skills/orchestrating-projects/facts.mjs), in the `orchestrating-projects` skill), adding `--tracker <owner/name> --labels <label,...>` for the open approvals and `--accounts` for the limits from `cswap list --json`. It lists the jobs of the last 24 hours and the running ones from `<run folder>/jobs/`, the open pull requests with head, required checks, open threads and the verdict for the current head, the approvals, the accounts and the default branch's newest CI run; a source it cannot read shows `unread`. `facts.mjs costs --run <run folder> --repo <owner/repo> --since <date> --until <date>` gives the job cost and the fix rounds per merged pull request. `<run folder>/decisions.md` is written by hand or by the cycle: the mandate in one page, decisions, caveats. A restart reads both instead of a transcript.
+2. **Handover in two files.** `<run folder>/facts.md` is generated, never written by the model: after every cycle and every job result the loop runs `node <skill folder>/facts.mjs write --run <run folder> --repo <owner/repo>` from the checkout, with `--run` relative to the working directory, as `.cedarloom/runs/<run id>`: an absolute path is refused when a link lies on it, and `/tmp` is one on macOS ([facts.mjs](../plugins/cl-orchestration/skills/orchestrating-projects/facts.mjs), in the `orchestrating-projects` skill), adding `--tracker <owner/name> --labels <label,...>` for the open approvals and `--accounts` for the limits from `cswap list --json`. It lists the jobs of the last 24 hours and the running ones from `<run folder>/jobs/`, the open pull requests with head, required checks, open threads and the verdict for the current head, the approvals, the accounts and the default branch's newest CI run; a source it cannot read shows `unread`. `facts.mjs costs --run <run folder> --repo <owner/repo> --since <date> --until <date>` gives the job cost and the fix rounds per merged pull request. `<run folder>/decisions.md` is written by hand or by the cycle: the mandate in one page, decisions, caveats. A restart reads both instead of a transcript.
 3. **Limit wait.** Before any launch, read `benchkeeper accounts status <name> --json` ([fields](../app/README.md#machine-readable-output)). When a window is `low`, wait until its `resetsAt`; never relaunch before it. A failure record `rate_limit` without a fresh reading means: wait for the reset of the last reading, else a fixed 30 minutes. Parse the message text ("You've hit your session limit · resets 3:45pm", [errors](https://code.claude.com/docs/en/errors)) only for an untracked account, and when the message names the session limit, ignore a parsed time more than six hours away. A weekly, Opus or Sonnet limit can reset days later (whether model limits are weekly: unverified).
 4. **The loop.** Run it in the terminal the runtime binds to the run ([runtime section](#runtime-specific-orca)). It acknowledges heartbeats itself, saves every other message to `<run folder>/inbox/` before acknowledging it, removes a saved message only after a cycle for it ended without an error or a limit (otherwise the message stays for the next cycle), keeps its own heartbeat, and starts one cycle for a saved message or every 30 minutes. After two failed cycles in a row it stops its heartbeat and sends a desktop notification, so the watchdog sees the failure.
 5. **The cycle.** One short non-interactive run per event, under the selected account's profile folder, with the [permission settings](#permission-settings-for-the-cycle) below. Send its JSON result to a log; a limit in the result goes to step 3. The cycle cannot ask anyone: it writes open questions to `<run folder>/questions.md`.
@@ -51,7 +53,7 @@ env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN -u CLAUDE_CODE_OAUTH_TOKEN -u C
 | `env -u` of the login variables | In `-p`, `ANTHROPIC_API_KEY` is always used when present, and `CLAUDE_CODE_OAUTH_TOKEN` ranks above the stored login ([authentication](https://code.claude.com/docs/en/authentication)). `CLAUDE_CODE_RETRY_WATCHDOG` retries 429 and 529 errors indefinitely and can wait inside the run until a limit resets ([environment variables](https://code.claude.com/docs/en/env-vars)); whether a subscription session limit takes that path: unverified |
 | `timeout`, `--max-turns` | Keep a cycle bounded; `--max-turns` exits with an error at the limit ([CLI reference](https://code.claude.com/docs/en/cli-reference)) |
 | `--output-format json` | The result carries `is_error`, `api_error_status`, `terminal_reason` and `permission_denials` ([Agent SDK reference](https://code.claude.com/docs/en/agent-sdk/typescript)). Which values a subscription limit produces: unverified |
-| No `--bare` | Bare mode does not use the subscription login and runs no hooks, the [role guard](setup.md#role-guard) included ([headless mode](https://code.claude.com/docs/en/headless#start-faster-with-bare-mode)) |
+| No `--bare` | Bare mode does not use the subscription login and runs no hooks, the [role guard](plugins.md#role-guard) included ([headless mode](https://code.claude.com/docs/en/headless#start-faster-with-bare-mode)) |
 
 Keep the settings file and the cycle prompt outside the checkout (`<supervisor folder>`), so a cycle cannot change its own rights or its next prompt. The cycle may edit only `decisions.md` and `questions.md`; the owner token, the stop switch, the generated facts and the saved inbox are written by the loop and denied explicitly, so a later, wider allow cannot open them.
 
@@ -60,13 +62,13 @@ Keep the settings file and the cycle prompt outside the checkout (`<supervisor f
   "permissions": {
     "disableBypassPermissionsMode": "disable",
     "allow": [
-      "Edit(./.benchkeeper/runs/<run id>/decisions.md)", "Edit(./.benchkeeper/runs/<run id>/questions.md)",
+      "Edit(./.cedarloom/runs/<run id>/decisions.md)", "Edit(./.cedarloom/runs/<run id>/questions.md)",
       "Bash(gh pr view *)", "Bash(gh pr list *)", "Bash(gh pr checks *)", "Bash(gh issue view *)",
       "Bash(git status *)", "Bash(git log *)", "Bash(git diff *)"
     ],
     "deny": [
-      "Edit(./.benchkeeper/runs/<run id>/owner)", "Edit(./.benchkeeper/runs/<run id>/active)",
-      "Edit(./.benchkeeper/runs/<run id>/facts.md)", "Edit(./.benchkeeper/runs/<run id>/inbox/**)",
+      "Edit(./.cedarloom/runs/<run id>/owner)", "Edit(./.cedarloom/runs/<run id>/active)",
+      "Edit(./.cedarloom/runs/<run id>/facts.md)", "Edit(./.cedarloom/runs/<run id>/inbox/**)",
       "Bash(gh pr merge *)", "Bash(gh api *)", "Bash(git push *)",
       "Bash(git diff *--output*)", "Bash(git log *--output*)",
       "WebFetch", "WebSearch"

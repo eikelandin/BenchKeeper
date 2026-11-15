@@ -1,5 +1,7 @@
 # Coordinator workflow: where each rule lives
 
+> **Not in CedarLoom 0.1:** the app steps this design names (`projects apply`, `doctor`, `verify`, the app's state file) arrive with the 0.2 command-line tool. In 0.1 the `setting-up-projects` skill proposes the policy file and the project rules as plan items you approve.
+
 A coordinator run needs rules for models, reviews, merges, owner-only changes, batches and worker conduct. This note gives each rule one home (a policy field, skill text, the worker rule file or an agent default), so that a project gets the same run by installing the plugin and committing its policy, its worker rules and its Claude Code settings.
 
 This is the design. The State column says what exists and which change adds the rest ([Changes](#changes)); each change updates that column and the line references it moves. The rules come from a coordinator run over several repositories from 2026-11-04 to 2026-11-11, called "the source run" below. File names are relative to the plugin folder that holds them: `plugins/cl-workflow/` for `skills/workflow/` and `agents/`, `plugins/cl-orchestration/` for `skills/orchestrating-projects/` and `rules/worker.md`, `plugins/cl-setup/` for `rules/project.md`; except those that start with `app/`, `packages/` or `docs/` and `release-please-config.json`, which are from the repository root; `SKILL.md` without a folder is `skills/orchestrating-projects/SKILL.md`, and `spec-template.md`, `orca.md`, `review-and-merge.md` and `approvals.md` are in the same folder.
