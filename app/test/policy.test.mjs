@@ -15,17 +15,18 @@ const DEFAULTS = {
   workersPerProject: 1,
   hostWorkerLimit: 2,
   stallMinutes: 20,
-  merge: { allowed: false, requiredChecks: [], mode: 'strict', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json'] },
+  merge: { allowed: false, requiredChecks: [], mode: 'strict', autoMergeMax: 'medium', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json'] },
   closeIssue: false,
   deleteMergedBranch: false,
   issuesPerWorker: 1,
   keepRunning: false,
   permissionPrompts: 'block',
+  riskyPaths: [],
   review: { depth: 'high', sensitiveDepth: 'high', sensitivePaths: [] },
   issues: { repository: null, labels: [] },
   minPlugin: null,
   models: {
-    worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, full: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
+    worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, deep: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
     phases: {},
     sensitive: { plan: { model: 'fable', effort: 'high' }, review: { model: 'fable', effort: 'high' }, independent: { model: 'fable', effort: 'high' }, security: { model: 'fable', effort: 'xhigh' } },
   },
@@ -90,9 +91,9 @@ test('policy: minPlugin newer than the plugin gives no policy, and versions comp
   assert.equal(effective({ minPlugin: '6.9.0' }, '6.10.0').policy.minPlugin, '6.9.0');
 });
 
-test('policy: models.worker replaces the model of every tier and keeps the tier\'s effort; phases hold only what the file names', () => {
+test('policy: models.worker replaces the model of every depth and keeps the depth\'s effort; phases hold only what the file names', () => {
   assert.deepEqual(effective({ models: { '//': 'note', worker: { model: 'fable' }, phases: { '//': 'note', review: { model: 'inherit', effort: 'max' } } } }, '6.26.0').policy.models, {
-    worker: { quick: { model: 'fable', effort: 'high' }, standard: { model: 'fable', effort: 'high' }, full: { model: 'fable', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
+    worker: { quick: { model: 'fable', effort: 'high' }, standard: { model: 'fable', effort: 'high' }, deep: { model: 'fable', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
     phases: { review: { model: 'inherit', effort: 'max' } },
     sensitive: DEFAULTS.models.sensitive,
   });
@@ -121,6 +122,8 @@ const NO_PATHS = ['', '/x', '../x', 'x/..', 'a/*', 'a\\b', './x', 'x//y', 'x/./y
 // One refused document per row, with the one rule and path named for it.
 const REFUSED = [
   ...PATH_LISTS.flatMap(([group, list]) => NO_PATHS.map((path) => [{ [group]: { [list]: [path] } }, 'pattern', `${group}.${list}[0]`])),
+  ...NO_PATHS.map((path) => [{ riskyPaths: [path] }, 'pattern', 'riskyPaths[0]']),
+  [{ merge: { autoMergeMax: 'high' } }, 'enum', 'merge.autoMergeMax'],
   ...['owner/tracker/docs', 'owner/tra cker', 'owner/..', 'tracker'].map((repository) => [{ issues: { repository, labels: ['project-a'] } }, 'pattern', 'issues.repository']),
   [{ issues: { repository: 'owner/tracker', labels: [] } }, 'length', 'issues.labels'],
   [{ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['go', 'GO'] } }, 'length', 'issues.labels'],

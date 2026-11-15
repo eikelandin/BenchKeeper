@@ -1,6 +1,6 @@
 # Review and merge
 
-The coordinator's steps for a worker's pull request, in this order. Policy fields are the reader's output ([SKILL.md](SKILL.md#policy)).
+The coordinator's steps for a worker's pull request, in this order. Policy fields are the reader's output ([policy.md](policy.md)).
 
 - [Scratch clone](#scratch-clone)
 - [Sensitive or routine](#sensitive-or-routine)
@@ -17,8 +17,9 @@ What the steps name:
 - `<head>` is its head commit, the `headRefOid` that `gh pr view <n> -R <owner/repo> --json headRefOid,baseRefName,title` prints. Read it at the start of a review or re-review, at Ready and at step 1 of Merge, nowhere else: every other step uses the value read there. `baseRefName` must be `<default branch>` at each read: a pull request on another base is left for the owner and named in the report.
 - `<scratch path>` is the absolute path of the pull request's scratch clone ([Scratch clone](#scratch-clone)), where every git command of this file and of [trial-merge.md](trial-merge.md) runs, but those with `-C <trial path>`.
 - `AGENTS.md` is the default branch's, read with `git -C <scratch path> show refs/remotes/origin/<default branch>:AGENTS.md`, never the pull request's copy.
-- The verdict of `<head>` is the JSON that `node <skill folder>/merge-checks.mjs <project path> <scratch path> <default branch> <reviewed head> <head>` prints: `next`, `allowed`, `ownerOnly`, `unsafePaths`, `sensitive`, `pin`, `upToDate` and `shared`.
+- The verdict of `<head>` is the JSON that `node <skill folder>/merge-checks.mjs <project path> <scratch path> <default branch> <reviewed head> <head> <risk class>` prints: `next`, `allowed`, `ownerOnly`, `unsafePaths`, `sensitive`, `risky`, `risk`, `pin`, `upToDate` and `shared`.
   - Run it after each read of `<head>`, once the `fetch` has passed ([Scratch clone](#scratch-clone)). Before the first review, pass `<head>` as the reviewed head too.
+  - `<risk class>` is `low`, `medium` or `high`, the class you decide for `<head>` ([SKILL.md](SKILL.md#risk-class)). `risky` lists its files under `riskyPaths`, and `risk` is the class the verdict used: yours, raised to medium by such a file.
   - It lists the pull request's files with `--no-renames` and `-z`: a moved file counts at its old and at its new path, and git quotes no path, whatever characters it holds.
   - Any exit but 0 is no verdict: the step stops, and the report names the line the script printed.
   - A head with several merge bases with the default branch gets none: its file list would hide what a merge of it takes back, so the pull request is the owner's to judge ([Owner-only](#owner-only)).
@@ -35,7 +36,7 @@ git -C <scratch path> fetch origin
 
 - The clone must exit 0 and `rev-parse --git-dir` must print `.git`, for a trial clone too. Run that check again in a fresh context before the first command in a clone it finds, and whenever a clone may be deleted in part. A folder without a repository of its own makes `git -C` answer from the repository above it, your working directory's: its file list and its `AGENTS.md`, with exit 0. Then stop: nothing of this file runs for that pull request, and the report names it. The verdict's script makes the same test and gives no verdict either for a scratch path that is the project's repository or that has a second worktree.
 - Clone once per pull request, and once more after a trial merge ([Merge](#merge), step 3; [trial-merge.md](trial-merge.md)), into a folder you name: the project's name, `<n>` and a counter. A fresh context finds the clones there by the run id of the handoff file. After each later read of `<head>`, run the `fetch` again: the clone then holds that head and the default branch as the remote has them.
-- **Where.** The run folder lies in your working directory, which no worker's sandbox can write. Never clone into the system's temporary folder: Claude Code lets every sandboxed command write the per-user temporary folder ([sandboxing](https://code.claude.com/docs/en/sandboxing#temporary-directories)), so a worker could put a replace ref, a hook or a setting into a clone there.
+- **Where.** The run folder lies in your working directory, which no worker's sandbox can write. Never clone into the system's temporary folder: Claude Code lets every sandboxed command write the per-user temporary folder ([sandboxing](https://code.claude.com/docs/en/sandboxing#temporary-directories)), so a worker could put a replace ref, a hook or a setting into a clone there. Clone nothing, and tell the owner, when your working directory lies in a folder that sandboxed commands may write: `/tmp` (any system), `/private/tmp` and `/var/folders` (macOS), the folders `$TMPDIR` and `CLAUDE_CODE_TMPDIR` name, or a folder in the `sandbox.filesystem.allowWrite` setting. On Linux, Claude Code's per-user temporary folder lies in `/tmp` whenever `TMPDIR` and `CLAUDE_CODE_TMPDIR` are unset ([environment variables](https://code.claude.com/docs/en/env-vars)).
 - **No file of the pull request is on disk**, so no `CLAUDE.md`, `AGENTS.md` or `.claude` of the pull request, a worker's text, exists there for Claude Code to load as instructions ([memory](https://code.claude.com/docs/en/memory#how-claude-md-files-load)):
   - `--no-checkout` leaves the clone without working files, and no step checks one out: run no `checkout`, `switch`, `restore` or `worktree` command there.
   - Every read goes through git: `git -C <scratch path> diff <range>`, `git -C <scratch path> show '<commit>:<path>'`, `git -C <scratch path> grep -n <pattern> <commit>`.
@@ -53,7 +54,8 @@ git -C <scratch path> fetch origin
 
 Read the pull request's diff (`git -C <scratch path> diff refs/remotes/origin/<default branch>...<head>`). The change is sensitive when one of these holds:
 
-- the verdict's `sensitive` lists a file: one under a `review.sensitivePaths` entry, or an owner-only one ([Owner-only](#owner-only))
+- the verdict's `sensitive` lists a file: one under a `review.sensitivePaths` or `riskyPaths` entry, or an owner-only one ([Owner-only](#owner-only))
+- its risk class is high ([SKILL.md](SKILL.md#risk-class))
 - it is a risky change by step 1 of the workflow skill
 - it changes CI, guards, data formats, money, what agents are told and allowed (`AGENTS.md`, `.claude`, `docs/agents`), or what runs on the host for a worktree or a trial (`orca.yaml`, whose archive script Clean up runs, and `.devcontainer`, whose `initializeCommand` runs on the host)
 - you cannot place it
@@ -110,7 +112,7 @@ The reviewer's working directory is not the clone, so neither built-in command f
   - Any push to the branch after a review is such a fix, whoever made it, except a head whose verdict's `pin` is `clean-merges` ([Merge](#merge), step 2).
   - The head that re-review accepts is the new reviewed head.
 - A review or re-review that reports itself void counts as no review and no round: split its scope into parts that together cover all of it, and start a fresh one on each part. They count as one review: void while one part is void, and clean only when every part is.
-- A review with a Blocking or Important finding is a round. After the second round with findings, the follow-up tells the worker to rerun the phase the findings come from on a stronger model or a higher effort (`sonnet` to `opus`, `opus` to `fable`, or an effort below `high` to `high`; `xhigh` only as [SKILL.md](SKILL.md#policy) says). With no step left, the question goes to the owner at once.
+- A review with a Blocking or Important finding is a round. After the second round with findings, the follow-up tells the worker to rerun the phase the findings come from on a stronger model or a higher effort (`sonnet` to `opus`, `opus` to `fable`, or an effort below `high` to `high`; `xhigh` only as [policy.md](policy.md) says). With no step left, the question goes to the owner at once.
 - A third round with findings is a question for the owner ([SKILL.md](SKILL.md#owner-decisions)): the pull request stays a draft and is named in the report. There is no fourth round.
 
 ## Ready
@@ -137,13 +139,13 @@ That list does not cover the title or a commit message, so both keep the keyword
 
 The verdict's `ownerOnly` lists the owner-only files: a file under a `merge.ownerOnlyPaths` entry, or with a segment of its path equal to a `merge.ownerOnlyNames` entry, both compared as a file system that ignores case and Unicode form opens them. With the names `.claude` and `.mcp.json`, `packages/ui/.claude/skills/x/SKILL.md` and `tools/.MCP.JSON` are. Its `unsafePaths` lists the files no command can name ([Scratch clone](#scratch-clone)).
 
-A pull request is the owner's when `ownerOnly` or `unsafePaths` lists a file (`next` is then `owner`), when its head has several merge bases with the default branch (no verdict), or when its purpose is a release. Decide this, too, again for every new head and before every merge. Review it and mark it ready as above, then leave it open, whatever `merge.allowed` says: it is never merged by the steps below. Put it to the owner ([SKILL.md](SKILL.md#rules)) and name it and the reason in the report.
+A pull request is the owner's when `ownerOnly` or `unsafePaths` lists a file or `risk` is high or above `merge.autoMergeMax` (`next` is then `owner`), when its head has several merge bases with the default branch (no verdict), or when its purpose is a release. Decide this, too, again for every new head and before every merge. Review it and mark it ready as above, then leave it open, whatever `merge.allowed` says: it is never merged by the steps below. Put it to the owner ([SKILL.md](SKILL.md#rules)) and name it and the reason in the report.
 
 ## Merge
 
 The verdict's `next` is never `merge` or `trial` without `merge.allowed` (its `allowed`): it is then `ready`, which leaves the pull request ready. Put it to the owner ([SKILL.md](SKILL.md#rules)) and name it in the report; no step below runs for it. Otherwise merge one pull request at a time per project, by these steps in order, with the policy as the reader prints it now. A step that does not pass stops the merge. After a branch update or a re-review, start again at step 1.
 
-1. **Head and class.** Read `<head>` and take its verdict: steps 2 to 5 use both, and never read the head again. Decide [Sensitive or routine](#sensitive-or-routine) for it. With `next` `owner` the pull request is left for the owner ([Owner-only](#owner-only)), with `ready` it stays ready for the owner (above), and a change that became sensitive goes back to its review.
+1. **Head and class.** Read `<head>`, decide its risk class ([SKILL.md](SKILL.md#risk-class)) and take its verdict with it: steps 2 to 5 use both, and never read the head again. Decide [Sensitive or routine](#sensitive-or-routine) for it. With `next` `owner` the pull request is left for the owner ([Owner-only](#owner-only)), with `ready` it stays ready for the owner (above), and a change that became sensitive goes back to its review.
 2. **Pin.** `pin` must be `reviewed` (the reviewed head) or `clean-merges`, and every check in `merge.requiredChecks` must be green on `<head>` (`gh pr checks <n> -R <owner/repo>`).
    - A check that still runs does not pass: read the checks once and start again at step 1 at a later wake-up, since a watch command would hold the loop for a whole CI run.
    - `clean-merges` is a head reached from the reviewed head only by clean merges of the default branch: the reviewed head is its ancestor, and each commit since, on the first-parent line, has exactly two parents, the first the head accepted before it and the second on the default branch, and the tree that `git merge-tree --write-tree` gives for those two.
@@ -158,7 +160,7 @@ The verdict's `next` is never `merge` or `trial` without `merge.allowed` (its `a
 5. **Merge.** In this order:
    1. Write two files into the run folder yourself: a subject file with the title that step 4 checked, followed by ` (#<n>)` where the subjects of the default branch's history end that way, and a body file with the pull request's number, the reviewed head and the issue reference, without a closing keyword.
    2. Check once more that no review thread is unresolved.
-   3. Take the verdict again, right before the merge command: another merge can have moved the default branch since step 3, and `--match-head-commit` pins only the head. Run the `fetch` and the script again, with the same `<head>`.
+   3. Take the verdict again, right before the merge command: another merge can have moved the default branch since step 3, and `--match-head-commit` pins only the head. Run the `fetch` and the script again, with the same `<head>` and class.
    4. `next` `merge` goes on. `next` `trial` goes on only after a trial merge ([trial-merge.md](trial-merge.md)), while `git -C <scratch path> rev-parse refs/remotes/origin/<default branch>`, in the scratch clone made after the trial, still prints the default-branch commit that the handoff file records for the trial. Otherwise start again at step 1.
    5. Then merge the head that passed the Pin:
 
