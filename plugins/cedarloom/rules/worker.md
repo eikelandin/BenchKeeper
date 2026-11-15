@@ -5,6 +5,8 @@
 - Write file text, commit messages and pull request bodies with the edit tools or from a file, never through a shell command that expands `$` or backticks: the shell rewrites the text.
 - Stage named paths, never everything at once: a worktree holds local setup files.
 - Bring a branch up to date by merging the default branch in. Never rebase a pushed branch: a rebase needs a force-push and loses the reviewed head.
+- Never add or remove a worktree, delete a branch, run `git gc`, `git prune` or `git stash`, or write `git config`: the worktrees share one git directory, so each of these reaches every session. They are the coordinator's.
+- Answer a review thread with a reply that names the fix commit, or the evidence where nothing changed, and never resolve it: the reviewer or the coordinator resolves it after checking.
 - Never stop, restart, reset or prune the container engine or its machine: workers share it. Remove only containers you started.
 - Change nothing at user scope (the settings, rules, plugins and skills that hold for every project) and run no global setup, only project steps: a user-scope change reaches every session on the machine.
 - On a stop request from the coordinator: commit, push the branch, report the exact state, and end, so that a usage limit loses no work.

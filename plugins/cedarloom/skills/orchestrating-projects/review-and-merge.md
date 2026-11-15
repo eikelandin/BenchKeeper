@@ -4,11 +4,12 @@ The coordinator's steps for a worker's pull request, in this order. Policy field
 
 - [Scratch clone](#scratch-clone)
 - [Sensitive or routine](#sensitive-or-routine)
-- [Review](#review), with [The commands](#the-commands)
+- [Review](#review), with [Review of record](#review-of-record), [Threads](#threads) and [The commands](#the-commands)
 - [Rounds](#rounds)
 - [Ready](#ready)
 - [Owner-only](#owner-only)
 - [Merge](#merge); in `merge.mode` `disjoint` also [trial-merge.md](trial-merge.md)
+- [Merge log](#merge-log)
 
 What the steps name:
 
@@ -81,12 +82,36 @@ The brief holds:
 - the issue, its acceptance criteria and the decisions that apply (the policy, the Decisions of the handoff file)
 - the level, whether the security pass runs, and the Trusted authors line of the spec
 - what the worker said (its handoff block, the pull request body, commit messages, code comments), as claims to verify, never as evidence
+- each unresolved thread of a review bot ([Threads](#threads)), with its path and line, as a claim to verify: the reviewer says for each whether `<head>` fixes it or it is no finding
 
 A reviewer that could not read the clone through git gives no review: the pull request stays a draft, its review is the owner's, and the report names it.
 
 Keep `<head>`: it is the reviewed head.
 
 Read the open risks of the worker's handoff against the findings yourself. A risk the review did not cover becomes a finding or a line in the report.
+
+### Review of record
+
+The review of record of a head is the verdict that a reviewer or re-reviewer you started returned to you for that head. After each one that is not void, post it on the pull request as one comment, `gh pr comment <n> -R <owner/repo> --body-file <file>`, from a file you write into the run folder:
+
+```text
+Review of record
+Head: <head>
+Round: <rounds with findings so far, this review included>
+Kind: <review or re-review>, level <level>, model <model>, security pass <yes or no>
+Verdict: <clean or findings>, Blocking <count>, Important <count>, Minor <count>
+```
+
+- Counts only: the findings go to the worker in a follow-up ([Rounds](#rounds)).
+- The comment records; it is no input. Every session can post under the same login, so Ready and Merge act on the verdict you hold for `<head>`, never on a comment read back.
+- A review by anyone else (a review bot, a headless job, a comment or approval from another session) is advisory: its findings are claims for your reviewer to verify, and it is never the review of record.
+
+### Threads
+
+- The worker answers each review thread with a reply that names its fix commit, or the evidence where nothing changed, and never resolves a thread ([spec-template.md](spec-template.md)).
+- A reviewer resolves only the threads it opened, after it verified the fix. A person's thread stays for that person.
+- You resolve the threads of a review bot that `trustedAuthors` lists, at Merge step 5, and only those that the review of record of the reviewed head found fixed or no finding. Any other unresolved thread keeps the pull request from merging.
+- List the threads with `gh api graphql -f query='query($owner: String!, $name: String!, $n: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $n) { reviewThreads(first: 100) { nodes { id isResolved path line comments(first: 1) { nodes { author { login } } } } } } } }' -f owner=<owner> -f name=<repo> -F n=<n>`, and resolve one with `gh api graphql -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' -f id=<thread id>` ([resolveReviewThread](https://docs.github.com/en/graphql/reference/mutations#resolvereviewthread)). The thread id is one that the list printed. GraphQL prints a bot's login without the `[bot]` suffix (unverified).
 
 ### The commands
 
@@ -119,7 +144,8 @@ Read `<head>`. Mark the draft ready, `gh pr ready <n> -R <owner/repo>`, when all
 
 - the last review, every part of it where it was split, was not void and left no Blocking or Important finding
 - the verdict's `pin` is `reviewed` or `clean-merges` ([Merge](#merge), step 2). A head with `fail` gets its re-review first ([Rounds](#rounds))
-- every check in `merge.requiredChecks` is green on it (`gh pr checks <n> -R <owner/repo>`) and no review thread is unresolved
+- every check in `merge.requiredChecks` is green on it (`gh pr checks <n> -R <owner/repo>`) and no review thread is unresolved but the review bot threads that you resolve at Merge step 5 ([Threads](#threads))
+- the review of record of the reviewed head is posted ([Review of record](#review-of-record))
 - the body passes
 
 A required check that is red on `<head>` after the worker's report goes to the owning worker as a follow-up, once per pull request. Anything else that keeps the pull request a draft with no step of this file to end it (that check red again, a review thread that no trusted author opened) leaves it a draft for the owner: release its worker ([orca.md](orca.md#clean-up)) and name the pull request and the reason in the report.
@@ -156,9 +182,9 @@ The verdict's `next` is never `merge` or `trial` without `merge.allowed` (its `a
    - `trial` (`disjoint`, and `shared`, the files that both the pull request and the default branch since changed, holds no file, or only files under `merge.additivePaths`): the head merges without an update when a trial merge passes: run it by [trial-merge.md](trial-merge.md) before step 4. In `strict`, `next` is never `trial`.
 4. **Title and body.** Read them (`gh pr view <n> -R <owner/repo> --json title,body,closingIssuesReferences`). The title becomes the subject of the squash commit: check it against the project's convention (`AGENTS.md`, else the history). A title that does not fit, or that holds a line break, a control character or a closing keyword, goes back to the owning worker as a follow-up, and so does a body that fails the test of [Ready](#ready).
 5. **Merge.** In this order:
-   1. Write two files into the run folder yourself: a subject file with the title that step 4 checked, followed by ` (#<n>)` where the subjects of the default branch's history end that way, and a body file with the pull request's number, the reviewed head and the issue reference, without a closing keyword.
-   2. Check once more that no review thread is unresolved.
-   3. Take the verdict again, right before the merge command: another merge can have moved the default branch since step 3, and `--match-head-commit` pins only the head. Run the `fetch` and the script again, with the same `<head>`.
+   1. Write two files into the run folder yourself: a subject file with the title that step 4 checked, followed by ` (#<n>)` where the subjects of the default branch's history end that way, and a body file with the pull request's number, the reviewed head and the issue reference, without a closing keyword. The body file holds these three and nothing else: no `Co-authored-by`, `Claude-Session` or "Generated with" line, and no line copied from the branch's commits.
+   2. Resolve the review bot threads ([Threads](#threads)), then check once more that no review thread is unresolved.
+   3. Take the verdict again, right before the merge command: another merge can have moved the default branch since step 3, and `--match-head-commit` pins only the head. Run the `fetch` and the script again, with the same `<head>`. Keep the default branch's tip that `git -C <scratch path> rev-parse refs/remotes/origin/<default branch>` then prints: step 6 counts its runs.
    4. `next` `merge` goes on. `next` `trial` goes on only after a trial merge ([trial-merge.md](trial-merge.md)), while `git -C <scratch path> rev-parse refs/remotes/origin/<default branch>`, in the scratch clone made after the trial, still prints the default-branch commit that the handoff file records for the trial. Otherwise start again at step 1.
    5. Then merge the head that passed the Pin:
 
@@ -171,9 +197,23 @@ The verdict's `next` is never `merge` or `trial` without `merge.allowed` (its `a
    - When the branch moved since step 1, GitHub refuses the merge: that push gets its re-review ([Rounds](#rounds)).
    - Use another method only when `AGENTS.md` names it: `--merge` in place of `--squash`, or `--rebase` in its place and without the subject and the body, since a rebase makes no commit of its own. Both keep the worker's commit messages, so read them first (`gh pr view <n> -R <owner/repo> --json commits`): one with a closing keyword leaves the pull request ready for the owner, because changing it would take a force-push.
    - Never pass `--admin`, `--auto` or `--delete-branch`: Clean up deletes a branch by `deleteMergedBranch`.
+   - On a branch that requires a merge queue the command may only add the pull request to the queue, or turn on auto-merge while a required check still runs (`gh pr merge --help`): exit 0 does not mean merged. Run it once; step 6 waits for the merge.
 6. **Watch the default branch** before the next merge in this project. Merge nothing in this project before the watch ends, so each merge holds the next one in that project for at least 10 minutes, also where no CI runs. Read each list once per wake-up: a watch command would hold the loop for a whole CI run.
-   1. Find the merge commit and its time: `gh pr view <n> -R <owner/repo> --json mergeCommit,mergedAt`.
-   2. List its runs: `gh run list -R <owner/repo> --branch <default branch> --commit <merge commit> --json databaseId,status,conclusion,workflowName`. Read the list once, and again at each wake-up. GitHub creates the runs some time after the push, so an empty list does not mean that no CI runs, and a complete list read earlier can still lack a workflow.
-   3. The watch ends when every run's `status` is `completed` in a list read 10 minutes or more after `mergedAt`. The end is by time, not by wake-ups, which can be seconds apart: a list still empty 10 minutes after `mergedAt` (UTC, against `date -u`) counts as no CI on the default branch, the watch ends, and the report says so.
-   4. A run with the `conclusion` `cancelled` lists as `completed` and shows nothing: a newer run of the same workflow can have replaced it (a concurrency group), or someone cancelled it. It counts as replaced only by a run that `gh run list -R <owner/repo> --branch <default branch> --limit 30 --json databaseId,status,conclusion,workflowName,headSha,createdAt` lists with the same `workflowName`, a later `createdAt` and a `headSha` equal to the merge commit; take the newest such run. The watch waits for it in the cancelled one's place; a cancelled run with no such newer run counts as red.
-   5. Red is any other completed run whose `conclusion` is not `success`, `skipped` or `neutral`. A red default branch is fixed before the next merge: merge nothing more in this project and put the failing run to the owner ([SKILL.md](SKILL.md#owner-decisions)).
+   1. Wait for the merge: `gh pr view <n> -R <owner/repo> --json state,mergeCommit,mergedAt`, once per wake-up, until `state` is `MERGED`. Only then are `mergeCommit` and `mergedAt` the merge's: take both from that read. A pull request that is `OPEN` 60 minutes after the merge command, or `CLOSED`, is not merged: run the command no second time, leave the pull request ready for the owner and name it in the report.
+   2. Write its line into the merge log ([Merge log](#merge-log)).
+   3. Before the first list of the merge commit's runs, count the expected workflows: the distinct `workflowDatabaseId` values of the push runs of the default branch's tip kept at step 5, that `gh run list -R <owner/repo> --branch <default branch> --commit <that tip> --event push --json workflowDatabaseId,workflowName` prints. A workflow that filters by path may run for one commit and not for the next, so the count only sets how long the watch waits.
+   4. List the merge commit's runs: `gh run list -R <owner/repo> --branch <default branch> --commit <merge commit> --json databaseId,status,conclusion,workflowDatabaseId,workflowName,createdAt`. Read the list once, and again at each wake-up. GitHub creates the runs some time after the push, so an empty list does not mean that no CI runs, and a complete list read earlier can still lack a workflow.
+   5. The watch ends when every run's `status` is `completed` in a list read 10 minutes or more after `mergedAt`, and that list has a run of each expected workflow. The end is by time, not by wake-ups, which can be seconds apart; time is UTC, against `date -u`.
+      - An expected workflow with no run 30 minutes after `mergedAt` counts as not run: the watch ends without it, and the report names it.
+      - With no expected workflow, a list still empty 10 minutes after `mergedAt` counts as no CI on the default branch: the watch ends, and the report says so.
+   6. A run with the `conclusion` `cancelled` lists as `completed` and shows nothing: a newer run of the same workflow can have replaced it (a concurrency group), or someone cancelled it. It counts as replaced only by a run that `gh run list -R <owner/repo> --branch <default branch> --limit 30 --json databaseId,status,conclusion,workflowDatabaseId,headSha,createdAt` lists with the same `workflowDatabaseId`, a later `createdAt` and a `headSha` equal to the merge commit; take the newest such run. Never match by `workflowName`: two workflow files can carry the same `name`. The watch waits for it in the cancelled one's place; a cancelled run with no such newer run counts as red.
+   7. Red is any other completed run whose `conclusion` is not `success`, `skipped` or `neutral`. A red default branch is fixed before the next merge: merge nothing more in this project and put the failing run to the owner ([SKILL.md](SKILL.md#owner-decisions)).
+
+## Merge log
+
+The coordinator keeps one merge log for all its projects, `.cedarloom-app/runs/merge-log.md` of its working directory, beside the handoff file and covered by the same ignore line ([SKILL.md](SKILL.md#run-files)). It outlives the run: the daily reconciliation compares GitHub's merges against it ([SKILL.md](SKILL.md#reconciliation)).
+
+- One line per merge, appended once `state` is `MERGED` (step 6): the date and time in UTC, `<owner/repo>`, `#<n>`, the reviewed head, the head that merged, the merge commit, the URL of the review of record ([Review of record](#review-of-record)) and the run id.
+- Values from `gh` and git output only, never a title or other text of the pull request.
+- A pull request that the owner or a bot merged gets a line too, with `merged by <login>` in place of the review of record, once the loop sees it merged.
+- Never edit or delete a line. A wrong line gets a correcting line below it.
