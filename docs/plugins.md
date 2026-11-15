@@ -5,7 +5,7 @@ What the CedarLoom plugins add to a Claude Code session besides their skills, an
 | Plugin | Hooks | Settings |
 |---|---|---|
 | `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand`, [`hub`](#hub-repository) |
-| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`](#hub-repository) |
+| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`, `issuesIn`](#hub-repository) |
 | `cl-setup` | none | none |
 
 Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options with `/plugin` (Installed tab, Configure options) or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session.
@@ -50,8 +50,16 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 The hub is one GitHub repository, often private, that collects the owner questions of all your projects. The coordinator of `/cl-orchestration:orchestrating-projects` files each there as an issue in the approval layout (labels `question`, `ready-for-human`, `project:<name>`), and `/cl-workflow:questions` asks them in any session.
 
 - Set it: the option `hub`, as `owner/name`, of both `cl-workflow@cedarloom` and `cl-orchestration@cedarloom`, to the same value. Run `/plugin configure cl-workflow@cedarloom` and `/plugin configure cl-orchestration@cedarloom` ([configuration dialog](https://code.claude.com/docs/en/plugins/components#when-the-configuration-dialog-appears)), or the plugins' rows in `/config` (Claude Code v2.1.269 or later, [user configuration](https://code.claude.com/docs/en/plugins-reference#user-configuration)), then start a new session. The plugins reference does not say a skill can read another plugin's options, so each has its own.
-- Claude Code keeps the value in your user settings (`pluginConfigs`) and ignores that key in project settings ([settings reference](https://code.claude.com/docs/en/settings-reference#pluginconfigs)). The skills read the hub nowhere else, so no repository can redirect questions.
-- A question goes to the hub; without one (the default; a value that is no plain `owner/name` is named as rejected), to the project's tracker if private with issues on; else to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
+- Claude Code keeps the value in your user settings (`pluginConfigs`) and ignores that key in project settings ([settings reference](https://code.claude.com/docs/en/settings-reference#pluginconfigs)). The skills read it nowhere else but, after a clear, the coordinator's own handoff file that the plugin's checks pass, so no repository can redirect work or questions.
+
+| Setting | Where | Default |
+| --- | --- | --- |
+| `hub` | option of both plugins | none |
+| `issuesIn`: `repo` or `hub` holds work items, follow-up issues and questions | option of `cl-orchestration` (Claude Code v2.1.271 or later) | `repo` |
+| `issues.tracker`: the same, per project; never another repository | the project's `docs/agents/orchestration.json` | `issuesIn` |
+
+- Public repositories never mention the hub (a check refuses such a merge); the coordinator closes a hub issue after the merge, linking the pull request.
+- A question goes to the tracker if private with issues on, else to the hub; without one (a value that is no plain `owner/name` is named as rejected), to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
 - Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or name it in a command; the coordinator files through `approval.mjs file`.
 
 ## Role guard

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { check, distinct, pickable, report } from '../skills/orchestrating-projects/precheck.mjs';
+import { check, distinct, pickable, report, settingsOf } from '../skills/orchestrating-projects/precheck.mjs';
 
 const POLICY = { startLabel: 'agent-ready', trustedAuthors: ['helper[bot]'] };
 const issue = (number, extra = {}) => ({ number, author_association: 'OWNER', user: { login: 'owner' }, labels: [{ name: 'agent-ready' }], ...extra });
@@ -26,22 +26,11 @@ test('precheck: picks labeled issues by trusted authors that have no open or mer
   assert.deepEqual(pickable(null, issues, []), []);
 });
 
-test('precheck: with a tracker an issue needs every label, and a pull request hides it only when its body names the tracker issue', () => {
-  const policy = { startLabel: 'agent-ready', issues: { repository: 'owner/tracker', labels: ['project-a'] } };
-  const labels = [{ name: 'agent-ready' }, { name: 'project-a' }];
-  const issues = [issue(12, { labels }), issue(13), ...[14, 15, 16, 17, 18, 19, 20].map((n) => issue(n, { labels }))];
-  const pulls = [
-    { headRefName: 'fix/12-an-old-branch-of-the-project', body: 'Fixes #12' },
-    { headRefName: 'feat/12-other', body: 'Part of owner/tracker#123 and co-owner/tracker#12.' },
-    { headRefName: 'fix/14-crash', body: 'Closes owner/tracker#14.' },
-    { headRefName: 'fix/15-x', body: null },
-    { headRefName: 'fix/16-x', body: 'See other/owner/tracker#16' },
-    { headRefName: 'fix/17-x', body: 'Closes Owner/Tracker#17' },
-    { headRefName: 'fix/18-x', body: 'Closes https://github.com/owner/tracker/issues/18' },
-    { headRefName: 'fix/19-x', body: 'After https://github.com/owner/tracker/issues/190 and https://github.com/owner/tracker/pull/19' },
-    { headRefName: 'fix/20-x', body: 'Closes https://github.com/other/tracker/issues/20' },
-  ];
-  assert.deepEqual(pickable(policy, issues, pulls), [12, 15, 16, 19, 20]);
+test('precheck: an issue needs every issues.labels entry and every label the tracker adds', () => {
+  const policy = { startLabel: 'agent-ready', issues: { labels: ['project-a'] } };
+  const issues = [issue(12, { labels: [{ name: 'agent-ready' }, { name: 'project-a' }, { name: 'project:web' }] }), issue(13, { labels: [{ name: 'agent-ready' }, { name: 'project-a' }] }), issue(14)];
+  assert.deepEqual(pickable(policy, issues, [], () => false, ['project:web']), [12]);
+  assert.deepEqual(pickable(policy, issues, []), [12, 13]);
 });
 
 test('precheck: an issue labeled question is the owner\'s, also once it carries the start label', () => {
@@ -74,6 +63,8 @@ test('precheck: the command line prints no issue that several projects list, nam
   assert.deepEqual(report(['/a', '/b', odd], pick), { out: ['/a: #12'], err: ['/c?[2K: no ?policy', 'several projects: owner/tracker#14 (/a, /b)'], code: 0 });
   assert.deepEqual(report(['/b', '/a'], (dir) => ({ tracker: 'owner/tracker', numbers: lists[dir].numbers.filter((n) => n === 14) })), { out: [], err: ['several projects: owner/tracker#14 (/b, /a)'], code: 1 });
   assert.deepEqual(report(['/a'], () => ({ tracker: 'owner/project', numbers: [31, 7] })), { out: ['/a: #7 #31'], err: [], code: 0 });
+  // A field the reader dropped is named, so a policy that changed meaning does not go quiet.
+  assert.deepEqual(report(['/a'], () => ({ tracker: 'owner/project', numbers: [], warnings: [{ rule: 'refused', path: 'issues.repository', message: 'is refused' }] })), { out: [], err: ['/a: refused at issues.repository: is refused'], code: 1 });
 });
 
 const calls = [];
@@ -86,7 +77,8 @@ const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd,
   if (args[0] === 'remote') return `${origin}\n`;
   if (args[0] === 'ls-tree') return policy ? 'docs/agents/orchestration.json\n' : '';
   if (args[0] === 'show') return JSON.stringify(policy);
-  if (args[0] === 'api') return JSON.stringify([[issue(7)], [issue(8)], [issue(9)]]);
+  // The hub's project label, which the project's own repository does not ask for.
+  if (args[0] === 'api') return JSON.stringify([7, 8, 9].map((n) => [issue(n, { labels: [{ name: 'agent-ready' }, { name: 'project:project' }] })]));
   // 7: a closed pull request and an open one from a fork, which anyone can open; 8: an open one of the project; 9: a merged one from a fork.
   return JSON.stringify([
     { headRefName: 'feat/8-x', state: 'OPEN', isCrossRepository: false },
@@ -96,12 +88,32 @@ const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd,
   ]);
 };
 
-test('precheck: with a tracker the issues are listed there with every label, and the pull requests with their bodies', () => {
+const HUB_ISSUES = 'gh api --paginate --slurp repos/owner/hub/issues?state=open&per_page=100&labels=agent-ready,project%3Aproject';
+const REPO_ISSUES = 'gh api --paginate --slurp repos/owner/project/issues?state=open&per_page=100&labels=agent-ready';
+// Which repository the issues were listed in, and whether pull requests were.
+const listed = (policy, settings) => {
   calls.length = 0;
-  // Issues 7 to 9 lack the label project-a.
-  assert.deepEqual(check('/p', stub({ ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } })), []);
-  assert.ok(calls.includes('gh api --paginate --slurp repos/owner/tracker/issues?state=open&per_page=100&labels=agent-ready,project-a'));
-  assert.ok(calls.includes('gh pr list -R owner/project --state all --limit 1000 --json headRefName,state,isCrossRepository,body'));
+  const numbers = check('/p', stub(policy), {}, settings);
+  return [calls.includes(HUB_ISSUES) ? 'hub' : calls.includes(REPO_ISSUES) ? 'repo' : 'none', calls.some((c) => c.startsWith('gh pr list')), numbers];
+};
+
+test('precheck: the option issuesIn chooses the tracker, the policy\'s issues.tracker overrides it either way, and without a hub it is the repository', () => {
+  // In the hub, issues carry the project label and no pull request hides one: 7, 8 and 9 all pick.
+  assert.deepEqual(listed(POLICY, { hub: 'owner/hub', issuesIn: 'hub' }), ['hub', false, [7, 8, 9]]);
+  assert.deepEqual(listed(POLICY, { hub: 'owner/hub', issuesIn: 'repo' }), ['repo', true, [7]]);
+  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'repo' } }, { hub: 'owner/hub', issuesIn: 'hub' }), ['repo', true, [7]]);
+  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'hub' } }, { hub: 'owner/hub', issuesIn: 'repo' }), ['hub', false, [7, 8, 9]]);
+  assert.deepEqual(listed({ ...POLICY, issues: { tracker: 'hub' } }, { issuesIn: 'hub' }), ['repo', true, [7]]);
+  // A committed file that names another repository lists the project's own issues.
+  assert.deepEqual(listed({ ...POLICY, issues: { repository: 'owner/other', tracker: 'hub' } }, { hub: 'owner/hub', issuesIn: 'repo' }), ['repo', true, [7]]);
+  assert.ok(!calls.some((c) => c.includes('owner/other')));
+});
+
+test('precheck: the command line takes a plain hub and repo or hub, else names the fault', () => {
+  assert.deepEqual(settingsOf(['--hub', 'owner/hub', '--issues-in', 'hub', '/a']), { hub: 'owner/hub', issuesIn: 'hub', dirs: ['/a'] });
+  assert.deepEqual(settingsOf(['/a', '/b']), { hub: undefined, issuesIn: 'repo', dirs: ['/a', '/b'] });
+  // An empty hub in the = form fails, instead of taking the first project path as the hub.
+  for (const [argv, fault] of [[['--hub=', 'projects/web', '/a'], /--hub/], [['--hub', '${user_config.hub}', '/a'], /--hub/], [['--hub', 'owner/../x', '/a'], /--hub/], [['--issues-in', 'other', '/a'], /--issues-in/], [['--hub', 'owner/hub'], /usage:/]]) assert.throws(() => settingsOf(argv), fault);
 });
 
 test('precheck: reads the policy from the default branch, skips a project without one and names why the reader rejects one', () => {
@@ -118,8 +130,8 @@ test('precheck: reads the policy from the default branch, skips a project withou
 });
 
 test('precheck: a member or collaborator counts only with write access to the tracker, and a failed lookup starts nothing', () => {
-  const policy = { ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } };
-  const by = (number, author_association, login) => issue(number, { author_association, user: { login }, labels: [{ name: 'agent-ready' }, { name: 'project-a' }] });
+  const policy = { ...POLICY, issues: { tracker: 'hub' } };
+  const by = (number, author_association, login) => issue(number, { author_association, user: { login }, labels: [{ name: 'agent-ready' }, { name: 'project:project' }] });
   // A managed user's login ends in _<shortcode>.
   const issues = [by(1, 'MEMBER', 'reader'), by(2, 'COLLABORATOR', 'reader'), by(3, 'MEMBER', 'writer'), by(4, 'COLLABORATOR', 'maintainer'), by(5, 'COLLABORATOR', 'admin'), by(6, 'OWNER', 'owner'), by(7, 'MEMBER', 'mona_acme')];
   // The REST API gives the maintain role as write.
@@ -132,9 +144,10 @@ test('precheck: a member or collaborator counts only with write access to the tr
     if (fails) throw new Error('HTTP 502');
     return JSON.stringify({ permission: roles[args[1].split('/')[4]] });
   };
-  assert.deepEqual(check('/p', run(false), {}), [3, 4, 5, 6, 7]);
+  const hub = { hub: 'owner/tracker', issuesIn: 'repo' };
+  assert.deepEqual(check('/p', run(false), {}, hub), [3, 4, 5, 6, 7]);
   assert.ok(asked.includes('api repos/owner/tracker/collaborators/reader/permission'));
-  assert.throws(() => check('/p', run(true), {}), /HTTP 502/);
+  assert.throws(() => check('/p', run(true), {}, hub), /HTTP 502/);
 });
 
 test('precheck: an origin on another host than gh\'s fails instead of listing the github.com repository of the same path', () => {

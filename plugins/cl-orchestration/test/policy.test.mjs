@@ -23,7 +23,7 @@ const DEFAULTS = {
   permissionPrompts: 'block',
   riskyPaths: [],
   review: { depth: 'high', sensitiveDepth: 'high', sensitivePaths: [] },
-  issues: { repository: null, labels: [] },
+  issues: { tracker: null, labels: [] },
   minPlugin: null,
   models: {
     worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, deep: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
@@ -43,7 +43,7 @@ const remote = (file, calls = []) => bare((dir, cmd, args) => {
 }, calls);
 
 test('policy: a version 1 file, or one without schemaVersion, keeps its fields and gets every default', () => {
-  assert.deepEqual(effective({}, '6.26.0'), { policy: DEFAULTS, errors: [] });
+  assert.deepEqual(effective({}, '6.26.0'), { policy: DEFAULTS, errors: [], warnings: [] });
   const file = { schemaVersion: 1, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { allowed: true, requiredChecks: ['ci'] }, closeIssue: true };
   assert.deepEqual(effective(file, '6.26.0').policy, { ...DEFAULTS, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { ...DEFAULTS.merge, allowed: true, requiredChecks: ['ci'] }, closeIssue: true });
 });
@@ -69,13 +69,16 @@ test('policy: a key the schema does not name gives no policy, a // comment key p
   assert.deepEqual(commented.policy.merge, { ...DEFAULTS.merge, allowed: true });
 });
 
-test('policy: a tracker without a label gives no policy', () => {
-  for (const [issues, rule] of [[{ repository: 'owner/tracker' }, 'missing-key'], [{ repository: 'owner/tracker', labels: [] }, 'length']]) {
-    const { policy, errors } = effective({ issues }, '6.26.0');
-    assert.equal(policy, null);
-    assert.deepEqual(rules(errors), [[rule, 'issues.labels']]);
-  }
-  assert.deepEqual(effective({ issues: { repository: 'owner/tracker', labels: ['project-a'] } }, '6.26.0').policy.issues, { repository: 'owner/tracker', labels: ['project-a'] });
+test('policy: issues.tracker chooses repo or hub; a file that names another repository is refused and keeps the project repository', () => {
+  assert.equal(effective({ issues: { tracker: 'hub' } }, '6.26.0').policy.issues.tracker, 'hub');
+  assert.equal(effective({ issues: { tracker: 'repo' } }, '6.26.0').policy.issues.tracker, 'repo');
+  const named = effective({ startLabel: 'go', issues: { repository: 'owner/tracker', tracker: 'hub', labels: ['project-a'] } }, '6.26.0');
+  assert.deepEqual(named.errors, []);
+  assert.deepEqual(named.policy.issues, { tracker: 'repo', labels: ['project-a'] });
+  assert.deepEqual(rules(named.warnings), [['refused', 'issues.repository']]);
+  assert.match(named.warnings[0].message, /never another repository; the tracker is the project repository/);
+  // A wrong tracker beside it is still named.
+  assert.deepEqual(rules(effective({ issues: { repository: 'owner/tracker', tracker: 'bogus' } }, '6.26.0').errors), [['enum', 'issues.tracker']]);
 });
 
 test('policy: a schemaVersion the reader does not know gives no policy', () => {
@@ -125,9 +128,9 @@ const REFUSED = [
   ...PATH_LISTS.flatMap(([group, list]) => NO_PATHS.map((path) => [{ [group]: { [list]: [path] } }, 'pattern', `${group}.${list}[0]`])),
   ...NO_PATHS.map((path) => [{ riskyPaths: [path] }, 'pattern', 'riskyPaths[0]']),
   [{ merge: { autoMergeMax: 'high' } }, 'enum', 'merge.autoMergeMax'],
-  ...['owner/tracker/docs', 'owner/tra cker', 'owner/..', 'tracker'].map((repository) => [{ issues: { repository, labels: ['project-a'] } }, 'pattern', 'issues.repository']),
-  [{ issues: { repository: 'owner/tracker', labels: [] } }, 'length', 'issues.labels'],
-  [{ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['go', 'GO'] } }, 'length', 'issues.labels'],
+  ...['owner/tracker', 'Hub', ''].map((tracker) => [{ issues: { tracker } }, 'enum', 'issues.tracker']),
+  // The editor refuses what the reader drops.
+  [{ issues: { repository: 'owner/tracker' } }, 'refused', 'issues.repository'],
   [{ models: { phases: { review: { model: 'some-model-20260101' } } } }, 'enum', 'models.phases.review.model'],
   [{ review: { depth: 'max' } }, 'enum', 'review.depth'],
   [{ review: { sensitiveDepth: 'max' } }, 'enum', 'review.sensitiveDepth'],
@@ -151,8 +154,6 @@ test('policy: each refused value is named with its rule and path', () => {
   }
   // The longest name and the characters of a full model name stay allowed.
   for (const model of ['opus[1m]', 'vendor.family-4-5-v1:0', 'team/model@2026-01-01', 'p'.repeat(128)]) assert.deepEqual(validate({ models: { worker: { model } } }), [], model);
-  // A tracker label besides startLabel is the project's own.
-  assert.deepEqual(validate({ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['go', 'project-a'] } }), []);
 });
 
 test('policy: a skill folder copied alone, as for an agent without plugins, checks with its own schema; minPlugin cannot be checked there and gives no policy', async () => {
@@ -207,7 +208,7 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
   assert.equal(moved.policy.merge.allowed, false);
   // A remote that names no commit as its HEAD gives no policy.
   assert.deepEqual(rules(read('/p', (dir, cmd, args) => (args[0] === 'ls-tree' ? 'docs/agents/orchestration.json\n' : args[0] === 'show' ? '{ "merge": { "allowed": true } }' : '')).errors), [['unreadable', '']]);
-  assert.deepEqual(read('/p', remote(null)), { policy: DEFAULTS, errors: [], absent: true });
+  assert.deepEqual(read('/p', remote(null)), { policy: DEFAULTS, errors: [], warnings: [], absent: true });
 });
 
 test('policy: a fetch or a show that fails gives no policy: not the defaults, and not the file an older fetch left', () => {

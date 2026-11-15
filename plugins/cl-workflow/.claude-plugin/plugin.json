@@ -19,8 +19,8 @@
     },
     "hub": {
       "type": "string",
-      "title": "Hub repository for owner questions (owner/name)",
-      "description": "Empty by default: no hub. One GitHub repository, best a private one, where the coordinator of cl-orchestration files owner questions and /cl-workflow:questions reads them. Set the same value in cl-orchestration's hub option. Without a hub, questions go to each project's own issue tracker, or into the report where that repository is public.",
+      "title": "Hub repository for questions and issues (owner/name)",
+      "description": "Empty by default: no hub. One GitHub repository, best a private one, for the owner questions of projects whose own repository is public, and for work items where cl-orchestration's issuesIn or a project's policy chooses the hub. Set the same value in cl-orchestration's hub option. /cl-workflow:questions asks the hub's question issues, then this private repository's, then the local queue.",
       "default": ""
     }
   }
