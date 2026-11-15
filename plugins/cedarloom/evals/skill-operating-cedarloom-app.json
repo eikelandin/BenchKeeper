@@ -1,23 +1,23 @@
 {
   "kind": "cedarloom-app-evals",
   "schemaVersion": 1,
-  "target": "skill:operating-benchkeeper",
+  "target": "skill:operating-cedarloom-app",
   "cases": [
     {
       "id": "s1",
-      "query": "Update the BenchKeeper setup of this repository from the command line and tell me the undo id.",
+      "query": "Update the CedarLoom setup of this repository from the command line and tell me the undo id.",
       "should": true,
       "expected": "the skill loads"
     },
     {
       "id": "s2",
-      "query": "Run benchkeeper doctor and plan the fixes without changing anything.",
+      "query": "Run cedarloom-app doctor and plan the fixes without changing anything.",
       "should": true,
       "expected": "the skill loads"
     },
     {
       "id": "s3",
-      "query": "Undo the last BenchKeeper run on this machine.",
+      "query": "Undo the last CedarLoom run on this machine.",
       "should": true,
       "expected": "the skill loads"
     },
@@ -35,7 +35,7 @@
     },
     {
       "id": "n3",
-      "query": "Open the BenchKeeper web UI and take a screenshot of the Dashboard.",
+      "query": "Open the CedarLoom web UI and take a screenshot of the Dashboard.",
       "should": false,
       "expected": "the skill does not load"
     }

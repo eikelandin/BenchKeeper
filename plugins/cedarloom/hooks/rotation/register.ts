@@ -9,7 +9,7 @@ import { FILE, RUNS, STATUS, STATUS_ARGS, TOP_ARGS, changedPaths, commitArgs, dr
 
 // A second /clear while the restore hook of the first still runs cuts that hook off and loses its context.
 const GAP_MS = 10 * 60 * 1000
-const resume = (size: string) => `BenchKeeper cleared this coordinator's context at ${size} to save tokens. Run the Resume steps of the handoff file in your context now, before anything else, then continue from its Next section.`
+const resume = (size: string) => `CedarLoom cleared this coordinator's context at ${size} to save tokens. Run the Resume steps of the handoff file in your context now, before anything else, then continue from its Next section.`
 
 // Per Claude Code process: the module stays loaded across /clear.
 let running = false
@@ -40,7 +40,7 @@ async function own($: EngineInterface) {
 const slashes = (path?: string) => path?.replaceAll('\\', '/')
 
 // Whether the file is the coordinator's own, not one a repository commits or a link leads to: a regular file reached
-// through no link, in a git work tree whose .cedarloom-app/runs git tracks nothing in. Any git failure refuses, so a broken
+// through no link, in a git work tree whose .cedarloom/runs git tracks nothing in. Any git failure refuses, so a broken
 // repository or one git distrusts (another owner) never counts as untracked.
 async function safe($: EngineInterface) {
   try {
@@ -101,7 +101,7 @@ async function rotate($: EngineInterface, size: string, now: number, seen: numbe
     const submitted = await $.prompt.submit({ text: resume(size) })
     if (submitted.drop !== undefined) throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
   } catch (error) {
-    await note($, `BenchKeeper could not clear and resume this coordinator: ${error instanceof Error ? error.message : String(error)}`).catch(() => undefined)
+    await note($, `CedarLoom could not clear and resume this coordinator: ${error instanceof Error ? error.message : String(error)}`).catch(() => undefined)
   } finally {
     lastEnd = await $.clock.now().catch(() => now)
     running = false
@@ -119,7 +119,7 @@ async function decide($: EngineInterface, atTokens: number, atPercent: number) {
   if (figure === undefined) {
     if (!noted) {
       noted = true
-      await note($, 'BenchKeeper cannot read the context size of this session, so it will not clear this coordinator at its threshold.')
+      await note($, 'CedarLoom cannot read the context size of this session, so it will not clear this coordinator at its threshold.')
       if (await safe($)) await status($, text, 'usage unread', context.tokens).catch(() => undefined)
     }
     return
