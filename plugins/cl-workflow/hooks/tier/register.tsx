@@ -17,7 +17,6 @@ const commands = (list: string) => ({
   any: new RegExp(`(?:^|[\\s;&|('"])${list}(?=$|[\\s;&|):'"])`),
   start: new RegExp(`^(?:\\w+=\\S+\\s+)*(?:(?:npx|pnpm(?: exec)?|yarn|bunx|uv run|python3? -m)\\s+)?${list}(?=$|\\s)`),
 })
-// The test commands the sessions board counts too (app/src/sessions.mjs).
 const TEST = commands('(?:(?:npm|pnpm|yarn|bun) (?:run )?test(?::\\S+)?|node --test|playwright test|pytest|go test|cargo test|vitest|jest)')
 const LINT = commands('(?:eslint|npm run lint|tsc|ruff|mypy|pyright|go vet|cargo clippy|biome)')
 const EDITS = ['Edit', 'Write', 'NotebookEdit'] as const

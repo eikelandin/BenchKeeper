@@ -62,7 +62,7 @@
     ],
     "evidence": [
       "https://github.com/OpenHands/OpenHands",
-      "docs/setup.md#per-repo"
+      "plugins/cl-setup/skills/setting-up-projects/SKILL.md"
     ]
   },
   "overview": {
@@ -190,8 +190,8 @@
         "name": "One install",
         "text": "one machine setup covers every repository. Each repository adds only its tracker, docs and stack.",
         "evidence": [
-          "docs/setup.md#setup-details",
-          "docs/setup.md#per-repo"
+          ".claude-plugin/marketplace.json",
+          "plugins/cl-setup/skills/setting-up-projects/SKILL.md"
         ]
       }
     ]

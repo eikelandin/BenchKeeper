@@ -1,6 +1,6 @@
 # Orca checks
 
-> **Not in CedarLoom 0.1.** The adapter belongs to the app, which the plugin release leaves out. The coordinator in `cl-orchestration` works with Orca through the `orca` command line.
+> **Not in CedarLoom 0.1.** The adapter belongs to the app, which the plugin release leaves out; the `app/` paths below are on the branch `archive/pre-cedarloom-0.1`. The coordinator in `cl-orchestration` works with Orca through the `orca` command line.
 
 What the app's Orca adapter (`app/src/orca/index.mjs`) relies on that only a real Orca can confirm. CI tests the adapter against a fake Orca CLI (`app/test/fakes/orca.mjs`) that answers with output recorded from the real CLI (`app/test/fixtures/orca/`). Run this checklist when the Orca version changes, before the adapter is said to work with it.
 
