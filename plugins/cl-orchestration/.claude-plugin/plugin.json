@@ -32,6 +32,12 @@
       "description": "0 (default) is off. Above 0, an idle coordinator that keeps the handoff file of /cl-orchestration:orchestrating-projects is also cleared with /clear and resumed from the file once this many tasks of its Orca run have completed or failed since its last clear, whatever its context size. The plugin then runs orca orchestration task-list --json at each idle stop. The same 10-minute gap applies.",
       "default": 0,
       "min": 0
+    },
+    "hub": {
+      "type": "string",
+      "title": "Hub repository for owner questions (owner/name)",
+      "description": "Empty by default: no hub. Set the same value as cl-workflow's hub option: the GitHub repository, best a private one, where the coordinator of /cl-orchestration:orchestrating-projects files owner questions for /cl-workflow:questions. Without a hub, the coordinator files them in each project's own issue tracker, or puts them into its report where that repository is public.",
+      "default": ""
     }
   }
 }
