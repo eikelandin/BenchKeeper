@@ -1,4 +1,4 @@
-// Usage: node merge-checks.mjs <project path> <scratch path> <default branch> <reviewed head> <head>. Decides steps 1 to 3 of Merge (review-and-merge.md) for one pull request head in its scratch clone and prints { next, allowed, ownerOnly, unsafePaths, sensitive, pin, upToDate, shared } as JSON, exit 0.
+// Usage: node merge-checks.mjs <project path> <scratch path> <default branch> <reviewed head> <head> <risk class>. Decides steps 1 to 3 of Merge (review-and-merge.md) for one pull request head in its scratch clone and prints { next, allowed, ownerOnly, unsafePaths, sensitive, risky, risk, pin, upToDate, shared } as JSON, exit 0.
 // Exit 2 with one line on stderr is no verdict (a refused policy, a failed git command, a bad argument, a scratch path that is no clone of its own, a head with several merge bases): nothing merges. It runs no fetch of the default branch, so fetch in the clone first: a clone whose default branch differs from the remote's gets no verdict. It changes no working file and no ref but the policy reader's refs/cedarloom-app/policy in the clone.
 import { realpathSync } from 'node:fs';
 import { errorLine, escaped, isMain, json, read, sh } from './policy.mjs';
@@ -14,7 +14,11 @@ const named = (paths, names) => {
 
 // The files that are the owner's: under a merge.ownerOnlyPaths entry, or with a merge.ownerOnlyNames entry as a path segment.
 export const ownerOnly = (policy, files) => files.filter(named(policy.merge.ownerOnlyPaths, policy.merge.ownerOnlyNames));
-export const sensitive = (policy, files) => files.filter(named([...policy.review.sensitivePaths, ...policy.merge.ownerOnlyPaths], policy.merge.ownerOnlyNames));
+export const sensitive = (policy, files) => files.filter(named([...policy.review.sensitivePaths, ...policy.riskyPaths, ...policy.merge.ownerOnlyPaths], policy.merge.ownerOnlyNames));
+export const risky = (policy, files) => files.filter(named(policy.riskyPaths, []));
+const RISKS = ['low', 'medium', 'high'];
+// A file under riskyPaths sets the impact high, so the class is at least medium (risk.md of the workflow skill), whatever class the coordinator gave.
+export const riskClass = (stated, riskyFiles) => (riskyFiles.length && stated === 'low' ? 'medium' : stated);
 // The files of the pull request that the default branch changed too.
 export const both = (files, theirs) => { const changed = new Set(theirs.map(fold)); return files.filter((file) => changed.has(fold(file))); };
 // Paths nobody types into a command: a single quote ends the quotes a path stands in, and a control character or a line break starts another line.
@@ -37,9 +41,11 @@ export function pin(reviewed, head, lines, facts) {
   return accepted === head ? 'clean-merges' : 'fail';
 }
 
-// What happens to the head, the first that applies: 'owner' (left for the owner), 're-review', 'ready' (no merge.allowed: left ready for the owner), 'merge', 'update' (the default branch is merged in first) or 'trial' (a trial merge decides).
-export function next({ ownerOnlyFiles, unsafePaths = [], pin: pinned, allowed, upToDate, mode, shared = [], additive = [] }) {
-  if (ownerOnlyFiles.length || unsafePaths.length) return 'owner';
+// What happens to the head, the first that applies: 'owner' (left for the owner; also a class above autoMergeMax, and high always), 're-review', 'ready' (no merge.allowed: left ready for the owner), 'merge', 'update' (the default branch is merged in first) or 'trial' (a trial merge decides).
+export function next({ ownerOnlyFiles, unsafePaths = [], risk, autoMergeMax, pin: pinned, allowed, upToDate, mode, shared = [], additive = [] }) {
+  // Named cases, so a missing or unknown class or limit leaves the head for the owner.
+  const below = risk === 'low' || (risk === 'medium' && autoMergeMax === 'medium');
+  if (ownerOnlyFiles.length || unsafePaths.length || !below) return 'owner';
   if (pinned !== 'reviewed' && pinned !== 'clean-merges') return 're-review';
   if (allowed !== true) return 'ready';
   if (upToDate) return 'merge';
@@ -50,7 +56,8 @@ export function next({ ownerOnlyFiles, unsafePaths = [], pin: pinned, allowed, u
 const BRANCH = /^(?!-)(?!.*\.\.)(?!HEAD$)[A-Za-z0-9._/-]+$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 
-function verdict(project, scratch, branch, reviewed, head) {
+function verdict(project, scratch, branch, reviewed, head, stated) {
+  if (!RISKS.includes(stated)) throw new Error(`the risk class must be one of ${RISKS.join(', ')}`);
   if (!BRANCH.test(branch)) throw new Error('the default branch is no plain name: letters, digits, . _ / and -, no - at the start, no .., not HEAD');
   if (!COMMIT.test(reviewed) || !COMMIT.test(head)) throw new Error('the reviewed head and the head must be full commit ids, 40 hex characters each');
   // Every git call runs in the clone: the project's checkout shares its git directory with the workers.
@@ -87,13 +94,14 @@ function verdict(project, scratch, branch, reviewed, head) {
   const pinned = pin(reviewed, head, lines, facts);
   const upToDate = facts.ancestor(base, head);
   const shared = both(files, policy.merge.mode === 'disjoint' ? changed(`${head}...${base}`) : []);
-  const owners = ownerOnly(policy, files), unsafePaths = unsafe(files), { allowed } = policy.merge;
-  return { next: next({ ownerOnlyFiles: owners, unsafePaths, pin: pinned, allowed, upToDate, mode: policy.merge.mode, shared, additive: policy.merge.additivePaths }), allowed, ownerOnly: owners, unsafePaths, sensitive: sensitive(policy, files), pin: pinned, upToDate, shared };
+  const owners = ownerOnly(policy, files), unsafePaths = unsafe(files), { allowed, autoMergeMax } = policy.merge;
+  const riskyFiles = risky(policy, files), risk = riskClass(stated, riskyFiles);
+  return { next: next({ ownerOnlyFiles: owners, unsafePaths, risk, autoMergeMax, pin: pinned, allowed, upToDate, mode: policy.merge.mode, shared, additive: policy.merge.additivePaths }), allowed, ownerOnly: owners, unsafePaths, sensitive: sensitive(policy, files), risky: riskyFiles, risk, pin: pinned, upToDate, shared };
 }
 
 if (isMain(import.meta.url)) {
   try {
-    if (process.argv.length !== 7) throw new Error('usage: node merge-checks.mjs <project path> <scratch path> <default branch> <reviewed head> <head>');
+    if (process.argv.length !== 8) throw new Error('usage: node merge-checks.mjs <project path> <scratch path> <default branch> <reviewed head> <head> <risk class>');
     console.log(json(verdict(...process.argv.slice(2))));
   } catch (e) {
     console.error(escaped(e.message.split('\n')[0]));
