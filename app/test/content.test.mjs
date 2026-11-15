@@ -15,7 +15,7 @@ const contentAt = (dir, minApp) => { mkdirSync(dir, { recursive: true }); writeF
 const stateAt = (state) => { const dir = tmp('bk-state-'); mkdirSync(join(dir, '.cedarloom-app')); writeFileSync(join(dir, STATE), JSON.stringify(state)); return dir; };
 
 test('content that needs a newer app is refused with the command to run; older, equal, absent or unreadable requirements are not', () => {
-  assert.match(contentRefusal(contentAt(tmp('bk-content-'), '7.0.0'), '6.25.0'), /needs benchkeeper 7\.0\.0 or newer, this is 6\.25\.0.*npx benchkeeper@7/);
+  assert.match(contentRefusal(contentAt(tmp('bk-content-'), '7.0.0'), '6.25.0'), /needs benchkeeper 7\.0\.0 or newer, this is 6\.25\.0.*npx @cedarloom\/app@7/);
   assert.equal(contentRefusal(contentAt(tmp('bk-content-'), '6.25.0'), '6.25.0'), null);
   assert.equal(contentRefusal(contentAt(tmp('bk-content-'), '6.9.0'), '6.25.0'), null);
   assert.equal(contentRefusal(tmp('bk-content-'), '6.25.0'), null);
@@ -62,7 +62,7 @@ test('state version 1 is read as version 2 with its setup version as both values
   const s = readState(v1);
   assert.deepEqual([s.schemaVersion, s.appVersion, s.contentVersion, 'setupVersion' in s, s.agents], [2, '6.20.0', '6.20.0', false, ['claude']]);
   assert.deepEqual(parseState('{"schemaVersion":2,"appVersion":"7.1.0","contentVersion":"7.0.0"}'), { schemaVersion: 2, appVersion: '7.1.0', contentVersion: '7.0.0' });
-  assert.throws(() => readState(stateAt({ schemaVersion: 3, appVersion: '8.0.0', contentVersion: '8.0.0' })), /schemaVersion 3, this benchkeeper reads up to 2.*npx benchkeeper@\d+/);
+  assert.throws(() => readState(stateAt({ schemaVersion: 3, appVersion: '8.0.0', contentVersion: '8.0.0' })), /schemaVersion 3, this benchkeeper reads up to 2.*npx @cedarloom\/app@\d+/);
 });
 
 test('a state file that is not a JSON object is unreadable, named by its path', () => {

@@ -11,7 +11,7 @@ import { FILE, RUNS, STATUS, STATUS_ARGS, TOP_ARGS, changedPaths, commitArgs, dr
 const GAP_MS = 10 * 60 * 1000
 // Longer than the gap, so a slow clear still resumes; past it, a clear that never settles no longer holds rotation off.
 const WATCHDOG_MS = 15 * 60 * 1000
-const resume = (why: string) => `BenchKeeper cleared this coordinator's context ${why} to save tokens. Run the Resume steps of the handoff file in your context now, before anything else, then continue from its Next section.`
+const resume = (why: string) => `CedarLoom cleared this coordinator's context ${why} to save tokens. Run the Resume steps of the handoff file in your context now, before anything else, then continue from its Next section.`
 
 // Per Claude Code process: the module stays loaded across /clear.
 let running = false
@@ -45,7 +45,7 @@ async function own($: EngineInterface) {
 const slashes = (path?: string) => path?.replaceAll('\\', '/')
 
 // Whether the file is the coordinator's own, not one a repository commits or a link leads to: a regular file reached
-// through no link, in a git work tree whose .cedarloom-app/runs git tracks nothing in. Any git failure refuses, so a broken
+// through no link, in a git work tree whose .cedarloom/runs git tracks nothing in. Any git failure refuses, so a broken
 // repository or one git distrusts (another owner) never counts as untracked.
 async function safe($: EngineInterface) {
   try {
@@ -132,7 +132,7 @@ async function rotate($: EngineInterface, why: string, now: number, seen: number
     })
     await Promise.race([clearing(), late])
   } catch (error) {
-    await note($, `BenchKeeper could not clear and resume this coordinator: ${error instanceof Error ? error.message : String(error)}`).catch(() => undefined)
+    await note($, `CedarLoom could not clear and resume this coordinator: ${error instanceof Error ? error.message : String(error)}`).catch(() => undefined)
   } finally {
     watchdog?.cancel()
     lastEnd = await $.clock.now().catch(() => now)
@@ -155,7 +155,7 @@ async function decide($: EngineInterface, atTokens: number, atPercent: number, a
   const figure = atPercent > 0 ? context.percent : context.tokens
   if (bySize && figure === undefined && !noted) {
     noted = true
-    await note($, 'BenchKeeper cannot read the context size of this session, so it will not clear this coordinator at its threshold.')
+    await note($, 'CedarLoom cannot read the context size of this session, so it will not clear this coordinator at its threshold.')
     if (await safe($)) await status($, text, 'usage unread', context.tokens).catch(() => undefined)
   }
   const why =

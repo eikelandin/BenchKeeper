@@ -4,7 +4,7 @@
 # comma separated; empty: the one of the checkout) whose newest completed run of the default branch or of a schedule is
 # not recorded yet and either failed (in the last day, or after a recorded failure) or passed after a recorded failure.
 # workflows: file names such as ci.yml, comma separated; empty: all. Exit 0 when it printed a line.
-dir=${XDG_STATE_HOME:-$HOME/.local/state}/benchkeeper/ci-health
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/ci-health
 repos=$(echo "$1" | tr , ' ')
 [ -n "$repos" ] || repos=$(gh repo view --json nameWithOwner --jq .nameWithOwner) || exit 1
 due=1

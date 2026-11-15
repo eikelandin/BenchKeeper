@@ -506,7 +506,7 @@ test('the workflow load line: on by default, off per project and kept off, on ag
   const r = repo();
   const block = () => readFileSync(join(r.dir, 'AGENTS.md'), 'utf8');
   apply(preview(plan(r, { agents: ['claude'], share: true }).changes), r.ctx, { scope: r.dir });
-  assert.match(block(), /load the `benchkeeper:workflow` skill/);
+  assert.match(block(), /load the `cedarloom:workflow` skill/);
   assert.equal(readState(r.dir).workflowLoad, undefined);
   apply(preview(plan(r, { workflowLoad: false }).changes), r.ctx, { scope: r.dir });
   assert.doesNotMatch(block(), /workflow` skill/);
@@ -514,7 +514,7 @@ test('the workflow load line: on by default, off per project and kept off, on ag
   assert.equal(readState(r.dir).workflowLoad, false);
   assert.deepEqual(preview(plan(r, {}).changes).map((c) => c.title), [], 'a later plan keeps it off');
   apply(preview(plan(r, { workflowLoad: true }).changes), r.ctx, { scope: r.dir });
-  assert.match(block(), /load the `benchkeeper:workflow` skill/);
+  assert.match(block(), /load the `cedarloom:workflow` skill/);
 });
 
 test('packs with plugins install them', () => {
@@ -757,8 +757,8 @@ test('bare skill names without plugin agents', () => {
   const mixed = repo();
   const mp = plan(mixed, { agents: ['claude', 'gemini'], env: 'host', share: true }).changes;
   apply(preview(mp), mixed.ctx, { scope: mixed.dir, select: mp.map((c) => c.id) });
-  assert.doesNotMatch(read(join(mixed.dir, 'AGENTS.md')), /benchkeeper:workflow/, 'one shared block, a name every chosen agent knows');
-  assert.doesNotMatch(read(join(g.dir, 'AGENTS.md')), /benchkeeper:workflow/);
+  assert.doesNotMatch(read(join(mixed.dir, 'AGENTS.md')), /cedarloom:workflow/, 'one shared block, a name every chosen agent knows');
+  assert.doesNotMatch(read(join(g.dir, 'AGENTS.md')), /cedarloom:workflow/);
 });
 
 const POLICY = 'docs/agents/orchestration.json', RULES = 'docs/agents/worker-rules.md';
@@ -773,8 +773,8 @@ test('the coordinator\'s files: apply writes the default policy and empty worker
   assert.doesNotMatch(read(join(r.dir, '.git/info/exclude')), /docs/);
   assert.doesNotMatch(read(join(r.dir, '.worktreeinclude')), /docs/);
   assert.deepEqual(localSetup(r.ctx, r.dir).filter((c) => c.path?.includes('docs')), []);
-  // A repository without a remote is enough, and nothing is fetched or kept under refs/cedarloom-app.
-  assert.equal(r.git('for-each-ref', 'refs/cedarloom-app').toString(), '');
+  // A repository without a remote is enough, and nothing is fetched or kept under refs/cedarloom.
+  assert.equal(r.git('for-each-ref', 'refs/cedarloom').toString(), '');
 
   const own = repo();
   mkdirSync(join(own.dir, 'docs/agents'), { recursive: true });

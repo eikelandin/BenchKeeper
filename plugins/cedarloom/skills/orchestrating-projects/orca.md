@@ -159,7 +159,7 @@ A worker on another agent stays `block` (unverified: which key declines its dial
 
 ## Resume
 
-The BenchKeeper plugin hands the handoff file back after a `/clear` or compaction only in the Orca terminal its `Terminal:` line names, for a Claude Code or a Codex coordinator (Codex once its hook is trusted).
+The CedarLoom plugin hands the handoff file back after a `/clear` or compaction only in the Orca terminal its `Terminal:` line names, for a Claude Code or a Codex coordinator (Codex once its hook is trusted).
 
 - When that Claude Code coordinator ends a turn idle (no background task; a session cron does not count) above the plugin option `rotateAtTokens`, 200,000 tokens by default, the plugin clears it with `/clear` and submits a prompt to run the Resume steps.
 - `rotateAtPercent` above 0 sets a percent of the context window instead, and both at 0 turn it off.
@@ -183,7 +183,7 @@ ORCA orchestration worker-release --dispatch <dispatch id> --json
 ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 ```
 
-`--run-hooks` runs the project's `orca.yaml` archive script before the removal; the one BenchKeeper's project setup writes removes the worktree's dev containers and exits 0 even when that fails, so the removal goes ahead. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
+`--run-hooks` runs the project's `orca.yaml` archive script before the removal; the one the CedarLoom app's project setup writes removes the worktree's dev containers and exits 0 even when that fails, so the removal goes ahead. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
 A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that no `send` carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 

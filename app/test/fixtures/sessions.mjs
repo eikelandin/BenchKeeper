@@ -26,7 +26,7 @@ export function writeSessions(home, { root = '/work', title = TITLE, now = REF }
     { type: 'mode', mode: 'normal', sessionId: 's1' },
     human('2026-10-20T10:00:00.000Z', 'fix the cart total'),
     { ...common('2026-10-20T10:00:01.000Z'), type: 'attachment', attachment: { type: 'skill_listing', names: ['old-skill'] } },
-    { ...common('2026-10-20T10:00:02.000Z'), type: 'attachment', attachment: { type: 'skill_listing', names: ['mattpocock-skills:tdd', 'ponytail:ponytail', 'benchkeeper:workflow', 'frontend-design', 'designing-technical-uis', 'accessibility'] } },
+    { ...common('2026-10-20T10:00:02.000Z'), type: 'attachment', attachment: { type: 'skill_listing', names: ['mattpocock-skills:tdd', 'ponytail:ponytail', 'cedarloom:workflow', 'frontend-design', 'designing-technical-uis', 'accessibility'] } },
     assistant('2026-10-20T10:00:03.000Z', 'm1', [{ type: 'text', text: 'Reading the code.\nTier: standard (bug, known cause)\nNext the test.' }, { type: 'tool_use', id: 'k1', name: 'Skill', input: { skill: 'mattpocock-skills:tdd' } }]),
     // One message streams as several lines with the same usage: counted once.
     assistant('2026-10-20T10:00:04.000Z', 'm1', [{ type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'cd app && npm test' } }]),
@@ -49,7 +49,7 @@ export function writeSessions(home, { root = '/work', title = TITLE, now = REF }
   // A running session: no cost-state yet, tokens from the usage of each message once.
   jsonl(join(home, '.claude/projects', `${root}/blog`.replaceAll('/', '-'), 's2.jsonl'), [
     { ...human('2026-10-21T09:00:00.000Z', 'typo in the README'), cwd: `${root}/blog`, sessionId: 's2' },
-    // A tier set with /benchkeeper:tier carries no change type; the next line names it.
+    // A tier set with /cedarloom:tier carries no change type; the next line names it.
     { ...assistant('2026-10-21T09:00:04.000Z', 'n1', [{ type: 'text', text: 'Tier: quick (override)' }]), cwd: `${root}/blog`, sessionId: 's2' },
     { ...assistant('2026-10-21T09:00:05.000Z', 'n1', [{ type: 'text', text: 'Tier: quick (docs, typo)' }]), cwd: `${root}/blog`, sessionId: 's2' },
     { ...assistant('2026-10-21T09:00:06.000Z', 'n1', [{ type: 'text', text: 'Fixed.' }]), cwd: `${root}/blog`, sessionId: 's2' },

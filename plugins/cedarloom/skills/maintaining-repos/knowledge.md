@@ -1,10 +1,10 @@
 # Knowledge base
 
-What earlier passes learned about this project, so a repeated pass skips finished work. It is derived from the repository and rebuildable: a lost or cleared base costs time, never correctness. The owner reads it with `benchkeeper knowledge show` and deletes it with `benchkeeper knowledge clear`.
+What earlier passes learned about this project, so a repeated pass skips finished work. It is derived from the repository and rebuildable: a lost or cleared base costs time, never correctness. The owner reads it with `cedarloom-app knowledge show` and deletes it with `cedarloom-app knowledge clear`.
 
 ## Where
 
-`.cedarloom-app/knowledge/` at the repository root, local only: before the first write run `git check-ignore -q .cedarloom-app/knowledge/verdicts.json`, else append `.cedarloom-app/` to `$(git rev-parse --git-path info/exclude)`. No committed file (`.gitignore`, docs, CI) mentions it. Folder mode 0700, files 0600.
+`.cedarloom/knowledge/` at the repository root, local only: before the first write run `git check-ignore -q .cedarloom/knowledge/verdicts.json`, else append `.cedarloom/knowledge/` (never `.cedarloom/`, which can hold committed files) to `$(git rev-parse --git-path info/exclude)`. No committed file (`.gitignore`, docs, CI) mentions it. Folder mode 0700, files 0600.
 
 One file per kind, each `{ "entries": [ { "id": "...", ... } ] }` and nothing else:
 

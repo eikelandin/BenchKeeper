@@ -26,7 +26,7 @@ export function skillEntry(text) {
   const when = unquote(fm.when) || rest;
   if (!when) throw new Error(`${name}: needs a when field or a second sentence in the description`);
   const user = fm['disable-model-invocation'] === 'true';
-  const start = user ? `you: \`/benchkeeper:${name}\` (Codex \`$benchkeeper:${name}\`)` : `the agent, or you with \`/benchkeeper:${name}\``;
+  const start = user ? `you: \`/cedarloom:${name}\` (Codex \`$cedarloom:${name}\`)` : `the agent, or you with \`/cedarloom:${name}\``;
   return { name, purpose, start, when, writes };
 }
 

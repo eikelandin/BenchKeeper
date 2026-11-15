@@ -18,7 +18,7 @@ test('update check: shown when newer, silent when off, offline or older', async 
   assert.equal(newer('5.9.9', '6.0.0'), false);
   const old = '2020-01-01T00:00:00Z', fresh = new Date(Date.now() - 864e5).toISOString();
   const reply = (version, ok = true, at = old) => async () => ({ ok, json: async () => ({ time: { '6.0.0': old, [version]: at }, versions: { '6.0.0': {}, [version]: {} } }) });
-  assert.match(await updateNotice('6.0.0', {}, reply('6.1.0')), /benchkeeper 6\.1\.0 is available .*npx benchkeeper@6\.1\.0/);
+  assert.match(await updateNotice('6.0.0', {}, reply('6.1.0')), /@cedarloom\/app 6\.1\.0 is available .*npx @cedarloom\/app@6\.1\.0/);
   assert.equal(await updateNotice('6.0.0', {}, reply('6.0.0')), null);
   assert.equal(await updateNotice('6.0.0', {}, reply('7.0.0', false)), null);
   assert.equal(await updateNotice('6.0.0', {}, reply('7.0.0-rc.1')), null);
@@ -31,7 +31,7 @@ test('update check: shown when newer, silent when off, offline or older', async 
   assert.equal(asked, false);
 });
 
-test('content.json: content version is the plugin version, minApp is not above the app, skill and automation text names the major', () => {
+test('content.json: content version is the plugin version, minApp is not above the app, skill and automation text names the 0.1 range', () => {
   const c = json('../../plugins/cedarloom/content.json');
   assert.equal(c.schemaVersion, 1);
   for (const agent of ['claude', 'codex']) assert.equal(c.contentVersion, json(`../../plugins/cedarloom/.${agent}-plugin/plugin.json`).version);
@@ -40,9 +40,11 @@ test('content.json: content version is the plugin version, minApp is not above t
   const [major, minor, patch] = appVersion.split('.').map(Number);
   assert.match(c.minApp, /^\d+\.\d+\.\d+$/);
   for (const v of [appVersion, `${major}.${minor}.${patch + 1}`]) assert.equal(contentRefusal(fileURLToPath(root), v), null, v);
+  let pins = 0;
   for (const dir of ['skills', 'library', 'automations']) {
     for (const f of readdirSync(new URL(`${dir}/`, root), { recursive: true }).filter((x) => x.endsWith('.md'))) {
-      for (const [, pin] of readFileSync(new URL(`${dir}/${f}`, root), 'utf8').matchAll(/npx (?:-y )?benchkeeper@(\S+?)[\s`)]/g)) assert.equal(pin, appVersion.split('.')[0], `${dir}/${f}`);
+      for (const [, pin] of readFileSync(new URL(`${dir}/${f}`, root), 'utf8').matchAll(/npx (?:-y )?@cedarloom\/app(?:@(\S+?))?(?=[\s`)])/g)) { pins++; assert.equal(pin, '0.1', `${dir}/${f}`); }
     }
   }
+  assert.ok(pins > 0, 'no npx @cedarloom/app pins under plugins/');
 });
