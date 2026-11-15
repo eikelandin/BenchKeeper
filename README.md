@@ -62,19 +62,15 @@ What each skill reads and writes: [Skills](docs/skills.md). Hooks and plugin set
 
 ## Typical flow
 
-Without Orca:
-
-1. Install the `cedarloom` bundle, or `cl-workflow` plus `cl-setup`.
-2. Once per repository, run `/cl-setup:setting-up-projects`.
-3. For each task, just ask: the workflow picks the kind and the depth. Start a bigger task with `/cl-workflow:plan <task>`.
-4. Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
-
-With Orca:
-
-1. Install the `cedarloom` bundle (or add `cl-orchestration`), set up each repository as above and label the issues the coordinator may start ([policy](docs/coordinator-workflow.md)).
-2. Start one coordinator session with `CEDARLOOM_ROLE=coordinator claude`, then run `/cl-orchestration:orchestrating-projects <project paths>`.
-3. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction.
-4. Answer open questions with `/cl-workflow:questions`. Merges and releases happen only in the coordinator session.
+1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without Orca. Update with the commands under [Update](#update).
+2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](docs/coordinator-workflow.md)).
+3. Per task, without Orca:
+   - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
+   - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
+4. Per task, with Orca (needs `cl-orchestration`):
+   - Label the issues with the `startLabel`.
+   - In an Orca terminal, run `CEDARLOOM_ROLE=coordinator claude`, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Only this session merges or releases.
+   - Answer open questions with `/cl-workflow:questions` in any other session.
 
 ## Update
 
