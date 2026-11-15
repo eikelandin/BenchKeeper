@@ -40,7 +40,7 @@ async function own($: EngineInterface) {
 const slashes = (path?: string) => path?.replaceAll('\\', '/')
 
 // Whether the file is the coordinator's own, not one a repository commits or a link leads to: a regular file reached
-// through no link, in a git work tree whose .cedarloom-app/runs git tracks nothing in. Any git failure refuses, so a broken
+// through no link, in a git work tree whose .cedarloom/runs git tracks nothing in. Any git failure refuses, so a broken
 // repository or one git distrusts (another owner) never counts as untracked.
 async function safe($: EngineInterface) {
   try {

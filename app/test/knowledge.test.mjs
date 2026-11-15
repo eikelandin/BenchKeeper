@@ -10,10 +10,10 @@ import { context } from '../src/runner.mjs';
 // A fixture project with a setup state (which clear must leave alone) and a knowledge base; the home is a temporary one.
 function fixture(answers = '') {
   const home = mkdtempSync(join(tmpdir(), 'bk-know-home-')), dir = mkdtempSync(join(tmpdir(), 'bk-know-proj-'));
-  mkdirSync(join(dir, '.cedarloom-app/knowledge'), { recursive: true });
-  writeFileSync(join(dir, '.cedarloom-app/state.json'), '{"kept":true}\n');
+  mkdirSync(join(dir, '.cedarloom/knowledge'), { recursive: true });
+  writeFileSync(join(dir, '.cedarloom/profile-files.json'), '{"kept":true}\n');
   writeFileSync(join(dir, 'README.md'), 'project file\n');
-  const k = (name, entries) => writeFileSync(join(dir, '.cedarloom-app/knowledge', name), JSON.stringify({ entries }));
+  const k = (name, entries) => writeFileSync(join(dir, '.cedarloom/knowledge', name), JSON.stringify({ entries }));
   k('verdicts.json', [{ id: 'cleanup:src/a.mjs:unusedFn', verdict: 'kept', reason: 'public API', commit: 'abc123' }, { id: 'cleanup:src/b.mjs:dup', verdict: 'rejected', files: ['src/b.mjs'] }]);
   k('tests.json', [{ id: 'test/a.test.mjs', score: 81.4, hash: 'f00' }]);
   let text = '', errText = '';
@@ -53,7 +53,7 @@ test('show without a knowledge base says so, and --json has empty lists', async 
 
 test('a tampered, oversized or linked file is ignored with a reason, the rest is shown', async () => {
   const f = fixture();
-  const kb = join(f.dir, '.cedarloom-app/knowledge');
+  const kb = join(f.dir, '.cedarloom/knowledge');
   writeFileSync(join(kb, 'broken.json'), '{ not json');
   writeFileSync(join(kb, 'shape.json'), '{"entries":"x"}');
   writeFileSync(join(kb, 'big.json'), `{"entries":[],"pad":"${'x'.repeat(1024 * 1024)}"}`);
@@ -67,7 +67,7 @@ test('a tampered, oversized or linked file is ignored with a reason, the rest is
 
 test('stored text cannot carry terminal control characters or token shapes to the output', async () => {
   const f = fixture();
-  writeFileSync(join(f.dir, '.cedarloom-app/knowledge/open.json'), JSON.stringify({ entries: [{ id: 'q1', note: '\u001b[31mred ghp_abcdefghijklmnop' }] }));
+  writeFileSync(join(f.dir, '.cedarloom/knowledge/open.json'), JSON.stringify({ entries: [{ id: 'q1', note: '\u001b[31mred ghp_abcdefghijklmnop' }] }));
   await f.exec(['knowledge', 'show', f.dir]);
   assert.doesNotMatch(f.text(), /\u001b/);
   assert.doesNotMatch(f.text(), /ghp_abcdefghijklmnop/);
@@ -77,21 +77,21 @@ test('clear asks, a no keeps everything, a yes removes the knowledge folder and 
   const f = fixture('n\n');
   assert.equal(await f.exec(['knowledge', 'clear', f.dir]), 1);
   assert.match(f.text(), /Remove .*knowledge \(3 entries in 2 files\)\? \[y\/N\]/);
-  assert.ok(existsSync(join(f.dir, '.cedarloom-app/knowledge/verdicts.json')));
+  assert.ok(existsSync(join(f.dir, '.cedarloom/knowledge/verdicts.json')));
   const g = fixture('y\n');
   assert.equal(await g.exec(['knowledge', 'clear', g.dir]), 0);
-  assert.equal(existsSync(join(g.dir, '.cedarloom-app/knowledge')), false);
-  assert.equal(readFileSync(join(g.dir, '.cedarloom-app/state.json'), 'utf8'), '{"kept":true}\n');
+  assert.equal(existsSync(join(g.dir, '.cedarloom/knowledge')), false);
+  assert.equal(readFileSync(join(g.dir, '.cedarloom/profile-files.json'), 'utf8'), '{"kept":true}\n');
   assert.equal(readFileSync(join(g.dir, 'README.md'), 'utf8'), 'project file\n');
 });
 
 test('clear --yes skips the question; ignored files go too; a second clear finds nothing', async () => {
   const f = fixture();
-  writeFileSync(join(f.dir, '.cedarloom-app/knowledge/broken.json'), 'x');
+  writeFileSync(join(f.dir, '.cedarloom/knowledge/broken.json'), 'x');
   assert.equal(await f.exec(['knowledge', 'clear', f.dir, '--yes']), 0);
   assert.doesNotMatch(f.text(), /\[y\/N\]/);
-  assert.equal(existsSync(join(f.dir, '.cedarloom-app/knowledge')), false);
-  assert.ok(existsSync(join(f.dir, '.cedarloom-app/state.json')));
+  assert.equal(existsSync(join(f.dir, '.cedarloom/knowledge')), false);
+  assert.ok(existsSync(join(f.dir, '.cedarloom/profile-files.json')));
   assert.equal(await f.exec(['knowledge', 'clear', f.dir, '--yes']), 0);
   assert.match(f.text(), /no knowledge stored for/);
 });
@@ -100,7 +100,7 @@ test('a linked knowledge folder is shown as ignored and clear removes the link, 
   const f = fixture();
   const target = mkdtempSync(join(tmpdir(), 'bk-know-target-'));
   writeFileSync(join(target, 'verdicts.json'), '{"entries":[]}');
-  const kb = join(f.dir, '.cedarloom-app/knowledge');
+  const kb = join(f.dir, '.cedarloom/knowledge');
   rmSync(kb, { recursive: true });
   symlinkSync(target, kb);
   await f.exec(['knowledge', 'show', f.dir]);
@@ -113,22 +113,22 @@ test('a linked knowledge folder is shown as ignored and clear removes the link, 
 test('clear removes an empty knowledge folder; show says it is empty', async () => {
   const f = fixture();
   await f.exec(['knowledge', 'clear', f.dir, '--yes']);
-  mkdirSync(join(f.dir, '.cedarloom-app/knowledge'));
+  mkdirSync(join(f.dir, '.cedarloom/knowledge'));
   assert.equal(await f.exec(['knowledge', 'show', f.dir]), 0);
   assert.match(f.text(), /the knowledge folder is empty/);
   assert.equal(await f.exec(['knowledge', 'clear', f.dir, '--yes']), 0);
-  assert.equal(existsSync(join(f.dir, '.cedarloom-app/knowledge')), false);
+  assert.equal(existsSync(join(f.dir, '.cedarloom/knowledge')), false);
 });
 
-test('a linked .cedarloom-app is not read and not removed', async () => {
+test('a linked .cedarloom is not read and not removed', async () => {
   const f = fixture();
   const outside = mkdtempSync(join(tmpdir(), 'bk-know-outside-'));
   mkdirSync(join(outside, 'knowledge'));
   writeFileSync(join(outside, 'knowledge/verdicts.json'), '{"entries":[{"id":"elsewhere"}]}');
-  rmSync(join(f.dir, '.cedarloom-app'), { recursive: true });
-  symlinkSync(outside, join(f.dir, '.cedarloom-app'));
+  rmSync(join(f.dir, '.cedarloom'), { recursive: true });
+  symlinkSync(outside, join(f.dir, '.cedarloom'));
   assert.equal(await f.exec(['knowledge', 'show', f.dir]), 0);
-  assert.match(f.text(), /ignored \.cedarloom-app: a link, not followed/);
+  assert.match(f.text(), /ignored \.cedarloom: a link, not followed/);
   assert.doesNotMatch(f.text(), /elsewhere/);
   assert.equal(await f.exec(['knowledge', 'clear', f.dir, '--yes']), 1);
   assert.match(f.text(), /is a link: nothing removed/);
@@ -137,21 +137,21 @@ test('a linked .cedarloom-app is not read and not removed', async () => {
 
 test('an unreadable knowledge folder is a read failure, not an absent one', async (t) => {
   const f = fixture();
-  chmodSync(join(f.dir, '.cedarloom-app/knowledge'), 0o000);
-  t.after(() => chmodSync(join(f.dir, '.cedarloom-app/knowledge'), 0o700));
+  chmodSync(join(f.dir, '.cedarloom/knowledge'), 0o000);
+  t.after(() => chmodSync(join(f.dir, '.cedarloom/knowledge'), 0o700));
   if (process.getuid?.() === 0 || process.platform === 'win32') return t.skip('permissions are not enforced here');
   assert.equal(await f.exec(['knowledge', 'show', f.dir]), 2);
   assert.match(f.text(), /cannot read .*knowledge: EACCES/);
   const g = fixture();
-  chmodSync(join(g.dir, '.cedarloom-app/knowledge'), 0o000);
-  t.after(() => chmodSync(join(g.dir, '.cedarloom-app/knowledge'), 0o700));
+  chmodSync(join(g.dir, '.cedarloom/knowledge'), 0o000);
+  t.after(() => chmodSync(join(g.dir, '.cedarloom/knowledge'), 0o700));
   assert.equal(await g.exec(['knowledge', 'show', g.dir, '--json']), 2);
   assert.match(g.json().error, /EACCES/);
 });
 
 test('token-shaped keys are masked too', async () => {
   const f = fixture();
-  writeFileSync(join(f.dir, '.cedarloom-app/knowledge/open.json'), JSON.stringify({ entries: [{ id: 'q1', ghp_abcdefghijklmnop: 'x' }] }));
+  writeFileSync(join(f.dir, '.cedarloom/knowledge/open.json'), JSON.stringify({ entries: [{ id: 'q1', ghp_abcdefghijklmnop: 'x' }] }));
   await f.exec(['knowledge', 'show', f.dir, '--json']);
   assert.doesNotMatch(f.text(), /ghp_abcdefghijklmnop/);
 });
@@ -170,5 +170,5 @@ test('usage errors: unknown subcommand, a surplus argument with --json', async (
   // Text mode too: a surplus argument never reaches the removal.
   const i = fixture();
   assert.equal(await i.exec(['knowledge', 'clear', i.dir, 'extra', '--yes']), 2);
-  assert.ok(existsSync(join(i.dir, '.cedarloom-app/knowledge/verdicts.json')));
+  assert.ok(existsSync(join(i.dir, '.cedarloom/knowledge/verdicts.json')));
 });
