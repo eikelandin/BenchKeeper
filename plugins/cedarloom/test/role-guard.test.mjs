@@ -35,8 +35,8 @@ after(() => {
 });
 
 const run = (input, role) => spawnSync(process.execPath, [HOOK], { input, env: role === undefined ? ENV : { ...ENV, CEDARLOOM_ROLE: role }, encoding: 'utf8' });
-const decision = (command, { role, cwd = trunk, tool = 'Bash', agent } = {}) => {
-  const input = { hook_event_name: 'PreToolUse', tool_name: tool, tool_input: { command }, tool_use_id: 'toolu_01', cwd, ...(agent && { agent_id: agent }) };
+const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, toolInput = { command } } = {}) => {
+  const input = { hook_event_name: 'PreToolUse', tool_name: tool, tool_input: toolInput, tool_use_id: 'toolu_01', cwd, ...(agent && { agent_id: agent }) };
   const r = run(JSON.stringify(input), role);
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? 'none' : JSON.parse(r.stdout).hookSpecificOutput.permissionDecision;
@@ -47,6 +47,7 @@ const DENIED = [
   'cd repo && gh pr -R owner/repo merge 12',
   'bash -c "gh pr merge 12"',
   'GH_TOKEN=x /opt/homebrew/bin/gh release create v1.0.0',
+  '"C:\\Program Files\\GitHub CLI\\gh.exe" pr merge 12',
   'gh api -X PUT repos/owner/repo/pulls/12/merge',
   'gh api \\\n  --method PUT \\\n  -H "Accept: application/vnd.github+json" \\\n  /repos/o/r/pulls/12/merge \\\n  -f merge_method=squash',
   'gh api -iX PUT repos/o/r/pulls/12/merge',
@@ -71,6 +72,8 @@ const DENIED = [
   'git push origin v1.2.0-rc.1',
   'git push origin release-candidate',
   'git push origin HEAD:refs/tags/x',
+  'git push origin tags/release-candidate',
+  'git push origin HEAD:heads/main',
   'git push origin HEAD:main',
   'git push origin feat/x:refs/heads/master',
   'git push origin HEAD:trunk',
@@ -114,8 +117,26 @@ test('role guard: passes reads and worker steps in a guarded session', () => {
   assert.equal(decision('git push', { cwd: feature }), 'none');
 });
 
-test('role guard: reads the commands of Monitor and PowerShell', () => {
+test('role guard: follows a cd to the folder git runs in', () => {
+  for (const command of [`cd ${trunk} && git push`, `cd ${trunk} && git push origin release-candidate`]) assert.equal(decision(command, { cwd: feature }), 'deny', command);
+  assert.equal(decision(`cd ${feature} && git push`), 'none');
+});
+
+test('role guard: reads the commands of Monitor and PowerShell, PowerShell with its backtick escape', () => {
   for (const tool of ['Monitor', 'PowerShell']) assert.equal(decision('gh pr merge 12 --squash', { tool }), 'deny', tool);
+  const powershell = [
+    'gh api `\n  --method PUT `\n  /repos/o/r/pulls/12/merge `\n  -f merge_method=squash',
+    'git push origin `\n  --tags',
+    'C:\\tools\\gh.exe pr merge 12',
+    '& "C:\\Program Files\\GitHub CLI\\gh.exe" pr merge 12',
+    'Set-Location ' + trunk + '; git push',
+  ];
+  for (const command of powershell) assert.equal(decision(command, { tool: 'PowerShell', cwd: feature }), 'deny', command);
+  assert.equal(decision('gh pr view 12 `\n  --json title', { tool: 'PowerShell' }), 'none');
+});
+
+test('role guard: passes a Monitor call on a WebSocket', () => {
+  assert.equal(decision(undefined, { tool: 'Monitor', toolInput: { ws: { url: 'wss://events.example.com/stream' }, description: 'events', timeout_ms: 60000 } }), 'none');
 });
 
 test('role guard: passes everything in the coordinator role, but not in its subagents', () => {

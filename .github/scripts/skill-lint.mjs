@@ -112,10 +112,17 @@ export function lintAgent(file) {
 export const ownAgents = () => markdownFiles(join(root, 'plugins/cedarloom/agents'));
 
 // Hooks do not run in bare mode, the role guard's included (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
-const BARE_LAUNCH = /\bclaude\s[^\n]*\s--bare\b|['"]claude['"]\s*,\s*\[[^\]]*['"]--bare['"]/;
+// A line (continuations joined) whose words, split at spaces, quotes, commas and brackets, hold claude and after it --bare:
+// a command line, or a spawn or execFile call with its argument list.
+const bareLaunch = (text) =>
+  text.replace(/[\\`]\r?\n/g, ' ').split('\n').some((line) => {
+    const words = line.split(/[\s'"`,()[\]{}]+/);
+    const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+    return at >= 0 && words.includes('--bare', at + 1);
+  });
 
 export const bareLaunches = (files) =>
-  files.filter((file) => BARE_LAUNCH.test(readFileSync(file, 'utf8'))).map((file) => `${file}: starts claude with --bare, which runs no hooks (the role guard's included)`);
+  files.filter((file) => bareLaunch(readFileSync(file, 'utf8'))).map((file) => `${file}: starts claude with --bare, which runs no hooks (the role guard's included)`);
 
 // The files every plugin ships; its tests name commands the hooks deny.
 export function pluginFiles() {

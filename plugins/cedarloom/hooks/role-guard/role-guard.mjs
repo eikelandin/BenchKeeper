@@ -4,6 +4,7 @@
 // It stops a session that forgets its role, not one that works around it (variables, aliases, scripts, another tool):
 // the boundary is a gh token without those rights.
 import { spawnSync } from 'node:child_process';
+import { homedir } from 'node:os';
 import { resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { gitProgram } from '../git-program.mjs';
@@ -28,20 +29,30 @@ const CONFIG_WRITE = /^(--(unset|unset-all|add|replace-all|rename-section|remove
 const PUSH_OPTIONS = [['tags', 'a tag push'], ['follow-tags', 'a tag push'], ['mirror', 'a mirror push'], ['all', 'a push of every branch'], ['branches', 'a push of every branch']];
 // A release tag name such as v1.2.0, app-v6.27.0 or setup-v6.27; branch names with a folder (dependabot/npm/x-1.2.3) are not read as tags.
 const VERSION = /(^|[-_@])v?\d+(\.\d+)+/;
+// Bare mode runs no hooks (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
+const BARE = '--bare';
 const DEFAULT_BRANCHES = ['main', 'master'];
+// Commands that change the folder the following commands run in, in bash and PowerShell.
+const CHANGE_DIR = new Set(['cd', 'pushd', 'chdir', 'set-location', 'sl', 'push-location']);
 
-// The commands of a shell text, each a list of words with quotes and backslashes resolved, as the shell splits them: a line
+// Inside double quotes bash drops a backslash only before these (https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html).
+const BASH_QUOTED_ESCAPES = '$`"\\';
+
+// The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
 // continuation joins its lines, a quoted word stays whole, and redirections are dropped. The text of a quoted word is read again
 // as commands, so `bash -c "gh pr merge 1"` shows its gh; text that only names such a command is denied as well.
-function commands(source) {
+// PowerShell escapes and continues lines with the backtick and keeps the backslash as a plain character
+// (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_special_characters).
+function commands(source, powershell) {
   const out = [];
-  const s = source.replace(/\\\r?\n/g, '');
+  const escape = powershell ? '`' : '\\';
+  const s = source.replace(powershell ? /`\r?\n/g : /\\\r?\n/g, '');
   let words = [], word = '', started = false, quoted = false, quote = null, redirect = false;
   const endWord = () => {
     if (started) {
       if (redirect) redirect = false;
       else words.push(word);
-      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word));
+      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell));
     }
     word = '';
     started = quoted = false;
@@ -56,11 +67,12 @@ function commands(source) {
     const c = s[i];
     if (quote) {
       if (c === quote) quote = null;
-      else word += c === '\\' && quote === '"' && i + 1 < s.length ? s[++i] : c;
+      else if (c === escape && quote === '"' && i + 1 < s.length && (powershell || BASH_QUOTED_ESCAPES.includes(s[i + 1]))) word += s[++i];
+      else word += c;
     } else if (c === '"' || c === "'") {
       quote = c;
       started = quoted = true;
-    } else if (c === '\\') {
+    } else if (c === escape) {
       word += s[++i] ?? '';
       started = quoted = true;
     } else if (c === '<' || c === '>' || (c === '&' && s[i + 1] === '>')) {
@@ -69,7 +81,7 @@ function commands(source) {
       endWord();
       while (/[<>&|]/.test(s[i + 1] ?? '')) i++;
       redirect = true;
-    } else if (c === '\n' || ';&|()`'.includes(c)) endCommand();
+    } else if (c === '\n' || ';&|()'.includes(c) || (c === '`' && !powershell)) endCommand();
     else if (/\s/.test(c)) endWord();
     else {
       word += c;
@@ -124,7 +136,8 @@ function push(args, dir) {
   // Without a refspec, git pushes the current branch to its push target.
   const targets = specs.length ? [] : [current(), branchOf(gitLine(dir, ['rev-parse', '--abbrev-ref', '@{push}']))];
   for (const spec of specs) {
-    const [src, dst = src] = spec.replace(/^\+/, '').split(':');
+    // git resolves tags/x and heads/x as refs/tags/x and refs/heads/x.
+    const [src, dst = src] = spec.replace(/^\+/, '').split(':').map((side) => side.replace(/^(tags|heads)\//, 'refs/$1/'));
     if (isTag(dir, src) || isTag(dir, dst)) return 'a tag push';
     targets.push(dst === 'HEAD' || dst === '@' ? current() : dst.replace(/^refs\/heads\//, ''));
   }
@@ -197,15 +210,28 @@ function gh(args, cmd) {
   return sub === 'api' ? api(args.slice(at + 1), cmd) : null;
 }
 
-function reason(cmd, cwd) {
+// The folder a cd or Set-Location moves to; a folder named by a variable stays unresolved, and git queries there fail.
+function changeDir(dir, args) {
+  const target = args.find((w) => !w.startsWith('-') || w === '-');
+  if (target === '-') return dir;
+  if (target === undefined) return homedir();
+  return target.startsWith('~') ? resolve(homedir(), `.${target.slice(1)}`) : resolve(dir, target);
+}
+
+function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
+  const cmd = toolInput?.command;
+  // A Monitor call on a WebSocket runs no command.
+  if (tool === 'Monitor' && cmd === undefined && toolInput?.ws) return null;
   if (typeof cmd !== 'string') return 'a command the guard cannot read';
   // A guarded session must not start another one as the coordinator.
-  if (cmd.replace(/["'\\]/g, '').includes(ROLE)) return `a command that names ${ROLE}`;
-  for (const words of commands(cmd)) {
+  if (cmd.replace(/["'\\`]/g, '').includes(ROLE)) return `a command that names ${ROLE}`;
+  let dir = cwd;
+  for (const words of commands(cmd, tool === 'PowerShell')) {
+    if (CHANGE_DIR.has(program(words[0]))) dir = changeDir(dir, words.slice(1));
     for (let j = 0; j < words.length; j++) {
       const name = program(words[j]);
       const rest = words.slice(j + 1);
-      const why = name === 'git' ? git(rest, cwd) : name === 'gh' ? gh(rest, cmd) : name === 'claude' && rest.includes('--bare') ? 'a claude --bare launch (bare mode runs no hooks)' : null;
+      const why = name === 'git' ? git(rest, dir) : name === 'gh' ? gh(rest, cmd) : name === 'claude' && rest.includes(BARE) ? 'a launch in bare mode, which runs no hooks' : null;
       if (why) return why;
     }
   }
@@ -215,7 +241,7 @@ function reason(cmd, cwd) {
 const input = JSON.parse(await text(process.stdin));
 // A subagent inherits the coordinator's environment, so only the coordinator's main session passes.
 if (process.env[ROLE] !== 'coordinator' || input.agent_id) {
-  const why = reason(input.tool_input?.command, typeof input.cwd === 'string' ? input.cwd : process.cwd());
+  const why = reason(input, typeof input.cwd === 'string' ? input.cwd : process.cwd());
   if (why) {
     const line = `CedarLoom role guard: ${why} is the coordinator's step, and this session does not run as the coordinator (${ROLE}=coordinator in the main session, set by the user who starts it). Leave the step to the coordinator and name it in your report. Text that only mentions such a command goes in a file (-F, --body-file).`;
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: line } }));

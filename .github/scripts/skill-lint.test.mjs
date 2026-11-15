@@ -80,8 +80,16 @@ test('a skill naming a skills CLI version fails, inside a code block too', () =>
 test('a plugin file that starts claude with --bare fails, in a command line and in a spawn call', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lint-'));
   const file = (name, body) => (writeFileSync(join(dir, name), body), join(dir, name));
-  for (const f of [file('run.sh', 'timeout 600 claude -p "$PROMPT" --bare\n'), file('run.mjs', "spawn('claude', ['-p', prompt, '--bare']);\n")])
-    assert.match(bareLaunches([f]).join(), /starts claude with --bare/);
+  const launches = {
+    'after.sh': 'timeout 600 claude -p "$PROMPT" --bare\n',
+    'first.sh': 'claude --bare -p "$PROMPT"\n',
+    'timeout.sh': 'timeout 600 claude --bare -p "$PROMPT" --allowedTools "Read"\n',
+    'continued.sh': 'claude -p "$PROMPT" \\\n  --bare\n',
+    'continued.ps1': 'claude -p $prompt `\n  --bare\n',
+    'spawn.mjs': "spawn('claude', ['-p', prompt, '--bare']);\n",
+    'variable.mjs': "execFile(claude, ['-p', prompt, '--bare']);\n",
+  };
+  for (const [name, body] of Object.entries(launches)) assert.match(bareLaunches([file(name, body)]).join(), /starts claude with --bare/, name);
   assert.deepEqual(bareLaunches([file('ok.sh', 'claude -p "$PROMPT" --permission-mode dontAsk\ngit init --bare origin\n')]), []);
 });
 test('own plugin files start no bare session', () => {
