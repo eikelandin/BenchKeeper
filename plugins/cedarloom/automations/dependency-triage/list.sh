@@ -7,7 +7,7 @@
 #   alert <owner/name> <number>         an open Dependabot alert
 #   noaccess <owner/name>               the token cannot read the alerts; with record printed once per repository
 # Exit 0 when it printed a pr or an alert line. Only names that pass the patterns below reach a gh command line.
-dir=${XDG_STATE_HOME:-$HOME/.local/state}/benchkeeper/dependency-triage
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/dependency-triage
 repo() { case "$1/" in */./*|*/../*) return 1 ;; esac; printf '%s\n' "$1" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*'; }
 repos=$(echo "$2" | tr , ' ')
 for o in $(echo "$1" | tr , ' '); do

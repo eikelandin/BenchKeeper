@@ -10,7 +10,7 @@ printf '%s\n' "$repo" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Z
 printf '%s %s %s\n' "$wf" "$run" "$attempt" | grep -qxE '[0-9]+ [0-9]+ [0-9]+' || { echo "not a workflow, run and attempt: $wf $run $attempt" >&2; exit 2; }
 printf '%s\n' "$path" | grep -qxE '[A-Za-z0-9_.][A-Za-z0-9_./-]*' || { echo "not a workflow path: $path" >&2; exit 2; }
 [ -f "$body" ] || { echo "report file $body is missing" >&2; exit 2; }
-dir=${XDG_STATE_HOME:-$HOME/.local/state}/benchkeeper/ci-health
+dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/ci-health
 file="$dir/$(echo "$repo" | tr / _)"
 mkdir -p "$dir"
 echo "$wf $run/$attempt $result $(date +%s)" >> "$file"
