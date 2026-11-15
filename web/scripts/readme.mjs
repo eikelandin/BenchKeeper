@@ -29,7 +29,6 @@ const quickstart = (setup) => {
 
 const blocks = {
   support: supportTables(agents),
-  core: [`**Optional: [${facts.core.name}](${facts.core.url}) by ${facts.core.by}:** ${facts.core.role}.`],
   levels: [
     '| Level | Contains | Writes | Command |',
     '|---|---|---|---|',
@@ -57,7 +56,7 @@ const blocks = {
 const pick = (names) => Object.fromEntries(names.map((n) => [n, blocks[n]]));
 const targets = [
   ['docs/setup.md', pick(['prerequisites', 'levels', 'support'])],
-  ['docs/stack.md', pick(['core', 'reasons', 'tools', 'openhands'])],
+  ['docs/stack.md', pick(['reasons', 'tools', 'openhands'])],
   ['app/README.md', { quickstart: quickstart('../docs/setup.md') }],
 ];
 let stale = false;

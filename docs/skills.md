@@ -1,6 +1,6 @@
 # Skills
 
-What each skill does, who starts it, when it runs and what it writes, so you can pick one without reading its `SKILL.md`. The tables come from each skill's front matter and from `plugins/cl-setup/library/library.json`; CI fails when this page differs from them (`node .github/scripts/skills-doc.mjs` rewrites it).
+What each skill does, who starts it, when it runs and what it writes, so you can pick one without reading its `SKILL.md`. The table comes from each skill's front matter; CI fails when this page differs from it (`node .github/scripts/skills-doc.mjs` rewrites it).
 
 ## CedarLoom's skills
 
@@ -21,40 +21,6 @@ The plugins `cl-workflow`, `cl-setup` and `cl-orchestration` ([install](../READM
 | [reviewing-rules](../plugins/cl-setup/skills/reviewing-rules/SKILL.md) | Reviews one rule file such as CLAUDE.md or AGENTS.md for contradictions, vague lines, lines a tool could enforce and lines that restate the code or config. | you: `/cl-setup:reviewing-rules` (Codex `$cl-setup:reviewing-rules`) | On request, after you wrote or changed a rule file. | Nothing: a list of findings in the conversation. Each is a suggestion; you decide what to change. |
 | [setting-up-projects](../plugins/cl-setup/skills/setting-up-projects/SKILL.md) | Sets up or updates a repository's agent setup for Claude Code and Codex: the CedarLoom rules block, the coordinator policy file, the devcontainer configuration and where the agent runs, the project parts of AGENTS.md, other project configuration to remove. | you: `/cl-setup:setting-up-projects` (Codex `$cl-setup:setting-up-projects`) | Use when the user asks to set up, onboard, update, or audit a project's agent setup. | After you approve its plan: the CedarLoom block (repository rules, where commands run) in `AGENTS.md`, or in `CLAUDE.local.md` for a local setup; `AGENTS.md` (commands, first-class targets, footgun docs, pointers) and `CLAUDE.md` with only `@AGENTS.md`, both committed, where `AGENTS.md` is new or holds the block (into a committed `AGENTS.md` without the block, only the parts you pick, and `CLAUDE.md` stays as it is); when absent, the coordinator's `docs/agents/orchestration.json` and an empty `docs/agents/worker-rules.md`, committed; the dev container configuration; short footgun docs under `docs/agents/`; and the removals you confirm when the skill lists other agent configuration: skills, plugin and marketplace entries, MCP servers, hooks, other agent rules files and tool folders. |
 | [workflow](../plugins/cl-workflow/skills/workflow/SKILL.md) | Picks the workflow and depth for a task: a software change, a docs pass, research, or a batch of tasks on one branch, each at quick, standard or deep depth, with the checks and reviews each needs. | the agent, or you with `/cl-workflow:workflow` | Use before the first edit in a repository, before issue or pull request work, and before research with two or more items. | The depth line `Depth: <depth> (<reason>)` and the risk line `Risk: <class> (<reason>)` before the first edit; through its playbooks commits and a pull request in the project's convention. |
-
-## Matt Pocock's skills
-
-The `matt-pocock` pack installs his plugin (skill list of version 1.3.1). Claude Code installs it from the official marketplace, which pins it to one commit ([marketplace.json](https://github.com/anthropics/claude-plugins-official/blob/main/.claude-plugin/marketplace.json)); the pin moves when that marketplace updates it. Skills you start run as `/mattpocock-skills:<name>` (Codex `$mattpocock-skills:<name>`); the agent starts the others on its own, and you can start them too.
-
-| Skill | Started by | What it does |
-| --- | --- | --- |
-| `ask-matt` | you | Routes you to the skill or flow that fits your situation. |
-| `diagnosing-bugs` | the agent or you | A diagnosis loop for hard bugs and performance regressions. |
-| `grill-with-docs` | you | Interviews you to sharpen a plan or design and writes ADRs and glossary entries as it goes. |
-| `triage` | you | Moves issues and external pull requests through triage roles and writes agent-ready briefs. |
-| `improve-codebase-architecture` | you | Scans for deepening opportunities, reports them as an HTML page, then grills through the one you pick. |
-| `setup-matt-pocock-skills` | you | Sets up the issue tracker, triage labels and domain doc layout in `docs/agents/`, once per repository. |
-| `tdd` | the agent or you | Test-driven development, red-green-refactor. |
-| `to-spec` | you | Turns the conversation into a spec on the issue tracker. |
-| `to-tickets` | you | Breaks a plan or spec into tracer-bullet tickets with their blocking edges. |
-| `wayfinder` | you | Plans work too big for one session as decision tickets and resolves them one by one. |
-| `implement` | you | Implements a piece of work from a spec or tickets. |
-| `implement-spec` | you | Implements the result of `to-spec` and `to-tickets`. |
-| `prototype` | the agent or you | Builds a throwaway prototype to answer a design question. |
-| `research` | the agent or you | Investigates a question against primary sources and writes the findings to a Markdown file. |
-| `domain-modeling` | the agent or you | Builds the domain model: `GLOSSARY.md` and ADRs. |
-| `codebase-design` | the agent or you | Shared vocabulary for designing deep modules and their seams. |
-| `code-review` | the agent or you | Reviews changes since a fixed point against the repository's standards and the issue or spec. |
-| `pr` | the agent or you | Writes a pull request body. |
-| `retro` | you | A retrospective on a coding session. |
-| `wizard` | the agent or you | Generates an interactive bash wizard for steps only a human can do. |
-| `grill-me` | you | Interviews you to sharpen a plan or design. |
-| `grilling` | the agent or you | Grills you about a plan, decision or idea. |
-| `handoff` | you | Compacts the conversation into a handoff document for another agent. |
-| `teach` | you | Teaches you a skill or concept within this workspace. |
-| `to-questionnaire` | you | Turns an open decision into a questionnaire for someone else to fill in. |
-| `wait-what` | you | Re-pitches the last message when it did not land. |
-| `writing-for-agents` | the agent or you | Writing skills, `AGENTS.md` and `CLAUDE.md` for agents. |
 <!-- /generated:skills -->
 
-Packs, such as the Matt Pocock pack above, and single skills per project come from the BenchKeeper app, which is not part of CedarLoom 0.1 (without it, install Matt Pocock's plugin yourself): [the library catalog](../plugins/cl-setup/library/README.md).
+Packs and single skills per project come from the BenchKeeper app, which is not part of CedarLoom 0.1: [the library catalog](../plugins/cl-setup/library/README.md).

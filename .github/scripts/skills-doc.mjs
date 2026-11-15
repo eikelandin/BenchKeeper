@@ -1,4 +1,4 @@
-// Writes the skill tables of docs/skills.md from the SKILL.md front matter of the plugin's skills and from library.json.
+// Writes the skill table of docs/skills.md from the SKILL.md front matter of the plugins' skills.
 // Usage: node .github/scripts/skills-doc.mjs [--check]   (--check: exit 1 when the page differs)
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -30,42 +30,34 @@ export function skillEntry(text, plugin) {
   return { name, plugin, purpose, start, when, writes };
 }
 
-export function render(skills, manifest) {
+export function render(skills) {
   const out = [row(['Skill', 'What it is for', 'Started by', 'When it runs', 'What it writes']), row(['---', '---', '---', '---', '---'])];
   for (const s of skills) out.push(row([`[${s.name}](../plugins/${s.plugin}/skills/${s.name}/SKILL.md)`, s.purpose, s.start, s.when, s.writes]));
-  const pack = manifest.packs.find((p) => p.pluginSkills);
-  const { version, skills: theirs } = pack.pluginSkills;
-  out.push('', `## ${pack.title}`, '', `The \`${pack.id}\` pack installs his plugin (skill list of version ${version}). Claude Code installs it from the official marketplace, which pins it to one commit ([marketplace.json](https://github.com/anthropics/claude-plugins-official/blob/main/.claude-plugin/marketplace.json)); the pin moves when that marketplace updates it. Skills you start run as \`/mattpocock-skills:<name>\` (Codex \`$mattpocock-skills:<name>\`); the agent starts the others on its own, and you can start them too.`, '');
-  out.push(row(['Skill', 'Started by', 'What it does']), row(['---', '---', '---']));
-  for (const s of theirs) out.push(row([`\`${s.name}\``, s.user ? 'you' : 'the agent or you', s.does]));
   return out.join('\n');
 }
 
-export function update(page, skills, manifest) {
+export function update(page, skills) {
   const a = page.indexOf(START);
   const b = page.indexOf(END);
   if (a < 0 || b < a) throw new Error(`docs/skills.md needs ${START} and ${END}`);
-  return `${page.slice(0, a + START.length)}\n${render(skills, manifest)}\n${page.slice(b)}`;
+  return `${page.slice(0, a + START.length)}\n${render(skills)}\n${page.slice(b)}`;
 }
 
-// Every plugin's skills in one table, sorted by name; library.json lies in the plugin that has a library folder.
+// Every plugin's skills in one table, sorted by name.
 export function sources() {
   const plugins = readdirSync(`${root}/plugins`).sort();
-  const skills = plugins.filter((p) => existsSync(`${root}/plugins/${p}/skills`))
+  return plugins.filter((p) => existsSync(`${root}/plugins/${p}/skills`))
     .flatMap((p) => readdirSync(`${root}/plugins/${p}/skills`).map((n) => skillEntry(readFileSync(`${root}/plugins/${p}/skills/${n}/SKILL.md`, 'utf8'), p)))
     .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-  const library = plugins.map((p) => `${root}/plugins/${p}/library/library.json`).find((f) => existsSync(f));
-  if (!library) throw new Error('no plugin has library/library.json');
-  return [skills, JSON.parse(readFileSync(library, 'utf8'))];
 }
 
 if (isMain(import.meta.url)) {
   const file = `${root}/docs/skills.md`;
   const page = readFileSync(file, 'utf8');
-  const next = update(page, ...sources());
+  const next = update(page, sources());
   if (process.argv[2] === '--check') {
     if (next !== page) {
-      console.log('::error::docs/skills.md differs from the skill front matter or library.json: run node .github/scripts/skills-doc.mjs');
+      console.log('::error::docs/skills.md differs from the skill front matter: run node .github/scripts/skills-doc.mjs');
       process.exit(1);
     }
   } else writeFileSync(file, next);
