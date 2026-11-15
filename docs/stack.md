@@ -10,19 +10,14 @@ The rest of this page describes what the BenchKeeper app in [app](../app) sets u
 |---|---|---|
 | [Dev Containers](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli) | tooling on host, configuration per repo | the agent runs inside the container by default; `--env` also offers the agent on the host with project commands in the container, a Docker Sandboxes microVM (untested), or no container |
 | [Ponytail](https://github.com/DietrichGebert/ponytail), level `full`, optional | the `ponytail` pack: global plugin in both agents, its level written when the pack is chosen | implementation simplicity |
-| [Matt Pocock's skills](https://github.com/mattpocock/skills), his install, optional | global plugin in both agents: Claude Code from the official marketplace (it pins a commit of his repository), Codex from his marketplace | workflow: grilling, domain docs, spec and tickets, TDD, bug diagnosis, code review, pull request, handoff. Per repo it reads the issue tracker, triage labels and domain docs from `docs/agents/` |
 | [workflow](../plugins/cl-workflow/skills/workflow/SKILL.md) | global, Claude + Codex | task kind (software change, docs pass, research) and depth (quick, standard, deep), pre-push correctness review, security review for risky changes; uses installed skills that match a step |
 | [find-skills](https://github.com/vercel-labs/skills) | global | skill search, used by `setting-up-projects` |
 
-Per repo, committed: `.devcontainer/`, `AGENTS.md` (your own text), `docs/agents/` (with Matt Pocock's skills: from his `/setup-matt-pocock-skills`, with its `## Agent skills` block), `.mcp.json`, `.codex/config.toml`. Local by default, listed in `.git/info/exclude` (committed with `--share`): `CLAUDE.local.md` (shared: `CLAUDE.md`), `AGENTS.override.md`, `.agents/skills/` and `.claude/skills/` (library and stack skills), `skills-lock.json`, `.benchkeeper/`, and `.worktreeinclude`, which lists them for new worktrees (with `--share` it lists only the personal files).
+Per repo, committed: `.devcontainer/`, `AGENTS.md` (your own text), `docs/agents/` (issue tracker, triage labels and domain docs), `.mcp.json`, `.codex/config.toml`. Local by default, listed in `.git/info/exclude` (committed with `--share`): `CLAUDE.local.md` (shared: `CLAUDE.md`), `AGENTS.override.md`, `.agents/skills/` and `.claude/skills/` (library and stack skills), `skills-lock.json`, `.benchkeeper/`, and `.worktreeinclude`, which lists them for new worktrees (with `--share` it lists only the personal files).
 
-Global (per machine): the rules, the BenchKeeper plugin, the plugins of the packs chosen (Ponytail, Matt Pocock's skills), find-skills, settings.
+Global (per machine): the rules, the BenchKeeper plugin, the plugins of the packs chosen (Ponytail), find-skills, settings.
 
 With the `ponytail` pack, another Ponytail level for the current session: `/ponytail lite` or `/ponytail ultra` (Claude Code).
-
-<!-- generated:core -->
-**Optional: [mattpocock/skills](https://github.com/mattpocock/skills) by Matt Pocock:** an add-on: when installed, his skills may run a workflow step in more detail (bug diagnosis, a test first, prototypes, interface design) under the floor and gates of the workflow skill, which is complete without them.
-<!-- /generated:core -->
 
 ## Contents
 
@@ -49,7 +44,7 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | [plugins/cl-setup/skills/audit](../plugins/cl-setup/skills/audit/SKILL.md) | reports findings in agent instructions, docs or code with `file:line`, the exact quote, a pattern and a confidence; changes nothing | plugin skill `/cl-setup:audit`, user-invoked |
 | [plugins/cl-setup/skills/improve](../plugins/cl-setup/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-setup:improve`, user-invoked |
 | [plugins/cl-setup/skills/debloat](../plugins/cl-setup/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-setup/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-setup:debloat`, user-invoked; the script also runs the `token-budget` CI job |
-| [plugins/cl-setup/library](../plugins/cl-setup/library/README.md) | skills installed per project, grouped into packs (frontend, testing, security, science, docs, data, marketing, operations, Matt Pocock's) | installed into a project by `benchkeeper projects apply` |
+| [plugins/cl-setup/library](../plugins/cl-setup/library/README.md) | skills installed per project, grouped into packs (frontend, testing, security, science, docs, data, marketing, operations) | installed into a project by `benchkeeper projects apply` |
 | [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then `app/CHANGELOG.md` (tags `app-v*`) and the changelog of each plugin, `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`, content up to 6.27 under `setup-v*`), see [Releasing](releasing.md) | not linked |
 | [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 
