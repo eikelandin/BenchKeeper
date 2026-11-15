@@ -5,7 +5,7 @@ What the CedarLoom plugins add to a Claude Code session besides their skills, an
 | Plugin | Hooks | Settings |
 |---|---|---|
 | `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand`, [`hub`](#hub-repository) |
-| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`, `issuesIn`](#hub-repository) |
+| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | [`runner`](../plugins/cl-orchestration/skills/orchestrating-projects/runners.md), `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`, `issuesIn`](#hub-repository) |
 | `cl-setup` | none | none |
 
 Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options with `/plugin` (Installed tab, Configure options) or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session.

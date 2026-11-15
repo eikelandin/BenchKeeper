@@ -1,19 +1,24 @@
 # Orca commands
 
-Orca is the runner this skill drives. `ORCA` stands for the executable the session resolved and used for `ORCA skills get orchestration`; substitute it, do not run `ORCA` literally. Load that guide first: it is the version-matched source for every command and state, and it wins where this file differs. This file holds only what the guide leaves to the caller: the launch settings, how the skill's outcomes, waits, dialogs and cleanup map onto Orca, and the host limit. Prefer `--json`.
+The `orca` runner ([runners.md](runners.md)) drives Orca. `ORCA` stands for the executable the session resolved and used for `ORCA skills get orchestration`; substitute it, do not run `ORCA` literally. Load that guide first: it is the version-matched source for every command and state, and it wins where this file differs. This file holds only what the guide leaves to the caller: the launch settings, how the skill's outcomes, waits, dialogs and cleanup map onto Orca, and the host limit. Prefer `--json`.
 
-Contents:
+The sections of the [runner interface](runners.md#interface), in this file:
 
-- [Start the run](#start-the-run)
-- [Acknowledgement](#acknowledgement)
-- [Worker reports](#worker-reports)
-- [Questions](#questions)
-- [Watch](#watch)
-- [A permission dialog](#a-permission-dialog)
-- [Resume](#resume)
-- [Clean up](#clean-up)
-- [Host limit](#host-limit)
-- [Scheduled runs](#scheduled-runs)
+| Section | Here |
+| --- | --- |
+| Detect | an Orca executable is found and `ORCA skills get orchestration` succeeds |
+| Start | [Start the run](#start-the-run) |
+| Acknowledgement | [Acknowledgement](#acknowledgement) |
+| Reports | [Worker reports](#worker-reports) |
+| Questions | [Questions](#questions) |
+| Follow-up | the `send` of [Start the run](#start-the-run); the worker answers as [Worker reports](#worker-reports) says |
+| Watch | [Watch](#watch) |
+| Dialogs | [A permission dialog](#a-permission-dialog) |
+| Write scope | the worktree; anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)) |
+| Resume | [Resume](#resume) |
+| Clean up | [Clean up](#clean-up) |
+| Host limit | [Host limit](#host-limit) |
+| Scheduled runs | [Scheduled runs](#scheduled-runs) |
 
 ## Start the run
 

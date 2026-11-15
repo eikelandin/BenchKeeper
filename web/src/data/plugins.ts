@@ -14,7 +14,7 @@ export const requirements: [string, string][] = [
   ['Claude Code', '2.1.295 or later'],
   ['Node.js on the PATH', 'the hooks of the plugins run node'],
   ['Git and the GitHub CLI (gh)', 'for setting up repositories and for coordinating issue work'],
-  ['Orca', 'with its orchestration skill, for cl-orchestration only: the coordinator starts nothing without it'],
+  ['Orca', 'optional, with its orchestration skill, for cl-orchestration only: without it, and with no other runner set or detected, workers run as background agents of the coordinator'],
 ];
 
 export type Skill = { name: string; args?: string; text: string };
@@ -56,7 +56,7 @@ export const plugins: PluginInfo[] = [
     title: 'cl-orchestration',
     summary: 'Coordinates the issues of several projects from one session.',
     skills: [
-      { name: 'orchestrating-projects', args: '<project paths>', text: 'Starts workers on labeled issues across the projects, has a fresh reviewer check each pull request and merges only where the repository\'s written policy allows.' },
+      { name: 'orchestrating-projects', args: '[--runner <name>] <project paths>', text: 'Starts workers on labeled issues across the projects, has a fresh reviewer check each pull request and merges only where the repository\'s written policy allows.' },
     ],
     notes: [
       'Needs cl-workflow, which installing it brings along.',

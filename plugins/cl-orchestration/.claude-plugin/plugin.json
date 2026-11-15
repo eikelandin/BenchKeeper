@@ -33,6 +33,12 @@
       "default": 0,
       "min": 0
     },
+    "runner": {
+      "type": "string",
+      "title": "Runner that starts the workers",
+      "description": "Empty by default: auto, which takes the one runner that detects itself, else claude-code (background agents of the coordinator's session). claude-code or orca sets one; a set runner that is missing starts nothing. A run's --runner argument wins.",
+      "default": ""
+    },
     "hub": {
       "type": "string",
       "title": "Hub repository for questions and issues (owner/name)",
