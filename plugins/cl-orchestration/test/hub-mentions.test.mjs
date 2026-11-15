@@ -40,6 +40,11 @@ test('hub mentions: encoded forms and the name before an issue number are hits, 
   for (const body of others) assert.deepEqual(mentions('owner/tracker', { ...clean, body }), [], body);
 });
 
+test('hub mentions: a dot in the hub matches only a dot', () => {
+  for (const body of ['See owner.io/my.tracker.', 'see my.tracker#12']) assert.deepEqual(mentions('owner.io/my.tracker', { ...clean, body }), ['body'], body);
+  for (const body of ['ownerxio/myxtracker', 'ownerxio/my.tracker', 'see myxtracker#12']) assert.deepEqual(mentions('owner.io/my.tracker', { ...clean, body }), [], body);
+});
+
 test('hub mentions: a text encoded more than three times over is no answer', () => {
   // 125,000 layers in 250 kB, as a commit message may hold.
   assert.throws(() => mentions('owner/tracker', { ...clean, body: `owner%${'25'.repeat(125000)}2Ftracker` }), /encoded more than 3 times over/);
