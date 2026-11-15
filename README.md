@@ -106,7 +106,7 @@ The command-line tool and the browser app are planned for 0.2.
 - [Skills](docs/skills.md): what each skill does, who starts it and what it writes
 - [Coordinator workflow](docs/coordinator-workflow.md) and [restart-safe coordinator](docs/restart-safe-coordinator.md)
 - [Stack](docs/stack.md): the components CedarLoom works with and why
-- [Security notes](docs/security.md) and [how to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
+- [How to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
 
 ## License
 

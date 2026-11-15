@@ -27,7 +27,7 @@ These hold in every step and for every outcome.
 - This session runs on `opus` at `high`. On `fable`, tell the owner once and go on only on their word.
 - A worker on `fable` follows Sessions on `fable` in the `cl-workflow:workflow` skill: it takes one issue whatever `issuesPerWorker` says, and after its report it gets no follow-up and is never resumed. Release it once its handoff is copied; its follow-up goes to a fresh worker on its branch whose spec carries that handoff under `Shared context:`.
 - Report each step with what was skipped or not checked.
-- The run folder holds against sandboxed workers only: no worker's sandbox may write the coordinator's working directory, while a worker without the sandbox can write it like every folder of the user and can merge with the owner's `gh` login; only the repository's rulesets bind such a worker (docs/security.md, Rules and skills against what is enforced).
+- The run folder holds against sandboxed workers only: no worker's sandbox may write the coordinator's working directory, while a worker without the sandbox can write it like every folder of the user and can merge with the owner's `gh` login; only the repository's rulesets bind such a worker.
 
 ## Names
 
