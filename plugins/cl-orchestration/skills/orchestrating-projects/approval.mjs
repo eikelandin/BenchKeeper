@@ -129,15 +129,24 @@ function queueDir(create) {
 
 // Files the approval text as the next question <project>-<n>.md of the queue, never over an existing file, and keeps the queue out of git.
 export function fileQuestion(text, project, run) {
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(project)) throw new Error(`no plain project name: ${project}`);
+  // A project name reads as a repository name does (REPO).
+  if (!/^(?!\.\.?$)[A-Za-z0-9._-]+$/.test(project)) throw new Error(`no plain project name: ${project}`);
+  // The answer is the last Owner answer line, so the filed text carries none: every such line comes after it.
+  if (/^Owner answer \(/m.test(text)) throw new Error('refused: the question text holds a line starting "Owner answer ("');
   const dir = queueDir(true);
   try {
     run('git', ['check-ignore', '-q', QUEUE]);
   } catch (e) {
     // 1: not ignored; 128: no git repository, nothing to keep out.
-    // An exclude pattern with a slash matches from the repository root, so it names the folder from there.
-    if (e.status === 1) { const exclude = resolve(run('git', ['rev-parse', '--git-path', 'info/exclude']).trim()); mkdirSync(dirname(exclude), { recursive: true }); appendFileSync(exclude, `\n/${run('git', ['rev-parse', '--show-prefix']).trim()}${QUEUE.replaceAll(sep, '/')}/\n`); }
-    else if (e.status !== 128) throw e;
+    // An exclude pattern with a slash matches from the repository root, so it names the folder from there,
+    // with the pattern characters of the folder names escaped (https://git-scm.com/docs/gitignore#_pattern_format).
+    if (e.status === 1) {
+      const prefix = run('git', ['rev-parse', '--show-prefix']).replace(/\n$/, '');
+      if (/[\r\n]/.test(prefix)) throw new Error('refused: the folder path holds a line break, which no exclude line can name');
+      const exclude = resolve(run('git', ['rev-parse', '--git-path', 'info/exclude']).trim());
+      mkdirSync(dirname(exclude), { recursive: true });
+      appendFileSync(exclude, `\n/${prefix.replace(/[\\[*?]/g, '\\$&')}${QUEUE.replaceAll(sep, '/')}/\n`);
+    } else if (e.status !== 128) throw e;
   }
   const taken = readdirSync(dir).filter((name) => name.startsWith(`${project}-`)).map((name) => /^(\d+)\.md$/.exec(name.slice(project.length + 1))?.[1]).filter(Boolean).map(Number);
   const name = `${project}-${Math.max(0, ...taken) + 1}.md`;
@@ -151,7 +160,13 @@ export function readQueue() {
   const dir = queueDir(false);
   const names = dir ? readdirSync(dir).filter((name) => name.endsWith('.md')).sort((a, b) => a.localeCompare(b, 'en', { numeric: true })) : [];
   return names.map((file) => {
-    const body = readFileSync(join(dir, file), 'utf8');
+    let body;
+    try {
+      body = readFileSync(join(dir, file), 'utf8');
+    } catch (e) {
+      // A folder or a dangling link by a question's name.
+      return { file, error: `cannot be read (${e.code ?? e.message})` };
+    }
     const status = /^Status: (open|answered|deferred)\r?$/.exec(body.split('\n', 1)[0])?.[1];
     if (!status) return { file, error: 'the first line is no Status line (open, answered or deferred)' };
     if (status !== 'answered') return { file, status };

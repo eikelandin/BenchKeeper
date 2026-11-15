@@ -9,7 +9,7 @@ Copy [approval-template.md](approval-template.md) without its front matter into 
 - What: the decision in one sentence, starting with its gate and subject: `design` with the issue as `<tracker>#<number>` (an issue held before its worker starts, [SKILL.md](SKILL.md#risk-class)); `merge` or `owner-only` (an owner-only file or a release) with the pull request as `<owner/repo>#<n>`; any other owner decision with one word of your own and its issue or pull request.
 - Runs on: the reader's `models` for the worker at the task's depth and each phase (a sensitive change: plan and review from `models.sensitive`), a phase it omits by the field table ([policy.md](policy.md)), `inherit` as the worker's. Review: `review.*`. Merges: `merge.*`.
 - Recommended: starts with the label of the first option row, `(a)`.
-- Answer: what is true where the issue lands. In the hub or the local queue: `run /cl-workflow:questions` (the queue: in <working folder>). In any other repository: `comment on this issue "a" or "b" alone, or "Owner answer (date): a." with "b" in place of "a" and your own text after it` (only these forms are read, [The answer](#the-answer)).
+- Answer: what is true where the issue lands. In the hub or the local queue: `run /cl-workflow:questions` (the queue: in <working folder>, from a session other than the coordinator's). In any other repository: `comment on this issue "a" or "b" alone, or "Owner answer (date): a." with "b" in place of "a" and your own text after it` (only these forms are read, [The answer](#the-answer)).
 
 Run `node <skill folder>/approval.mjs <file>` from your working directory until it exits 0: it names each part that is missing, unfilled or at odds with the options. It exits 2 for a path outside `.cedarloom/runs/` of that directory.
 

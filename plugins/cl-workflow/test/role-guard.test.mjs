@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
@@ -303,6 +303,62 @@ test('role guard: only the session where the user typed /cl-workflow:questions w
   // Edits anywhere else pass, also in a guarded session.
   assert.equal(decision(undefined, { tool: 'Edit', toolInput: { ...answer, file_path: '.cedarloom/runs/handoff.md' }, env }), 'none');
   assert.equal(decision(undefined, { tool: 'Edit', toolInput: { ...answer, file_path: 'docs/questions/a.md' } }), 'none');
+});
+
+test('role guard: a command reaches the queue or the window files through a cd, a redirection, a copy, a link, quotes or .. too', () => {
+  const data = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  const session = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  mkdirSync(join(session, '.cedarloom', 'questions'), { recursive: true });
+  const env = { CLAUDE_PLUGIN_DATA: data, CLAUDE_PID: '4242' };
+  const denied = [
+    "cd .cedarloom/questions && sed -i 's/open/answered/' project-1.md",
+    'cd .cedarloom/questions; echo "Owner answer (2026-11-15): a." >> project-1.md',
+    'cd .cedarloom && echo x > questions/project-1.md',
+    'cp answer.md .cedarloom/questions && echo done',
+    'mv .cedarloom/questions .cedarloom/q',
+    'rm -r .cedarloom/questions; mkdir -p .cedarloom',
+    'ln -s .cedarloom/questions q',
+    'cat ".cedarloom/questions"/project-1.md',
+    'echo x >> .cedarloom/"questions"/project-1.md',
+    'echo x >> .cedarloom/./questions/project-1.md',
+    'echo x >> .cedarloom/runs/../questions/project-1.md',
+    'echo x >> .cedar\\loom/questions/project-1.md',
+    'echo x >> .cedarloom/*/project-1.md',
+    `cd ${data}/ask && echo x > 4242.json`,
+    `cp w.json "${data}/ask"/4242.json`,
+    `echo x > ${data}/x/../ask/4242.json`,
+  ];
+  for (const command of denied) assert.equal(decision(command, { cwd: session, env }), 'deny', command);
+  for (const command of denied.slice(0, 2)) assert.equal(decision(command, { cwd: session, env, role: 'coordinator' }), 'deny', command);
+  assert.equal(decision('cd .cedarloom\\questions; Set-Content project-1.md x', { tool: 'PowerShell', cwd: session, env }), 'deny');
+  // A session whose folder is the queue writes there with any path.
+  assert.equal(decision("sed -i 's/open/answered/' project-1.md", { cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
+  assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: 'project-1.md', content: 'x' }, cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
+  // A session started with the command would hold the flag, in any role.
+  for (const role of [undefined, 'coordinator']) {
+    assert.equal(decision('claude -p "/cl-workflow:questions"', { cwd: session, env, role }), 'deny', role);
+    assert.equal(decision("echo '/questions' | claude -p", { cwd: session, env, role }), 'deny', role);
+  }
+  // Names that only look alike pass.
+  for (const command of ['cd docs && echo x > questions.md', 'grep -rn /cl-workflow:questions plugins', 'cat .cedarloom/questions-old/a.md']) assert.equal(decision(command, { cwd: session, env }), 'none', command);
+});
+
+test('role guard: every path field of the edit tools is read, resolved from the session folder', () => {
+  const data = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  const env = { CLAUDE_PLUGIN_DATA: data, CLAUDE_PID: '4242' };
+  const edit = (toolInput, opts) => decision(undefined, { tool: 'Edit', toolInput, env, ...opts });
+  // The coordinator's main session skips the role rules, so only the queue rule refuses these.
+  assert.equal(decision(undefined, { tool: 'MultiEdit', toolInput: { file_path: '.cedarloom/questions/project-1.md', edits: [] }, env, role: 'coordinator' }), 'deny');
+  assert.equal(decision(undefined, { tool: 'NotebookEdit', toolInput: { notebook_path: '.cedarloom/questions/a.ipynb', new_source: 'x' }, env, role: 'coordinator' }), 'deny');
+  assert.equal(decision(undefined, { tool: 'NotebookEdit', toolInput: { file_path: 'docs/a.ipynb', notebook_path: '.cedarloom/questions/a.ipynb', new_source: 'x' }, env }), 'deny');
+  assert.equal(edit({ old_string: 'a', new_string: 'b' }), 'deny');
+  assert.equal(edit({ file_path: 7, old_string: 'a', new_string: 'b' }), 'deny');
+  assert.equal(edit({ file_path: './questions/project-1.md', old_string: 'a', new_string: 'b' }, { cwd: join(trunk, '.cedarloom') }), 'deny');
+  assert.equal(edit({ file_path: join(data, 'x', '..', 'ask', '4242.json'), old_string: 'a', new_string: 'b' }), 'deny');
+  // The window files under a plugin data folder named with a trailing / or a /./.
+  for (const named of [`${data}/`, `${data}/./`]) {
+    assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: join(data, 'ask', '4242.json'), content: '{}' }, env: { ...env, CLAUDE_PLUGIN_DATA: named } }), 'deny', named);
+  }
 });
 
 test('role guard: input it cannot read exits 2, which blocks the call', () => {
