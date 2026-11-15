@@ -1,156 +1,4 @@
 {
-  "description": "BenchKeeper sets up Claude Code and Codex the same way on your machine and in each repository: short global rules and a workflow skill that sizes each task, plus a dev container, `AGENTS.md` and skills per repository. Its app shows every change before it applies it and records each run so you can undo it.",
-  "levels": [
-    {
-      "name": "Lite",
-      "contains": "the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app`, `reviewing-rules`, `audit`, `improve` and `debloat` skills",
-      "writes": "nothing outside the plugin install, besides the app's run record for undo",
-      "command": "npx @cedarloom/app@6.27.0 apply --level lite",
-      "evidence": "app/test/level.test.mjs"
-    },
-    {
-      "name": "Standard",
-      "contains": "lite plus the local project block: `CLAUDE.local.md`, `AGENTS.override.md` and the git exclude list",
-      "writes": "local files in each project you run `projects apply` in",
-      "command": "npx @cedarloom/app@6.27.0 apply --level standard && npx @cedarloom/app@6.27.0 projects apply",
-      "evidence": [
-        "app/test/level.test.mjs",
-        "docs/setup.md#per-repo"
-      ]
-    },
-    {
-      "name": "Full",
-      "contains": "standard plus the global rules, Claude Code and Codex settings, packs and the app",
-      "writes": "global rule files, settings and packs",
-      "command": "npx @cedarloom/app@6.27.0 apply --level full",
-      "evidence": [
-        "app/test/level.test.mjs",
-        "docs/setup.md#setup-details"
-      ]
-    }
-  ],
-  "core": {
-    "name": "mattpocock/skills",
-    "by": "Matt Pocock",
-    "url": "https://github.com/mattpocock/skills",
-    "role": "an add-on: when installed, his skills may run a workflow step in more detail (bug diagnosis, a test first, prototypes, interface design) under the floor and gates of the workflow skill, which is complete without them",
-    "evidence": [
-      "plugins/cl-workflow/skills/workflow/SKILL.md",
-      "plugins/cl-workflow/skills/workflow/software.md#steps"
-    ]
-  },
-  "quickstart": {
-    "needs": "Node.js 22 and at least one agent, Claude Code or Codex.",
-    "choose": "Choose the App to review each change in the browser. Choose the CLI in a terminal-only session or in a script.",
-    "paths": [
-      {
-        "name": "App",
-        "steps": [
-          {
-            "command": "npx @cedarloom/app@6.27.0",
-            "text": "Opens the browser on the Dashboard with the doctor findings (the read-only checks of this machine). Select Fix everything, review the changes and press Apply; nothing is written before.",
-            "evidence": [
-              "app/README.md#web-ui",
-              "app/test/server.test.mjs"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "CLI",
-        "steps": [
-          {
-            "command": "npx @cedarloom/app@6.27.0 plan",
-            "text": "Lists each change and writes nothing.",
-            "evidence": "app/test/cli.test.mjs"
-          },
-          {
-            "command": "npx @cedarloom/app@6.27.0 apply",
-            "text": "Asks per change. `--yes` applies the default selection without questions.",
-            "evidence": "app/test/cli.test.mjs"
-          }
-        ]
-      }
-    ],
-    "next": "After either path, restart the agents.",
-    "changes": "`npx @cedarloom/app@6.27.0 history` lists what changed, `npx @cedarloom/app@6.27.0 undo <run>` reverses a run.",
-    "links": [
-      { "label": "Lite level, the plugin alone", "anchor": "levels" },
-      { "label": "Full setup description", "anchor": "setup-details" },
-      { "label": "What the app writes and what it never does", "anchor": "what-the-app-writes-and-what-it-never-does" }
-    ]
-  },
-  "prerequisites": [
-    {
-      "name": "Claude Code",
-      "url": "https://code.claude.com/docs/en/setup",
-      "for": "agent, at least one; Gemini CLI and GitHub Copilot CLI get rules, skills, settings, doctor and project setup only. Version 2.1.292 or later for the effort a skill passes to a subagent call, such as `xhigh` for a security review: 2.1.267 to 2.1.291 run each subagent at the `effort` of its definition (`high` for the reviewer), and an older one ignores that field on Opus 4.7, Opus 4.8 and Fable 5",
-      "evidence": [
-        "docs/setup.md#agent-and-os-support",
-        "plugins/cl-orchestration/skills/orchestrating-projects/review-and-merge.md#review",
-        "https://code.claude.com/docs/en/sub-agents#choose-an-effort-level",
-        "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21292",
-        "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21267"
-      ]
-    },
-    {
-      "name": "Codex CLI",
-      "url": "https://developers.openai.com/codex/cli",
-      "for": "agent, at least one; Gemini CLI and GitHub Copilot CLI get rules, skills, settings, doctor and project setup only",
-      "evidence": "docs/setup.md#agent-and-os-support"
-    },
-    {
-      "name": "Git",
-      "url": "https://git-scm.com/downloads",
-      "for": "clone, branches, commits",
-      "evidence": [
-        "https://git-scm.com/downloads",
-        "plugins/cl-workflow/skills/workflow/SKILL.md"
-      ]
-    },
-    {
-      "name": "GitHub CLI",
-      "url": "https://cli.github.com/",
-      "for": "issues and pull requests (optional, local branches without it)",
-      "evidence": [
-        "https://cli.github.com/",
-        "plugins/cl-workflow/skills/workflow/software.md#steps"
-      ]
-    },
-    {
-      "name": "Node.js and npm",
-      "url": "https://nodejs.org/en/download",
-      "for": "the app (Node.js 22), Dev Containers CLI and skills CLI, npm with a user prefix such as `$HOME/.local`",
-      "evidence": [
-        "app/package.json",
-        "docs/setup.md#setup-details"
-      ]
-    },
-    {
-      "name": "Docker Engine",
-      "url": "https://docs.docker.com/engine/install/",
-      "for": "dev containers (`container` and `host-agent` modes; Podman works too)",
-      "evidence": "docs/setup.md#per-repo"
-    },
-    {
-      "name": "VS Code",
-      "url": "https://code.visualstudio.com/download",
-      "for": "optional, attach to the devcontainer",
-      "evidence": [
-        "https://code.visualstudio.com/download",
-        "docs/setup.md#per-repo"
-      ]
-    },
-    {
-      "name": "Orca",
-      "url": "https://github.com/stablyai/orca",
-      "for": "optional, the runner the `orchestrating-projects` skill needs (CLI `orca`)",
-      "evidence": [
-        "https://github.com/stablyai/orca",
-        "plugins/cl-orchestration/skills/orchestrating-projects/orca.md"
-      ]
-    }
-  ],
   "parallelTools": [
     {
       "name": "Orca",
@@ -214,7 +62,7 @@
     ],
     "evidence": [
       "https://github.com/OpenHands/OpenHands",
-      "docs/setup.md#per-repo"
+      "plugins/cl-setup/skills/setting-up-projects/SKILL.md"
     ]
   },
   "overview": {
@@ -249,8 +97,8 @@
         "name": "Understand",
         "phase": "define",
         "sub": "request, questions, on-ramps",
-        "tip": "Reads the request, AGENTS.md and the code it touches, and picks the kind (software change, docs pass, research) and the depth. With Matt Pocock's skills: triage, diagnosing-bugs, wayfinder. Standard and deep: open questions go with recommendations into one issue, and the agent goes on (in rounds, then plan mode, while you allow terminal questions).",
-        "text": "Read the request, `AGENTS.md` and the code the change touches, and pick the kind (software change, docs pass, research) and the depth. With Matt Pocock's skills installed, his on-ramps start here: `/triage` for issues you did not write, `diagnosing-bugs` for a broken behavior, `/wayfinder` for work too big to see the way yet. Standard and deep: the agent writes the open questions, each with a recommendation, into one issue in the tracker the project names, takes the safe and reversible ones and goes on. Only while you allow terminal questions does it ask them in rounds and explore in plan mode.",
+        "tip": "Reads the request, AGENTS.md and the code it touches, and picks the kind (software change, docs pass, research) and the depth. Standard and deep: open questions go with recommendations into one issue, and the agent goes on (in rounds, then plan mode, while you allow terminal questions).",
+        "text": "Read the request, `AGENTS.md` and the code the change touches, and pick the kind (software change, docs pass, research) and the depth. Standard and deep: the agent writes the open questions, each with a recommendation, into one issue in the tracker the project names, takes the safe and reversible ones and goes on. Only while you allow terminal questions does it ask them in rounds and explore in plan mode.",
         "evidence": [
           "plugins/cl-workflow/skills/workflow/SKILL.md",
           "plugins/cl-workflow/skills/workflow/software.md#steps"
@@ -262,7 +110,7 @@
         "sub": "plan, spec, tickets",
         "human": "approve the plan",
         "tip": "Standard: a plan of a few lines that names the test seams. Deep: the spec, terms and decisions recorded. Several sessions: one ticket per testable slice.",
-        "text": "Standard: a plan of a few lines that names the test seams. Deep: the spec (deployment target, data storage, module boundaries, core types), with terms and decisions recorded (`domain-modeling` with Matt Pocock's skills). Work for several sessions: one ticket per independently testable slice; with his skills the agent suggests `/to-spec` and `/to-tickets` and waits for you to run them.",
+        "text": "Standard: a plan of a few lines that names the test seams. Deep: the spec (deployment target, data storage, module boundaries, core types), with terms and decisions recorded. Work for several sessions: one ticket per independently testable slice.",
         "evidence": [
           "plugins/cl-workflow/skills/workflow/SKILL.md",
           "plugins/cl-workflow/skills/workflow/deep.md"
@@ -273,7 +121,7 @@
         "phase": "build",
         "sub": "tests where they count",
         "tip": "Standard and deep: the existing tests of the touched code, then a test first only where the test rule calls for one.",
-        "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
+        "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one, ticket by ticket. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
         "evidence": [
           "plugins/cl-workflow/skills/workflow/software.md#steps",
           "docs/stack.md#components"
@@ -284,7 +132,7 @@
         "phase": "build",
         "sub": "tests, browser, spec review",
         "tip": "Every depth: build, types, lint and tests where AGENTS.md says, each with its command and result. UI changes also in a browser. Deep: the branch reviewed against the spec.",
-        "text": "Every depth: the project's build, types, lint and tests, run where `AGENTS.md` says (the dev container by default), each reported with its command and result. UI changes also get a browser check, in addition to the UI tests, never instead of them. Long checks run once, after the last edit. Deep: the branch is reviewed against the spec (`code-review` with Matt Pocock's skills).",
+        "text": "Every depth: the project's build, types, lint and tests, run where `AGENTS.md` says (the dev container by default), each reported with its command and result. UI changes also get a browser check, in addition to the UI tests, never instead of them. Long checks run once, after the last edit. Deep: the branch is reviewed against the spec.",
         "evidence": [
           "plugins/cl-workflow/skills/workflow/SKILL.md#verify"
         ]
@@ -304,9 +152,9 @@
       {
         "name": "Maintain",
         "phase": "maintain",
-        "sub": "retro, architecture, audit",
-        "tip": "After a session that went sideways: retro. On request: /maintaining-repos (audit, cleanup, architecture, test audit, debt, dependencies, pins, docs drift, unused skills). Findings become new requests.",
-        "text": "After a session that went sideways: `/retro` (Matt Pocock's skills). On request (`/cl-setup:maintaining-repos`): cleanup tools (unused code, duplicates), architecture checks (cycles, forwarding modules), a test audit by mutation testing, dependency audit, version pins, docs drift, `/doctor prompt-audit`, `/skill-doctor`, repository hygiene, and with Matt Pocock's skills `/improve-codebase-architecture` and `/triage`. Findings become new requests.",
+        "sub": "architecture, audit",
+        "tip": "On request: /maintaining-repos (audit, cleanup, architecture, test audit, debt, dependencies, pins, docs drift, unused skills). Findings become new requests.",
+        "text": "On request (`/cl-setup:maintaining-repos`): cleanup tools (unused code, duplicates), architecture checks (cycles, forwarding modules), a test audit by mutation testing, dependency audit, version pins, docs drift, `/doctor prompt-audit`, `/skill-doctor`, repository hygiene. Findings become new requests.",
         "evidence": [
           "plugins/cl-setup/skills/maintaining-repos/SKILL.md"
         ]
@@ -342,24 +190,13 @@
         "name": "One install",
         "text": "one machine setup covers every repository. Each repository adds only its tracker, docs and stack.",
         "evidence": [
-          "docs/setup.md#setup-details",
-          "docs/setup.md#per-repo"
+          ".claude-plugin/marketplace.json",
+          "plugins/cl-setup/skills/setting-up-projects/SKILL.md"
         ]
       }
     ]
   },
   "evidence": {
-    "description": [
-      "docs/setup.md#setup-details",
-      "docs/setup.md#per-repo"
-    ],
-    "sdlc.requirements": "plugins/cl-orchestration/skills/orchestrating-projects/SKILL.md",
-    "quickstart.needs": "app/package.json",
-    "quickstart.choose": [
-      "app/README.md#web-ui",
-      "app/README.md#commands"
-    ],
-    "quickstart.next": "docs/setup.md#update",
-    "quickstart.changes": "docs/setup.md#setup-details"
+    "sdlc.requirements": "plugins/cl-orchestration/skills/orchestrating-projects/SKILL.md"
   }
 }

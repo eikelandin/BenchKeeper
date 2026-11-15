@@ -11,13 +11,11 @@ const skill = (fields) => `---\n${fields.join('\n')}\n---\n\n# x\n`;
 
 test('docs/skills.md matches its sources', () => {
   const page = readFileSync(join(root, 'docs/skills.md'), 'utf8');
-  assert.equal(update(page, ...sources()), page);
+  assert.equal(update(page, sources()), page);
 });
-test('every plugin skill and every pack plugin skill has its row', () => {
-  const [skills, manifest] = sources();
+test('every plugin skill has its row', () => {
   const page = readFileSync(join(root, 'docs/skills.md'), 'utf8');
-  for (const s of skills) assert.match(page, new RegExp(`^\\| \\[${s.name}\\]`, 'm'));
-  for (const s of manifest.packs.flatMap((p) => p.pluginSkills?.skills ?? [])) assert.match(page, new RegExp(`^\\| \`${s.name}\` \\|`, 'm'));
+  for (const s of sources()) assert.match(page, new RegExp(`^\\| \\[${s.name}\\]`, 'm'));
 });
 test('the when column comes from the field, else from the description after its first sentence', () => {
   const agent = skillEntry(skill(['name: a', 'description: "Does a. Use when b."', 'writes: "c"']));

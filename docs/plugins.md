@@ -4,8 +4,8 @@ What the CedarLoom plugins add to a Claude Code session besides their skills, an
 
 | Plugin | Hooks | Settings |
 |---|---|---|
-| `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand` |
-| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks` |
+| `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand`, [`hub`](#hub-repository) |
+| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`](#hub-repository) |
 | `cl-setup` | none | none |
 
 Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options with `/plugin` (Installed tab, Configure options) or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session.
@@ -36,7 +36,7 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 - The plugin's `PreToolUse` hook refuses both with the rule as its reason: open questions with recommendations go into one issue per task in the issue tracker the project names, else the report; safe, reversible recommendations are taken and the work goes on; no chat-text interviews either.
 - A `SessionStart` hook adds that rule as one line at start, resume, `/clear`, compaction and fork.
 - `/cl-workflow:ask` allows both for 30 minutes, `for <n>m` or `for <n>h`, `until HH:MM` (local time), and `off` ends the window early.
-- `/cl-workflow:questions`, the question queue, allows both for the rest of the session, as running it means you sit at the terminal; `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. It asks you the open `question` issues of the hub repository that CedarLoom's owner-questions rule or the machine-local `CLAUDE.local.md` line names, never a project's own rules, in batches, comments each answer, and labels the ones you defer `deferred` so the queue skips them.
+- `/cl-workflow:questions`, the question queue, allows both for the rest of the session, as running it means you sit at the terminal; `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. It asks you the open `question` issues of the [hub repository](#hub-repository) in batches, comments each answer, and labels the ones you defer `deferred` so the queue skips them.
 - A window ends at its time or when Claude Code quits. `/clear`, compaction and a fork keep it, while a new Claude Code process or a resumed conversation starts with questions off.
 - A `UserPromptExpansion` hook sets the window, and that event fires only when a typed command expands ([hooks reference](https://code.claude.com/docs/en/hooks#userpromptexpansion)). So the same text in a scheduled task sets nothing (checked with a cron job, Claude Code 2.1.316), nor, by that reference, in a `/loop` iteration or a message from another session; the skill is user-only.
 - The window is one file per Claude Code process in the plugin's data folder (`ask/<CLAUDE_PID>.json`, the window's end), and `CLAUDE_PID` is set in the Bash tool too, so a model that writes that file opens the window: the hooks stop a model that forgets the rule, not one that works around it.
@@ -44,6 +44,14 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 - On Windows the hooks start `node` without a shell, which needs `node.exe` itself on the PATH: with only a `.cmd` or `.bat` shim, the refusal still holds but `/cl-workflow:ask` cannot open the window (unverified on Windows).
 - Setting `disableAllHooks` turns the hooks off.
 - Codex runs none of these hooks, so there `/cl-workflow:ask` changes nothing.
+
+## Hub repository
+
+The hub is one GitHub repository, often a private one, that collects the owner questions of all your projects and keeps internal questions out of product repositories. The coordinator of `/cl-orchestration:orchestrating-projects` files each question there as an issue in the approval layout, with the labels `question`, `ready-for-human` and `project:<name>`, and `/cl-workflow:questions` asks them in any session.
+
+- Set it: the option `hub`, as `owner/name`, of both `cl-workflow@cedarloom` and `cl-orchestration@cedarloom`, to the same value. Run `/plugin configure cl-workflow@cedarloom` and `/plugin configure cl-orchestration@cedarloom` ([configuration dialog](https://code.claude.com/docs/en/plugins/components#when-the-configuration-dialog-appears)), or the plugins' rows in `/config` (Claude Code v2.1.269 or later, [user configuration](https://code.claude.com/docs/en/plugins-reference#user-configuration)), then start a new session. The plugins reference does not say a skill can read another plugin's options, so each has its own.
+- Claude Code stores the value in your user settings (`pluginConfigs` in `$HOME/.claude/settings.json`) and ignores that key in a project's settings ([settings reference](https://code.claude.com/docs/en/settings-reference#pluginconfigs)). The skills take the hub from nothing else, not from rules, `CLAUDE.md`, `CLAUDE.local.md` or `AGENTS.md`, so no repository can send the questions elsewhere.
+- Without a hub (the default, empty): the coordinator files each question in the project's own issue tracker, where you answer it in a comment, and `/cl-workflow:questions` says no hub is set and stops. A value other than a plain `owner/name` counts as no hub, named as rejected. A public repository, hub or tracker, gets nothing: the question goes into the coordinator's report instead.
 
 ## Role guard
 

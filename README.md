@@ -60,6 +60,22 @@ The role guard refuses merges, releases and pushes to the default branch in ever
 
 What each skill reads and writes: [Skills](docs/skills.md). Hooks and plugin settings: [The plugins](docs/plugins.md). How the coordinator's rules are split between policy, skills and worker rules: [Coordinator workflow](docs/coordinator-workflow.md).
 
+## Typical flow
+
+1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without Orca. Update with the commands under [Update](#update).
+2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](docs/coordinator-workflow.md)). The coordinator starts nothing until that file is on the default branch.
+3. Per task, without Orca:
+   - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
+   - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
+4. Per task, with Orca (needs `cl-orchestration`):
+   - Label the issues with the `startLabel`.
+   - In an Orca terminal, run `CEDARLOOM_ROLE=coordinator claude`, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
+   - The coordinator files its questions as issues: with a [hub](#hub-repository) set, in the hub, where `/cl-workflow:questions` asks them in any session; without one, in the project's tracker, where you answer each in a comment. A public repository gets none: they go into the coordinator's report.
+
+## Hub repository
+
+One GitHub repository, often a private one, where the coordinator files the owner questions of all projects (labels `question`, `ready-for-human` and `project:<name>`) and `/cl-workflow:questions` reads them, so internal questions stay out of product repositories. Set it as `owner/name` in the option `hub` of both `cl-workflow` and `cl-orchestration`: `/plugin configure cl-workflow@cedarloom` and `/plugin configure cl-orchestration@cedarloom`, or the `/config` panel. It is empty by default, and then each question goes to its project's own tracker. Details: [The plugins](docs/plugins.md#hub-repository).
+
 ## Update
 
 Marketplaces other than Anthropic's have auto-update off, so a plugin changes only when you update it, and only when its version changed in a release ([Claude Code docs](https://code.claude.com/docs/en/discover-plugins#keep-plugins-updated)).
@@ -90,7 +106,7 @@ The command-line tool and the browser app are planned for 0.2.
 - [Skills](docs/skills.md): what each skill does, who starts it and what it writes
 - [Coordinator workflow](docs/coordinator-workflow.md) and [restart-safe coordinator](docs/restart-safe-coordinator.md)
 - [Stack](docs/stack.md): the components CedarLoom works with and why
-- [Security notes](docs/security.md) and [how to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
+- [How to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
 
 ## License
 

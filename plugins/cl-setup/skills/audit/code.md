@@ -13,7 +13,7 @@ First run the read-only checks the repository names in AGENTS.md or its package 
 | over-built | An abstraction with one caller, an option no caller passes, a setting nobody sets. | rewrite |
 | stale | Commented-out code, a flag that is on everywhere, a comment the code contradicts. | remove or rewrite |
 | test that cannot fail | A test of mocks, copy or constants: it passes when the change it guards is reverted. | remove |
-| risk | A bug seen on the way. Give the input that fails. | flag; to chase it, a diagnosis skill when one is installed (such as `mattpocock-skills:diagnosing-bugs`) |
+| risk | A bug seen on the way. Give the input that fails. | flag; to chase it, a diagnosis skill when one is installed |
 
 ## Not findings
 

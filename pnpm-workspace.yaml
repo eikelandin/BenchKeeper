@@ -1,4 +1,4 @@
-# CedarLoom packages. app/ and web/ stay npm projects with their own lockfiles.
+# CedarLoom packages. web/ stays an npm project with its own lockfile.
 packages:
   - packages/*
 

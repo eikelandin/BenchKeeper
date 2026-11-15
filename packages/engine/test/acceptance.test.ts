@@ -1,5 +1,6 @@
-// The CedarLoom app's documented apply and undo behavior (docs/security.md, "Recovery and concurrency" and "Secrets"), one test
-// per row that applies to file plans, plus the undo, write and mode cases of CedarLoom app issue 1031.
+// The CedarLoom app's documented apply and undo behavior (docs/security.md on the branch archive/pre-cedarloom-0.1,
+// "Recovery and concurrency" and "Secrets"), one test per row that applies to file plans, plus the undo, write and mode
+// cases of CedarLoom app issue 1031.
 import {
   chmodSync,
   closeSync,

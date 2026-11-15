@@ -5,7 +5,7 @@ Single-context repository. Skills that explore the codebase read these files whe
 - `GLOSSARY.md` at the repository root.
 - `docs/adr/`: ADRs that touch the area being changed.
 
-A missing file is not an error: proceed without it. `mattpocock-skills:domain-modeling` creates them when terms or decisions get resolved.
+A missing file is not an error: proceed without it. Create them when terms or decisions get resolved.
 
 ## Rules
 
