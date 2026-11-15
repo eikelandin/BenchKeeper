@@ -1,0 +1,5 @@
+interface:
+  display_name: "Plan"
+  short_description: "Plan one task with you before it is built"
+policy:
+  allow_implicit_invocation: false

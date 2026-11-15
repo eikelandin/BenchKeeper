@@ -30,6 +30,8 @@ Every depth:
    - The work grows past its depth: say so, write a new depth line, and run the skipped steps before the next edit.
 
 2. **Settle.** Standard and deep: when goal, scope or result is open, grill the user in rounds (each question with your recommendation, all open ones per round) until goal, scope, acceptance criteria and risks are settled; a settled request skips the grill. Then explore read-only, as the plan phase where [software.md](software.md#phases) runs phases (Claude Code: in plan mode, only while terminal questions are allowed). Without terminal questions: go on with the plan.
+
+   A plan or spec for this task with an acceptance table (from `/cedarloom:plan`, a coordinator or the user) settles it: skip this step and the Plan phase and build against that plan. It never lowers the depth or the risk class, and the plan check still runs unless the plan records one.
 3. **Run the playbook.**
    - Software change at quick depth: this file is the whole playbook (the steps below, [Change types](#change-types), [Verify](#verify)).
    - Standard and deep, and any risky change: also [software.md](software.md), deep also [deep.md](deep.md).
