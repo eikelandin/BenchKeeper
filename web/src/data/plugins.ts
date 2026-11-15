@@ -6,7 +6,7 @@ export const MARKETPLACE = 'cedarloom';
 const MARKETPLACE_SOURCE = 'CedarLoom/cedarloom';
 export const install: { command: string; text: string }[] = [
   { command: `claude plugin marketplace add ${MARKETPLACE_SOURCE}#stable`, text: 'Adds the CedarLoom marketplace at its stable branch.' },
-  { command: `claude plugin install cedarloom@${MARKETPLACE}`, text: 'Installs the bundle: cl-workflow, cl-setup and cl-orchestration. Run /reload-plugins, or start a new session, and type /cl-workflow: to see the commands.' },
+  { command: `claude plugin install cedarloom@${MARKETPLACE}`, text: 'Installs the bundle: cl-workflow, cl-setup, cl-orchestration and cl-orca. Run /reload-plugins, or start a new session, and type /cl-workflow: to see the commands.' },
 ];
 export const installOne = `claude plugin install cl-workflow@${MARKETPLACE}`;
 
@@ -14,7 +14,7 @@ export const requirements: [string, string][] = [
   ['Claude Code', '2.1.295 or later'],
   ['Node.js on the PATH', 'the hooks of the plugins run node'],
   ['Git and the GitHub CLI (gh)', 'for setting up repositories and for coordinating issue work'],
-  ['Orca', 'with its orchestration skill, for cl-orchestration only: the coordinator starts nothing without it'],
+  ['Orca', 'for cl-orca only: cl-orchestration runs without it'],
 ];
 
 export type Skill = { name: string; args?: string; text: string };
@@ -60,13 +60,24 @@ export const plugins: PluginInfo[] = [
     ],
     notes: [
       'Needs cl-workflow, which installing it brings along.',
+      'Runs with or without Orca: workers start as background agents of Claude Code, or in Orca terminals when cl-orca is installed and Orca is running. The runner option picks one by name.',
       'A handoff file lets a coordinator that was cleared or compacted resume its run.',
+    ],
+  },
+  {
+    id: 'cl-orca',
+    title: 'cl-orca',
+    summary: 'Runs the workers of cl-orchestration in Orca terminals.',
+    skills: [],
+    notes: [
+      'Needs cl-orchestration and cl-workflow, which installing it brings along.',
+      'Its runner skill tells the coordinator how to work with Orca; you do not call it.',
     ],
   },
   {
     id: 'cedarloom',
     title: 'cedarloom',
-    summary: 'The bundle: installs cl-workflow, cl-setup and cl-orchestration together.',
+    summary: 'The bundle: installs cl-workflow, cl-setup, cl-orchestration and cl-orca together.',
     skills: [],
     notes: ['A single plugin installs on its own as well.'],
   },
@@ -79,14 +90,14 @@ export const defaults: { title: string; text: string }[] = [
   { title: 'Skills that change things wait for you', text: 'Every skill except workflow starts only when you call it.' },
   { title: 'No merges from a worker', text: 'A session that does not run as the coordinator, and every subagent, cannot merge, release, push tags or push to the default branch. The guard stops a session that forgets its role; the hard boundary is a gh token without those rights.' },
   { title: 'The status band is off', text: 'The band above the prompt appears only after you turn on its plugin option. It reads your working folder and git, and stores and sends nothing.' },
-  { title: 'Coordinator rotation needs a handoff file', text: 'An idle coordinator is cleared and resumed only in an Orca terminal whose project holds the handoff file of orchestrating-projects.' },
+  { title: 'Coordinator rotation needs a handoff file', text: 'An idle coordinator is cleared and resumed only in the session that the handoff file of orchestrating-projects names. It is not cleared while background workers run.' },
 ];
 
 export const hooks: { plugin: string; name: string; when: string; does: string }[] = [
   { plugin: 'cl-workflow', name: 'Terminal questions', when: 'Session start, /cl-workflow:ask and /cl-workflow:questions, and before the question tool or plan mode', does: 'Refuses the question tool and plan mode outside the window you opened. Keeps the window in one small file per Claude Code process in the plugin data folder, and removes ended windows at startup and resume.' },
   { plugin: 'cl-workflow', name: 'Role guard', when: 'Before Bash, Monitor and PowerShell commands', does: 'In a session that does not run as the coordinator (CEDARLOOM_ROLE=coordinator) and in every subagent, refuses merges, releases, tag pushes, pushes to the default branch, repository settings and security changes, gh auth, git config writes, git stash and sessions in bare mode. Writes nothing.' },
   { plugin: 'cl-workflow', name: 'Status band', when: 'Only with the tierBand option on', does: 'Shows project, branch, the last test run and lint or type check above the prompt. Reads your working folder, git, one Ponytail flag file and the commands and edits of the main loop; stores and sends nothing.' },
-  { plugin: 'cl-orchestration', name: 'Coordinator rotation', when: 'When an idle coordinator in an Orca terminal ends a turn, and after /clear and compaction', does: 'With the handoff file .cedarloom/runs/handoff.md present, clears a coordinator whose context passed the configured size with /clear and resumes it from the file; at most once every 10 minutes. After a clear or compaction it hands the file back. Without the file nothing happens.' },
+  { plugin: 'cl-orchestration', name: 'Coordinator rotation', when: 'When an idle coordinator in the session the handoff file names ends a turn, and after /clear and compaction', does: 'With the handoff file .cedarloom/runs/handoff.md present, clears a coordinator whose context passed the configured size with /clear and resumes it from the file; at most once every 10 minutes. After a clear or compaction it hands the file back. Without the file nothing happens.' },
 ];
 
 export const planned = {

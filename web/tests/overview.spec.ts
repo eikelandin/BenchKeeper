@@ -23,7 +23,7 @@ test('the homepage links to the overview page in its body', async ({ page }) => 
 test('each plugin card on the homepage links to its card on the overview page', async ({ page }) => {
   await page.goto('./overview/');
   const ids = await page.locator('#brings [id]:not(h2)').evaluateAll((els) => els.map((e) => e.id));
-  expect(ids).toEqual(['cl-workflow', 'cl-setup', 'cl-orchestration', 'cedarloom']);
+  expect(ids).toEqual(['cl-workflow', 'cl-setup', 'cl-orchestration', 'cl-orca', 'cedarloom']);
   await page.goto('./');
   const hrefs = await page.locator('#plugins a').evaluateAll((as) => as.map((a) => a.getAttribute('href')!.split('#')[1]));
   expect(hrefs).toEqual(ids);

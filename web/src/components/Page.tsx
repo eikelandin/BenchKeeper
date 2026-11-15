@@ -2,7 +2,7 @@ import {
   ActionIcon, Anchor, Badge, Box, Button, Card, Code, Container, Group, List,
   SimpleGrid, Stack, Table, Text, ThemeIcon, Timeline, Title, VisuallyHidden,
 } from '@mantine/core';
-import { IconCheck, IconCopy, IconListCheck, IconRoute, IconSettings, IconStack2 } from '@tabler/icons-react';
+import { IconCheck, IconCopy, IconListCheck, IconRoute, IconSettings, IconStack2, IconTerminal2 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
 import { SLUG } from '../lib/repo-facts';
 import { sdlcSvg } from '../lib/sdlc';
@@ -12,7 +12,7 @@ import Mark from './Mark';
 import { SiteShell } from './SiteShell';
 
 const PLUGIN_ICONS: Record<string, ReactNode> = {
-  'cl-workflow': <IconListCheck size={20} />, 'cl-setup': <IconSettings size={20} />, 'cl-orchestration': <IconRoute size={20} />, cedarloom: <IconStack2 size={20} />,
+  'cl-workflow': <IconListCheck size={20} />, 'cl-setup': <IconSettings size={20} />, 'cl-orchestration': <IconRoute size={20} />, 'cl-orca': <IconTerminal2 size={20} />, cedarloom: <IconStack2 size={20} />,
 };
 // Backticks in facts.json become inline code and `[label](url)` a link.
 export const md = (t: string) => t.split(/(`[^`]*`|\[[^[\]]+\]\((?:[^()\s]|\([^()\s]*\))+\))/).map((part, i) => {
@@ -119,10 +119,10 @@ export default function Page({ base, updated, commit }: { base: string; updated?
           </SimpleGrid>
         </Section>
 
-        <Section id="plugins" title="Three plugins and a bundle">
+        <Section id="plugins" title="Four plugins and a bundle">
           <SimpleGrid cols={{ base: 1, sm: 2 }}>
             {plugins.map((p) => (
-              <Part key={p.id} icon={PLUGIN_ICONS[p.id]} title={p.title} href={`${base}/overview/#${p.id}`} scope={p.id === 'cedarloom' ? 'Bundle' : `Plugin, ${p.skills.length} ${p.skills.length === 1 ? 'skill' : 'skills'}`}>{p.summary}</Part>
+              <Part key={p.id} icon={PLUGIN_ICONS[p.id]} title={p.title} href={`${base}/overview/#${p.id}`} scope={p.id === 'cedarloom' ? 'Bundle' : p.skills.length === 0 ? 'Plugin' : `Plugin, ${p.skills.length} ${p.skills.length === 1 ? 'skill' : 'skills'}`}>{p.summary}</Part>
             ))}
           </SimpleGrid>
         </Section>
@@ -130,7 +130,7 @@ export default function Page({ base, updated, commit }: { base: string; updated?
         <Section id="install" title="Install" intro="From the CedarLoom marketplace, in a terminal.">
           <Stack gap="lg" maw={760}>
             {install.map((st) => <CmdRow key={st.command} cmd={st.command} note={st.text} />)}
-            <CmdRow cmd={installOne} note="Installs a single plugin instead of the bundle; cl-orchestration brings cl-workflow with it." />
+            <CmdRow cmd={installOne} note="Installs a single plugin instead of the bundle; cl-orchestration brings cl-workflow with it, and cl-orca brings both." />
             <Text size="sm">You need:</Text>
             <List size="sm" spacing={4}>
               {requirements.map(([name, why]) => <List.Item key={name}><Text span fw={700}>{name}:</Text> {why}.</List.Item>)}
