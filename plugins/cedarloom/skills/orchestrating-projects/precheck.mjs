@@ -1,10 +1,21 @@
 // Usage: node precheck.mjs <project paths...>. Sample precheck for a scheduled coordinator run: exit 0 when a project has an issue to pick, else 1. It starts and merges nothing.
-// Pickable: open, carries startLabel and every issues.labels entry, not labeled question (an owner question), written by a trusted author, and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
+// Pickable: open, carries startLabel and every issues.labels entry, not labeled question (an owner question), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
 // A tracker's numbers (issues.repository) can equal those of the project's own old branches: a pull request then counts only when its body also holds <owner/repo>#<number> or the issue's URL.
 // An issue that several of the given projects list starts in none of them: it is printed once on stderr, as "several projects: <tracker>#<number> (<paths>)".
 import { errorLine, escaped, isMain, read, sh } from './policy.mjs';
 
-const TRUSTED = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+// MEMBER is any member of the owning organization and COLLABORATOR any invited collaborator: either may have only the Read role, so each counts only with write access.
+const ASSOCIATED = ['MEMBER', 'COLLABORATOR'];
+
+// writes(login): true when the login has write access to repo, as the REST API's legacy permission (maintain reads as write). exec(cmd, args) gives stdout or throws; a failed lookup throws, so nobody counts on a guess.
+export const writers = (repo, exec) => {
+  const known = new Map();
+  return (login) => {
+    if (typeof login !== 'string' || !/^[A-Za-z0-9-]+$/.test(login)) return false;
+    if (!known.has(login)) known.set(login, ['admin', 'write'].includes(JSON.parse(exec('gh', ['api', `repos/${repo}/collaborators/${login}/permission`])).permission));
+    return known.get(login);
+  };
+};
 
 // True when the body names the tracker's issue as its own token, as owner/repo#12 or by its URL: not co-owner/repo#12, other/owner/repo#12 or issue 123. GitHub ignores case in owner/repo.
 const refers = (body, tracker, number) => {
@@ -12,17 +23,19 @@ const refers = (body, tracker, number) => {
   return new RegExp(`(?:(?<![\\w/.-])${repo}#|https?://(?:www\\.)?github\\.com/${repo}/issues/)${number}(?!\\d)`, 'i').test(body ?? '');
 };
 
-export function pickable(policy, issues, pulls) {
+// writes(login) is asked last, so only for an issue that is pickable otherwise.
+export function pickable(policy, issues, pulls, writes = () => false) {
   if (!policy?.startLabel) return [];
   const trusted = new Set(policy.trustedAuthors ?? []);
   const labels = [policy.startLabel, ...(policy.issues?.labels ?? [])];
   const tracker = policy.issues?.repository;
   return issues
-    .filter((i) => !i.pull_request && (TRUSTED.includes(i.author_association) || trusted.has(i.user?.login)))
+    .filter((i) => !i.pull_request)
     .filter((i) => labels.every((label) => i.labels.some((l) => l.name.toLowerCase() === label.toLowerCase())))
     // The approvals the coordinator files carry this label: such an issue asks the owner, also after it gained the start label.
     .filter((i) => !i.labels.some((l) => l.name.toLowerCase() === 'question'))
     .filter((i) => !pulls.some((p) => p.headRefName.includes(`/${i.number}-`) && (!tracker || refers(p.body, tracker, i.number))))
+    .filter((i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login)))
     .map((i) => i.number);
 }
 
@@ -66,7 +79,8 @@ function picks(dir, run, env) {
   const issues = JSON.parse(run(dir, 'gh', ['api', '--paginate', '--slurp', `repos/${tracker}/issues?state=open&per_page=100&labels=${labels}`])).flat();
   const pulls = JSON.parse(run(dir, 'gh', ['pr', 'list', '-R', repo, '--state', 'all', '--limit', '1000', '--json', `headRefName,state,isCrossRepository${policy.issues.repository ? ',body' : ''}`]))
     .filter((p) => p.state === 'MERGED' || (p.state !== 'CLOSED' && !p.isCrossRepository));
-  return { tracker, numbers: pickable(policy, issues, pulls) };
+  // Issue text counts by its author's access to the tracker, as its association does.
+  return { tracker, numbers: pickable(policy, issues, pulls, writers(tracker, (cmd, args) => run(dir, cmd, args))) };
 }
 
 export const check = (dir, run = sh, env = process.env) => picks(dir, run, env).numbers;
