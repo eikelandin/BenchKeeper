@@ -160,7 +160,7 @@ Several logins per agent, for example work and personal, each in a folder of its
 - Usage, Claude Code: `accounts track <name>` adds a status line script and a `StopFailure` hook to the account's folder.
   - It is a plan with a diff and undo.
   - An account that already has a status line of its own is refused, except one that only runs Ponytail's `ponytail-statusline.sh` or `.ps1`: that one is replaced and comes back with `benchkeeper undo <run>` or `accounts track <name> --off`. A dev container account has no undo run: there `--off` is the way back.
-  - The status line prints what the plugin option `statusStyle` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it under `pluginConfigs."cedarloom@cedarloom".options` in its own `settings.json`):
+  - The status line prints what the key `statusStyle` under `pluginConfigs."cedarloom@cedarloom".options` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it in its own `settings.json`):
     - `merged` (default): the windows and Ponytail's level from the account's `.ponytail-active` (`[PONYTAIL]`, or `[PONYTAIL:LITE]` and `[PONYTAIL:ULTRA]`, coloured as Ponytail's own badge)
     - `plugin`: the level only
     - `benchkeeper`: the windows only
