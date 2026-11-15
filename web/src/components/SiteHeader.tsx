@@ -4,7 +4,7 @@ import { SLUG, facts } from '../lib/repo-facts';
 import Mark from './Mark';
 
 const REPO = `https://github.com/${SLUG}`;
-const SECTIONS = [['sdlc', 'Workflow'], ['parts', 'What gets installed'], ['start', 'Quick start'], ['selected', 'Why this stack'], ['where', 'Where things run']];
+const SECTIONS = [['sdlc', 'Workflow'], ['plugins', 'Plugins'], ['install', 'Install'], ['commands', 'Commands']];
 
 // The header of every page. On the main page (home) the links stay in the page; elsewhere they lead back to its sections.
 export default function SiteHeader({ base, home = false, size = 'lg' }: { base: string; home?: boolean; size?: string }) {
@@ -24,7 +24,7 @@ export default function SiteHeader({ base, home = false, size = 'lg' }: { base: 
               <Anchor key={id} href={to(id)} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>{l}</Anchor>
             ))}
             <Anchor href={`${base}/overview/`} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>Overview</Anchor>
-            <Anchor href={`${base}/app/`} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>The app</Anchor>
+            <Anchor href={`${base}/app/`} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>Coming in 0.2</Anchor>
           </Group>
           <Group gap="xs" wrap="nowrap" className="header-end">
             <a href={REPO} className="repo">
@@ -53,7 +53,7 @@ export default function SiteHeader({ base, home = false, size = 'lg' }: { base: 
             <Anchor key={id} href={to(id)} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>{l}</Anchor>
           ))}
           <Anchor href={`${base}/overview/`} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>Overview</Anchor>
-            <Anchor href={`${base}/app/`} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>The app</Anchor>
+          <Anchor href={`${base}/app/`} c="dimmed" size="sm" underline="never" style={{ whiteSpace: 'nowrap' }}>Coming in 0.2</Anchor>
         </Group>
       </Container>
     </Box>

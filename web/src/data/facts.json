@@ -1,6 +1,5 @@
 {
   "description": "BenchKeeper sets up Claude Code and Codex the same way on your machine and in each repository: short global rules and a workflow skill that sizes each task, plus a dev container, `AGENTS.md` and skills per repository. Its app shows every change before it applies it and records each run so you can undo it.",
-  "tagline": "Short rules, a workflow skill and a per-repository setup for Claude Code and Codex, installed by an app that shows each change first and can undo it.",
   "levels": [
     {
       "name": "Lite",
@@ -219,159 +218,8 @@
     ]
   },
   "overview": {
-    "title": "What BenchKeeper is",
-    "audience": "For developers who run Claude Code or Codex in more than one repository and want the same rules, skills and dev container setup in each.",
-    "parts": [
-      {
-        "id": "app",
-        "title": "The app",
-        "text": "`npx @cedarloom/app@6.27.0` opens a local web app on 127.0.0.1 behind a one-time link. It sets up the machine and each repository, reports drift on the Dashboard and fixes it in one plan. Every change appears as a diff or a command line before Apply, and each run is recorded, so History can undo a run or a single step.",
-        "evidence": "app/README.md#web-ui"
-      },
-      {
-        "id": "sessions",
-        "title": "Sessions board",
-        "text": "The board reads the Claude Code and Codex transcripts on this machine: per session the project, tier, pattern, the setup installed at the time, skills used, the last test run, time, tokens, cost (Claude Code as recorded, Codex estimated from tokens and OpenAI API prices, unpriced models left out) and pull request links. Charts compare tiers, patterns and setups and mark every bar that rests on fewer than 20 sessions. The page makes no request and holds no message text.",
-        "evidence": "app/README.md#commands"
-      },
-      {
-        "id": "analysis",
-        "title": "Analysis of sessions",
-        "text": "Insights turns the sessions scan and the doctor into findings, each with its evidence and a fix: installed skills no session of the last 90 days used, with the tokens their descriptions cost per turn; projects where sessions ended on a failed test run; setup drift; skills a project could add, turn off or update. A finding the setup can fix opens its plan with a diff and undo. The Runs view lists orchestrated runs and their tasks with sessions, cost and tokens. Both read the transcripts when the view opens, Runs also on Refresh; nothing watches a running session.",
-        "evidence": "app/README.md#web-ui"
-      },
-      {
-        "id": "installs",
-        "title": "Installs",
-        "text": "One `apply` installs the global setup for the agents it finds: the rules, the BenchKeeper plugin, the chosen packs, agent settings and, once a project uses a dev container, the Dev Containers CLI, at three levels from the plugin alone to the full setup. A skills CLI install runs first in a scratch folder inside an OS sandbox (not on Windows), so the plan lists the files it would write. Settings files are merged by key, and other keys and hooks stay.",
-        "evidence": "docs/setup.md#setup-details"
-      },
-      {
-        "id": "skills",
-        "title": "Skill management",
-        "text": "Each skill of a project has a state (current, outdated, modified, removed or disabled) and the commit it was installed at. Check for updates asks each source for its newest commit; Update, Reset, Remove, Adopt and the on and off switch each open a plan with a diff and undo. Packs group library skills by topic, and the pack builder warns when two skill descriptions overlap, so an agent may pick the wrong one.",
-        "evidence": "app/README.md#web-ui"
-      },
-      {
-        "id": "setup",
-        "title": "Project setup",
-        "text": "`projects apply` writes the repository rules block, the packs' skills and `.cedarloom-app/state.json`, whose answers later runs reuse. The `setting-up-projects` skill adds stack skills, the commands in `AGENTS.md` and the dev container as a recorded session that undo can reverse. `projects update` brings every registered project to the current setup.",
-        "evidence": "docs/setup.md#per-repo"
-      },
-      {
-        "id": "configuration",
-        "title": "Configuration",
-        "text": "Agent settings lists the keys of Claude Code `settings.json` and Codex `config.toml` per layer, with the default, the value in effect, the file it comes from and notes where one setting turns off another. Rules shows the instruction files each agent loads, in load order, with a switch per file and the context budget they take. Extensions lists MCP servers, hooks, subagents and commands and marks the ones that run code; it only shows.",
-        "evidence": "app/README.md#web-ui"
-      },
-      {
-        "id": "cli",
-        "title": "The CLI",
-        "text": "The app's actions run on the command line too: `plan` and `apply` for the machine, then `projects`, `skills`, `packs`, `accounts`, `automations`, `history` and `undo`. `apply` asks per change and `--yes` applies the default selection; many commands print one JSON document with `--json`. The `operating-cedarloom-app` skill lets an agent manage its own setup through these commands.",
-        "evidence": "app/README.md#commands"
-      },
-      {
-        "id": "automations",
-        "title": "Automations",
-        "text": "An automation template describes one scheduled agent run in a single Markdown file: schedule, precheck, prompt and what it may change. The app installs a template on Orca, shows when the template or the runner's copy changed, and updates or removes it as a plan with undo. Templates include issue triage, CI health, dependency triage and worktree cleanup.",
-        "evidence": "docs/automations.md"
-      },
-      {
-        "id": "accounts",
-        "title": "Accounts",
-        "text": "Several logins per agent, such as work and personal, each in its own folder on the host or a named volume in a dev container, signed in through a private browser window. `run --account` starts the agent as one of them with a filtered environment. Usage readings show what is left of the 5-hour and 7-day window (Claude Code through a status line script that `accounts track` adds, Codex from its app-server) and warn below a minimum. Auto-pick and handover rotation (both Claude Code only) are opt-in and off by default: auto-pick starts a new run under the pool account with the most headroom, handover rotation asks, then starts the agent under that account with a handover text of the task; neither acts inside a running session.",
-        "evidence": "docs/setup.md#accounts"
-      }
-    ],
-    "defaults": [
-      {
-        "title": "The agent runs in the dev container",
-        "text": "Project setup starts the agent inside the repository's dev container, unless the project's `AGENTS.md` says it runs on the host.",
-        "reason": "The container mounts only the project: no host home folder, engine socket or credential forwarding beyond the sign-in variable. It shares the host kernel and is not a security boundary.",
-        "evidence": "docs/setup.md#per-repo"
-      },
-      {
-        "title": "The project setup stays local",
-        "text": "The rules block, skills and state go into files listed in `.git/info/exclude`; `--share` commits them instead.",
-        "reason": "The repository does not change for anyone else until you choose to share the setup.",
-        "evidence": "docs/setup.md#per-repo"
-      },
-      {
-        "title": "Guards are on",
-        "text": "Claude Code projects get deny rules for `--no-verify`, force pushes, `sudo` and infrastructure apply commands, plus a hook for the forms a rule cannot match.",
-        "reason": "The repository rules ask the agent to fix the cause of a failed check; the guards block the commands that would skip one.",
-        "evidence": "docs/setup.md#per-repo"
-      },
-      {
-        "title": "Removals stay unchecked",
-        "text": "Rules files, skills, plugins and servers you installed yourself appear in the plan as removals that are off until you select them.",
-        "reason": "Nothing of yours goes unless you choose it. Only files the app identifies as its own by content are removed by default.",
-        "evidence": "docs/setup.md#what-the-app-writes-and-what-it-never-does"
-      },
-      {
-        "title": "Automations start disabled, in report mode",
-        "text": "An installed automation does nothing until you enable it in the runner, and it only reports until you reinstall it with `mode=act`.",
-        "reason": "You run it once and read its report before it may change anything.",
-        "evidence": "docs/automations.md#install-and-keep-current"
-      },
-      {
-        "title": "Auto-pick is off",
-        "text": "Auto-pick of accounts is opt-in, for Claude Code only, and acts only when a run starts.",
-        "reason": "The provider's consumer terms prohibit bypassing protective measures and do not say whether picking another account at a limit counts, so the choice stays with you.",
-        "evidence": "docs/setup.md#accounts"
-      }
-    ]
+    "title": "What BenchKeeper is"
   },
-  "parts": [
-    {
-      "id": "rules",
-      "title": "`rules/global.md`",
-      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/rules/global.md",
-      "scope": "Global, every session, full level",
-      "text": "Secrets kept out, confirmation before hard-to-reverse actions or actions visible to others, assumptions stated, the minimum change and the check that proves it done. The repository rules (when and how to ask, best practice with a source, writing without filler, sources for claims, checks never weakened, load the workflow skill) are in `rules/project.md`, part of each project's block.",
-      "evidence": ["plugins/cedarloom/rules/global.md", "plugins/cl-setup/rules/project.md", "docs/stack.md#contents"]
-    },
-    {
-      "id": "workflow",
-      "title": "`workflow`",
-      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cl-workflow/skills/workflow/SKILL.md",
-      "scope": "Global, before repository work",
-      "text": "The task kind and depth, the playbooks for software changes, docs passes and research, the check per change type, batch mode with long checks at the end.",
-      "evidence": ["plugins/cl-workflow/skills/workflow/SKILL.md", "docs/stack.md#contents"]
-    },
-    {
-      "id": "mattpocock",
-      "title": "Matt Pocock's skills",
-      "href": "https://github.com/mattpocock/skills",
-      "scope": "Optional, workflow owner, his plugin, global in both agents",
-      "text": "Grilling, spec and tickets, TDD, bug diagnosis, code review, pull request text. They read the issue tracker and domain docs in `docs/agents/`.",
-      "evidence": "docs/stack.md#components"
-    },
-    {
-      "id": "ponytail",
-      "title": "Ponytail",
-      "href": "https://github.com/DietrichGebert/ponytail",
-      "scope": "Optional pack, global, level full",
-      "text": "The smallest complete change: reuse before new code, no unrequested options, a test for new logic, `shortcut:` comments for known limits.",
-      "evidence": "docs/stack.md#components"
-    },
-    {
-      "id": "app",
-      "title": "The app and the setup skills",
-      "href": "https://github.com/eikelandin/BenchKeeper/tree/main/app",
-      "scope": "On request",
-      "text": "`npx @cedarloom/app@6.27.0` sets up the machine and each repository, shows every change first and records each run for undo. Its Dashboard reports drift, Fix everything applies the global plan and updates the projects that are behind, and the Sessions board tracks tier, cost and outcome per session. `/cl-setup:setting-up-projects` adds stack skills and the dev container, `/cl-setup:maintaining-repos` runs a maintenance pass, `/cl-orchestration:orchestrating-projects` coordinates workers on labeled issues across projects.",
-      "evidence": ["app/README.md#web-ui", "app/ui/fix.jsx", "docs/stack.md#contents"]
-    },
-    {
-      "id": "devcontainer",
-      "title": "Devcontainer and browser checks",
-      "href": "https://code.visualstudio.com/docs/devcontainers/devcontainer-cli",
-      "scope": "Per repository",
-      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Domain skills come from the [BenchKeeper library](https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cl-setup/library/README.md), stack skills from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
-      "evidence": ["docs/stack.md#components", "plugins/cl-setup/skills/setting-up-projects/SKILL.md", "plugins/cl-setup/skills/setting-up-projects/devcontainer.md"]
-    }
-  ],
   "sdlc": {
     "requirements": "Requests come from you, GitHub issues, Jira, Linear and other trackers, bug reports, reviews and Maintain findings. Only GitHub issues are automated.",
     "phases": [
@@ -425,7 +273,7 @@
         "phase": "build",
         "sub": "tests where they count",
         "tip": "Standard and deep: the existing tests of the touched code, then a test first only where the test rule calls for one.",
-        "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. With the Ponytail pack, Ponytail runs at its level `full`. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
+        "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
         "evidence": [
           "plugins/cl-workflow/skills/workflow/software.md#steps",
           "docs/stack.md#components"
@@ -457,8 +305,8 @@
         "name": "Maintain",
         "phase": "maintain",
         "sub": "retro, architecture, audit",
-        "tip": "After a session that went sideways: retro. On request: /maintaining-repos (audit, cleanup, architecture, test audit, debt, dependencies, pins, docs drift, unused skills). benchkeeper doctor for setup drift. Findings become new requests.",
-        "text": "After a session that went sideways: `/retro` (Matt Pocock's skills). On request (`/maintaining-repos`): Ponytail's audit and debt, cleanup tools (unused code, duplicates), architecture checks (cycles, forwarding modules), a test audit by mutation testing, dependency audit, version pins, docs drift, `/doctor prompt-audit`, `/skill-doctor`, repository hygiene, and with Matt Pocock's skills `/improve-codebase-architecture` and `/triage`. `benchkeeper doctor` reports setup drift on the machine and in the project. Findings become new requests.",
+        "tip": "After a session that went sideways: retro. On request: /maintaining-repos (audit, cleanup, architecture, test audit, debt, dependencies, pins, docs drift, unused skills). Findings become new requests.",
+        "text": "After a session that went sideways: `/retro` (Matt Pocock's skills). On request (`/cl-setup:maintaining-repos`): cleanup tools (unused code, duplicates), architecture checks (cycles, forwarding modules), a test audit by mutation testing, dependency audit, version pins, docs drift, `/doctor prompt-audit`, `/skill-doctor`, repository hygiene, and with Matt Pocock's skills `/improve-codebase-architecture` and `/triage`. Findings become new requests.",
         "evidence": [
           "plugins/cl-setup/skills/maintaining-repos/SKILL.md"
         ]
@@ -505,15 +353,7 @@
       "docs/setup.md#setup-details",
       "docs/setup.md#per-repo"
     ],
-    "tagline": [
-      "docs/setup.md#setup-details",
-      "docs/setup.md#per-repo"
-    ],
-    "overview.audience": [
-      "docs/setup.md#per-repo",
-      "docs/setup.md#update"
-    ],
-    "sdlc.requirements": "docs/automations.md#catalogue",
+    "sdlc.requirements": "plugins/cl-orchestration/skills/orchestrating-projects/SKILL.md",
     "quickstart.needs": "app/package.json",
     "quickstart.choose": [
       "app/README.md#web-ui",
