@@ -1,0 +1,35 @@
+# CedarLoom block
+
+The block holds every line under Rules as it stands, then the line under Where commands run for the project's answer, as one list.
+
+## Rules
+
+- Before changing a repository, working on issues or pull requests, or researching two or more items: load the `cedarloom:workflow` skill. It picks the workflow and the tier.
+- When goal, scope or expected result is open, write the open questions with your recommendations (including risks and options the user has not named) into one issue per task in the issue tracker the project names, else the report; take each recommendation that is safe and reversible (an item without one waits), and go on. Only while the user allows terminal questions, ask with the question tool (Claude Code: `AskUserQuestion`) instead: one decision per question, related ones in one call. Settle yourself what research, the code, the docs or a safe default answer: say in one line what you chose and why, and prefer the choice that is easy to undo.
+- Ask when the choice is the user's (taste, priorities, scope, money, risk). Unsure whether to ask: ask once.
+- Research the recommended option before asking (code, docs, an official source, a cheap trial).
+- Question text: What (topic), Impact (per option), Why now, Recommendation (one option first, labeled "(Recommended)", with reason, source or file and line, confidence). Each option names its trade-off.
+- When a check fails, fix the cause. Skip, delete or loosen a check only when the user asks.
+- Before designing or changing something, find the established practice (official docs, the standard, the project's own conventions), weigh it, and say which one you followed and its source. Style (naming, formatting, idioms) follows the project; security follows the standard.
+- If the user asks for something against best practice, or a simpler approach does the job, say so before doing it: the practice, the concrete risk, a better option. Then follow the user's decision. No warning for a deviation already recorded as deliberate.
+- Before every push, after your last edit: run the changed-files check that Commands in `AGENTS.md` names. Never use `--no-verify`.
+- Don't poll CI: wait with `gh run watch <run-id> --interval 30 --compact --exit-status` or `gh pr checks --watch --interval 30`.
+- main stays releasable. A red main is fixed before anything else merges.
+- Reuse before reimplementing: before you write new logic, look for code that already does it, and extend or generalize that instead of building a parallel version.
+- Don't reinvent the wheel: when a well-maintained open-source package solves the problem (recent releases, a license the project allows, a size that fits), use it instead of writing your own, and name it and the reason in the pull request. A few lines of your own still beat a new dependency.
+- Comments only where the code cannot say it: one line, the why, not the how.
+- In docs, comments, commits, issues, pull requests and UI text, write what the reader needs to use, build, change or decide. Leave out restated headings, code or labels (a tooltip that repeats its button), feature counts, recaps, offers, hedging and history unless asked. Uncertainty goes in a confidence level.
+- In docs, code comments and UI text, state what holds, in a neutral tone. Never record who decided, when, or tracker references: decisions live in the tracker.
+- In docs, comments, commits, issues, pull requests and UI text, where an em dash would go, use a comma, colon, parentheses or two sentences. No emojis or emoticons, also inside skill templates.
+- In docs, comments, commits, issues, pull requests and UI text, back claims about external things (APIs, versions, prices, laws) with an official source URL, or mark them "unverified". Back claims about the codebase with file and line.
+- READMEs and product pages open with one or two plain sentences on what the product does for the reader, then lists, tables or steps.
+- Never call a file, folder or module `utils`, `helpers`, `common`, `misc` or `shared`. Name it after what it contains. A file that wants such a name has more than one job: split it.
+- UI code follows the styleguide and tokens that Pointers in `AGENTS.md` links. No new colors, font sizes, spacing or shadows when a token already covers the role.
+- Every change considers the first-class targets that `AGENTS.md` lists. Before changing an area with a footgun doc, read that doc.
+
+## Where commands run
+
+- `container`: The agent runs inside the dev container (`.devcontainer/`): start it with `devcontainer exec --workspace-folder . <agent>`. Installs, builds, lint, tests and local MCP or browser tools run there too.
+- `host-agent`: The agent, Git and file edits run on the host. Installs, builds, lint, tests and local MCP or browser tools run in the dev container: prefix `devcontainer exec --workspace-folder .`, compound commands as `devcontainer exec --workspace-folder . sh -lc '...'`. If the container cannot start, report it and stop that command.
+- `sandbox`: The agent runs in a Docker Sandboxes microVM (`sbx`) with its own container engine. Installs, builds and tests run inside it.
+- `host`: no line.
