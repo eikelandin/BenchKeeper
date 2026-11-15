@@ -12,7 +12,7 @@ A release ships the plugins only, and no release publishes to npm.
 
 The first release is 0.1.0, set with `release-as` on each plugin in `release-please-config.json`. Remove those four lines after that release: while they stay, every release pull request proposes 0.1.0 again.
 
-`CHANGELOG.md` at the repository root holds the single setup version up to 6.25; the tags `setup-v<x.y>` and `setup-v<x.y>.0` name the content releases up to 6.27, and `app-v<x.y.z>` the app releases up to 6.27.0. The plugin components carry the `cedarloom-` prefix in their tags because the packages under `packages/` release with their own components, one of them `orchestration`.
+`CHANGELOG.md` at the repository root and the tags `setup-v*` and `app-v*` belong to the legacy app, up to 6.27.
 
 ## Steps
 
