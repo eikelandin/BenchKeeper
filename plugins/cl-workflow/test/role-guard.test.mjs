@@ -127,6 +127,7 @@ const DENIED = [
   "echo $$'\\x00\\' ; gh pr merge 12 ; echo '",
   "$'\\x{167}h' pr merge 12",
   "# $'\\0\ngh pr merge 12",
+  "# $'\n\\\\;gh pr merge 12",
   "eval $'true\\0; gh pr merge 12'",
   'git config user.email a@example.com',
   'git -C ../other config --unset core.hooksPath',

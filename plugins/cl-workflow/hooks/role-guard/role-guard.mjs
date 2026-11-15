@@ -100,7 +100,9 @@ function commands(source, powershell, nested = false) {
       const [whole, body] = ANSI_C.exec(s);
       const [text, ...rest] = ansiC(body).split('\0');
       word += text;
-      // Bash ends the word at a NUL, zsh keeps the text after it, and in a comment or here-document $' is no quote.
+      // In a comment or here-document $' is no quote, so the text as written is read as well; bash ends the word at a NUL,
+      // zsh keeps the text after it.
+      if (/[\s;&|()`<>]/.test(body)) out.push(...commands(body, powershell, true));
       if (rest.length) out.push(...commands(rest.join('\n'), powershell, true));
       i += whole.length - 1;
       started = quoted = true;
