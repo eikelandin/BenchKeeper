@@ -4,7 +4,7 @@
     "duplicatedLines": {
       "app": 0,
       "tests": 386,
-      "web": 6,
+      "web": 0,
       "plugins/cedarloom": 18,
       "plugins/cl-orchestration": 0,
       "plugins/cl-setup": 0,
