@@ -21,7 +21,7 @@ Global (per machine): the rules, the BenchKeeper plugin, the plugins of the pack
 With the `ponytail` pack, another Ponytail level for the current session: `/ponytail lite` or `/ponytail ultra` (Claude Code).
 
 <!-- generated:core -->
-**Optional: [mattpocock/skills](https://github.com/mattpocock/skills) by Matt Pocock:** the workflow owner: his skills run the phases of standard and deep work when installed (grilling, spec and tickets, tdd, code review, pull request).
+**Optional: [mattpocock/skills](https://github.com/mattpocock/skills) by Matt Pocock:** an add-on: when installed, his skills may run a workflow step in more detail (bug diagnosis, a test first, prototypes, interface design) under the floor and gates of the workflow skill, which is complete without them.
 <!-- /generated:core -->
 
 ## Contents
