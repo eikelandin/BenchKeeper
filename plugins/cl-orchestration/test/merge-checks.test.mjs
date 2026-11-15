@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { both, next, ownerOnly, pin, riskClass, risky, sensitive, unsafe } from '../skills/orchestrating-projects/merge-checks.mjs';
+import { effective } from '../skills/orchestrating-projects/policy.mjs';
 import { facts as riskFacts } from '../skills/orchestrating-projects/risk-facts.mjs';
 import { initRepo } from './git-repo.mjs';
 
@@ -25,6 +26,14 @@ test('merge checks: an owner-only file is one under a path entry or with a name 
   // A sensitive file is one under review.sensitivePaths or riskyPaths, and every owner-only file.
   assert.deepEqual(sensitive(POLICY, ['src/billing/tax.mjs', 'src/billings.mjs', 'src/auth/login.mjs', 'CODEOWNERS', 'README.md']), ['src/billing/tax.mjs', 'src/auth/login.mjs', 'CODEOWNERS']);
   assert.deepEqual(risky(POLICY, ['src/billing/tax.mjs', 'SRC/Auth/login.mjs', 'src/authz.mjs', 'CODEOWNERS']), ['SRC/Auth/login.mjs']);
+});
+
+test('merge checks: by default, the files that instruct agents, configure editors and hooks, or define a container are the owner\'s', () => {
+  const { policy } = effective({});
+  const owners = ['AGENTS.md', 'pkg/CLAUDE.md', 'docs/agents/x.md', 'orca.yaml', '.devcontainer/devcontainer.json', '.devcontainer.json', 'web/.devcontainer.json', '.vscode/tasks.json', '.husky/pre-commit', '.codex/config.toml', '.cursor/rules/x.mdc', '.claude-plugin/plugin.json', 'Dockerfile', 'docker/Dockerfile.dev', 'app.containerfile', 'compose.yaml', 'docker-compose.override.yml', '.env.local', '.envrc'];
+  const others = ['README.md', 'src/compose.ts', 'docs/compose.md', 'src/environment.ts', 'docs/agentsx.md', 'docs/AGENTS-guide.md'];
+  assert.deepEqual(ownerOnly(policy, [...others, ...owners]), owners);
+  assert.equal(next({ ownerOnlyFiles: ownerOnly(policy, ['AGENTS.md']), risk: 'medium', autoMergeMax: 'medium', pin: 'reviewed', allowed: true, upToDate: true, mode: 'strict' }), 'owner');
 });
 
 test('merge checks: paths are compared as a file system that ignores case and form opens them', () => {

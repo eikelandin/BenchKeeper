@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -8,14 +8,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { effective, read, validate } from '../skills/orchestrating-projects/policy.mjs';
 import { initRepo } from './git-repo.mjs';
 
-const BUILT_IN = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', 'docs/agents/orchestration.json', 'docs/agents/worker-rules.md'];
+const BUILT_IN = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', 'docs/agents/orchestration.json', 'docs/agents/worker-rules.md', 'docs/agents', 'orca.yaml'];
 const DEFAULTS = {
   startLabel: null,
   trustedAuthors: [],
   workersPerProject: 1,
   hostWorkerLimit: 2,
   stallMinutes: 20,
-  merge: { allowed: false, requiredChecks: [], mode: 'strict', autoMergeMax: 'medium', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json'] },
+  merge: { allowed: false, requiredChecks: [], mode: 'strict', autoMergeMax: 'medium', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json', 'AGENTS.md', 'CLAUDE.md', '.claude-plugin', '.codex', '.cursor', '.vscode', '.husky', '.devcontainer', '.devcontainer.json'] },
   closeIssue: false,
   deleteMergedBranch: false,
   issuesPerWorker: 1,
@@ -34,12 +34,13 @@ const DEFAULTS = {
 const rules = (errors) => errors.map((e) => [e.rule, e.path]);
 // git as the reader runs it: the remote's default branch holds this policy file, or none (null).
 const HEAD = 'c0ffee0000000000000000000000000000000001';
-const remote = (file, calls = []) => (dir, cmd, args) => {
-  calls.push([cmd, ...args].join(' '));
+// The git command without the -c settings before it.
+const bare = (fake, calls = []) => (dir, cmd, args) => { calls.push([cmd, ...args].join(' ')); return fake(dir, cmd, args.filter((a, i) => a !== '-c' && args[i - 1] !== '-c')); };
+const remote = (file, calls = []) => bare((dir, cmd, args) => {
   if (args[0] === 'ls-remote') return `${HEAD}\tHEAD\n`;
   if (args[0] === 'ls-tree') return file == null ? '' : 'docs/agents/orchestration.json\n';
   return args[0] === 'show' ? file : '';
-};
+}, calls);
 
 test('policy: a version 1 file, or one without schemaVersion, keeps its fields and gets every default', () => {
   assert.deepEqual(effective({}, '6.26.0'), { policy: DEFAULTS, errors: [] });
@@ -187,15 +188,18 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
   const calls = [];
   assert.equal(read('/p', remote('{ "startLabel": "go" }', calls)).policy.startLabel, 'go');
   // No name that the remote or the local origin/HEAD chooses is part of a command.
-  assert.ok(calls.some((call) => call.startsWith('git fetch ') && call.endsWith(' origin +HEAD:refs/cedarloom/policy')));
+  // The two calls that reach the remote set again what the repository's config could make run instead of git.
+  const pinned = 'git -c core.fsmonitor=false -c core.sshCommand=ssh -c remote.origin.uploadpack=git-upload-pack';
+  assert.ok(calls.includes(`${pinned} ls-remote origin HEAD`));
+  assert.ok(calls.some((call) => call.startsWith(`${pinned} fetch `) && call.endsWith(' origin +HEAD:refs/cedarloom/policy')));
   assert.ok(calls.includes(`git show ${HEAD}:docs/agents/orchestration.json`));
   // A worker that moves the reader's ref after the fetch changes nothing: the read names the remote's commit, not the ref.
-  const moved = read('/p', (dir, cmd, args) => {
+  const moved = read('/p', bare((dir, cmd, args) => {
     if (args[0] === 'ls-remote') return `${HEAD}\tHEAD\n`;
     if (args[0] === 'ls-tree') return 'docs/agents/orchestration.json\n';
     if (args[0] === 'show') return args[1].startsWith(HEAD) ? '{ "startLabel": "go" }' : '{ "startLabel": "go", "merge": { "allowed": true } }';
     return '';
-  });
+  }));
   assert.equal(moved.policy.merge.allowed, false);
   // A remote that names no commit as its HEAD gives no policy.
   assert.deepEqual(rules(read('/p', (dir, cmd, args) => (args[0] === 'ls-tree' ? 'docs/agents/orchestration.json\n' : args[0] === 'show' ? '{ "merge": { "allowed": true } }' : '')).errors), [['unreadable', '']]);
@@ -204,11 +208,11 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
 
 test('policy: a fetch or a show that fails gives no policy: not the defaults, and not the file an older fetch left', () => {
   for (const failing of ['fetch', 'show']) {
-    const { policy, errors } = read('/p', (dir, cmd, args) => {
+    const { policy, errors } = read('/p', bare((dir, cmd, args) => {
       if (args[0] === failing) throw new Error(`fatal: the ${failing} failed`);
       if (args[0] === 'ls-remote') return `${HEAD}\tHEAD\n`;
       return args[0] === 'ls-tree' ? 'docs/agents/orchestration.json\n' : '{ "startLabel": "go", "merge": { "allowed": true } }';
-    });
+    }));
     assert.equal(policy, null, failing);
     assert.deepEqual(rules(errors), [['unreadable', '']], failing);
   }
@@ -218,6 +222,42 @@ test('policy: a file that is not JSON gives no policy', () => {
   const { policy, errors } = read('/p', remote('{ "startLabel": '));
   assert.equal(policy, null);
   assert.deepEqual(rules(errors), [['bad-json', '']]);
+});
+
+test('policy: a repository whose own git config redirects origin or runs a command gives no policy, and git starts nothing', () => {
+  const repo = (text) => {
+    const dir = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+    const git = initRepo(dir);
+    mkdirSync(join(dir, 'docs/agents'), { recursive: true });
+    writeFileSync(join(dir, 'docs/agents/orchestration.json'), text);
+    git('add', '-A');
+    git('commit', '-qm', 'policy');
+    return { dir, git };
+  };
+  const origin = repo('{ "startLabel": "go" }');
+  const other = repo('{ "startLabel": "go", "trustedAuthors": ["someone"], "merge": { "allowed": true } }');
+  const project = () => {
+    const dir = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'project');
+    origin.git('clone', '-q', origin.dir, dir);
+    return (...config) => { origin.git('-C', dir, 'config', ...config); return dir; };
+  };
+  assert.equal(read(project()('user.name', 't')).policy.merge.allowed, false);
+  const marker = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'ran');
+  for (const config of [
+    [`url.${other.dir}.insteadOf`, origin.dir],
+    ['remote.origin.uploadpack', `touch '${marker}'; git-upload-pack`],
+    ['core.sshCommand', `touch '${marker}'; ssh`],
+    ['core.fsmonitor', `touch '${marker}'`],
+    ['credential.helper', `!touch '${marker}'`],
+    ['include.path', join(other.dir, '.git', 'config')],
+  ]) {
+    const { policy, errors } = read(project()(...config));
+    assert.equal(policy, null, config[0]);
+    assert.deepEqual(rules(errors), [['unreadable', '']], config[0]);
+    assert.equal(existsSync(marker), false, config[0]);
+  }
+  // git's own file system monitor runs no command of the repository.
+  assert.equal(read(project()('core.fsmonitor', 'true')).policy.startLabel, 'go');
 });
 
 test('policy: the command line prints the policy of the default branch and exits 0, or names each error and exits 1', () => {
