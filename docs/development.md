@@ -5,6 +5,7 @@ How the checks, the workflows and the local agent setup of this repository work.
 ## Workflows
 
 - `checks.yml` runs `checks-core`, `app-ui-tests` and `plugin-checks` in parallel; the job `checks` gates all three.
+- `token-budget.yml` runs on pull requests that change instruction files or docs: it measures the estimated tokens of the base and the head with `plugins/cedarloom/skills/debloat/token-budget.mjs`, posts the change as a pull request comment (pull requests from this repository only) and fails only when the head is above the budget in `.github/token-budget.json` (`budget.total`, `budget.files`). Lost protected text and dead links are warnings there. After a pull request that moves the total on purpose, `node plugins/cedarloom/skills/debloat/token-budget.mjs baseline --write` stores the new counts.
 - Every workflow has `permissions: {}` at the top and per job, `timeout-minutes` on every job and a `concurrency` group that cancels superseded pull request runs.
 - Every required check runs on pull requests into `main` and on pushes to `main`, except `conventional` (the pull request title) and `dependency-review`, which run on pull requests only, and `check`, which runs on pull requests, the merge queue and weekly.
 - The rulesets name the required checks: `checks`, `app (ubuntu-latest)`, `app (macos-latest)`, `app-windows-smoke`, `build`, `check` (the CedarLoom gate of `cedarloom.yml`), `conventional`, `dependency-review`. A job change keeps these names.
