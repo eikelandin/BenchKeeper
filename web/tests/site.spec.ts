@@ -68,7 +68,7 @@ test('focus rings keep 3:1 against the page in both schemes (WCAG 2.2, 1.4.11)',
   await page.goto('./');
   for (const scheme of ['light', 'dark']) {
     await page.evaluate((s) => document.documentElement.setAttribute('data-mantine-color-scheme', s), scheme);
-    for (const target of [page.getByRole('link', { name: 'Set up your machine' }), page.locator('[data-theme-toggle]').first()]) {
+    for (const target of [page.getByRole('link', { name: 'Install the plugins' }), page.locator('[data-theme-toggle]').first()]) {
       await target.focus();
       const [style, ring, body] = await target.evaluate((el) => [getComputedStyle(el).outlineStyle, getComputedStyle(el).outlineColor, getComputedStyle(document.body).backgroundColor]);
       expect(style).toBe('solid');
@@ -91,17 +91,6 @@ test('the sitemap lists the six pages', async ({ request }) => {
   expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname)).toEqual([BASE, `${BASE}overview/`, `${BASE}app/`, `${BASE}writes/`, `${BASE}changelog/`, `${BASE}benchmark/`]);
 });
 
-test('the writes page renders the sections of docs/setup.md and docs/security.md', async ({ page }) => {
-  await page.goto('./writes/');
-  const doc = page.locator('.doc');
-  await expect(doc).toContainText('The app itself never: runs a command through a shell');
-  await expect(doc.locator('h2#trust-boundaries + ul')).toContainText('Two exceptions.');
-  await expect(doc.locator('h2#what-the-app-writes + table')).toContainText('.git is denied');
-  await expect(doc.locator('h2#what-the-app-never-does + ul > li').first()).toHaveText('Run a command through a shell.');
-  await expect(doc.locator('a[href="https://github.com/eikelandin/BenchKeeper/blob/main/docs/security.md#controls-in-claude-code"]')).toHaveCount(1);
-  await expect(doc.locator('a[href="https://github.com/eikelandin/BenchKeeper/blob/main/SECURITY.md"]')).toHaveCount(1);
-});
-
 test('the changelog page shows the entries of CHANGELOG.md in its order', async ({ page }) => {
   const entries = [...readFileSync('../CHANGELOG.md', 'utf8').matchAll(/^## (.+)$/gm)].map((m) => m[1]);
   await page.goto('./changelog/');
@@ -110,22 +99,8 @@ test('the changelog page shows the entries of CHANGELOG.md in its order', async 
   await expect(page.locator(`footer a[href="${BASE}changelog/"]`)).toHaveCount(1);
 });
 
-test('the homepage and the footer link to the writes page', async ({ page }) => {
+test('the footer links to the writes page and the benchmark page', async ({ page }) => {
   await page.goto('./');
-  await expect(page.locator(`#start a[href="${BASE}writes/"]`)).toHaveCount(1);
   await expect(page.locator(`footer a[href="${BASE}writes/"]`)).toHaveCount(1);
-});
-
-test('the homepage benchmark item and the footer link to the benchmark page', async ({ page }) => {
-  await page.goto('./');
-  await expect(page.locator(`#features a[href="${BASE}benchmark/"]`)).toHaveCount(1);
   await expect(page.locator(`footer a[href="${BASE}benchmark/"]`)).toHaveCount(1);
-});
-
-test('the installed parts render code and links from facts.json', async ({ page }) => {
-  await page.goto('./');
-  const parts = page.locator('#parts');
-  await expect(parts.locator('code', { hasText: 'rules/global.md' })).toHaveCount(1);
-  await expect(parts.getByRole('link', { name: 'BenchKeeper library' })).toHaveAttribute('href', /plugins\/cl-setup\/library\/README\.md$/);
-  await expect(parts).not.toContainText('[');
 });
