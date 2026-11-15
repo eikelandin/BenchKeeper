@@ -1,5 +1,7 @@
 # Automation templates
 
+> **Not in CedarLoom 0.1.** The plugins ship no automations and install none; the app that installs them is replaced in 0.2. The templates stay in the repository for that release.
+
 An automation template describes one scheduled agent run in a single Markdown file, so the run can be reviewed, versioned and carried to a second machine. The format does not name the scheduler that runs it. Installing a template on a scheduler is not part of the format: the app does it ([Install and keep current](#install-and-keep-current)).
 
 ## Where templates live

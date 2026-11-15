@@ -2,9 +2,9 @@
 
 What each skill does, who starts it, when it runs and what it writes, so you can pick one without reading its `SKILL.md`. The tables come from each skill's front matter and from `plugins/cl-setup/library/library.json`; CI fails when this page differs from them (`node .github/scripts/skills-doc.mjs` rewrites it).
 
-## BenchKeeper's skills
+## CedarLoom's skills
 
-The BenchKeeper plugin installs these nine in Claude Code and Codex at every level. A skill that "you" start never starts on its own.
+The plugins `cl-workflow`, `cl-setup` and `cl-orchestration` ([install](../README.md#install)) bring these skills to Claude Code and Codex. A skill that "you" start never starts on its own.
 
 <!-- generated:skills -->
 | Skill | What it is for | Started by | When it runs | What it writes |
@@ -57,4 +57,4 @@ The `matt-pocock` pack installs his plugin (skill list of version 1.3.1). Claude
 | `writing-for-agents` | the agent or you | Writing skills, `AGENTS.md` and `CLAUDE.md` for agents. |
 <!-- /generated:skills -->
 
-Skills installed per project (packs and single skills): [the library catalog](../plugins/cl-setup/library/README.md).
+Packs, such as the Matt Pocock pack above, and single skills per project come from the BenchKeeper app, which is not part of CedarLoom 0.1 (without it, install Matt Pocock's plugin yourself): [the library catalog](../plugins/cl-setup/library/README.md).
