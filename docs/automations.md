@@ -220,8 +220,11 @@ Not offered: merging external pull requests, applying the agent label, changing 
 - In an exported run the template's hook (`daily-digest/guard.sh`) allows, in mode `act`, exactly these calls, with `<path>` the `file` value and a real date in place of `YYYY-MM-DD`:
   - `git add -- <path>`
   - `git commit -m "docs: daily digest" -- <path>` (`commit` true)
+  - `git push origin HEAD:<default branch>` (`commit` true, `<default branch>` the branch the project folder's `origin/HEAD` names; without `origin/HEAD` the push is denied, `git remote set-head origin --auto` sets it; only when the call's folder, the `cwd` of the hook input, is in the project folder's own checkout, not a nested one, that checkout is on `<default branch>`, and HEAD is one commit ahead of `origin/<default branch>` and none behind: no merge, subject `docs: daily digest`, changing the digest file alone)
   - `gh issue comment <issue> --repo <owner/name> --body-file <path>` (`issue` set, `<owner/name>` the `origin` repository of the project folder in any case, not of a nested checkout the run may `cd` into)
-- The hook denies every other call with the adjacent words `git add`, `git commit`, `gh issue comment` or `gh pr comment` (a second path or `--repo`, a tab, `${IFS}`, `..`, a subfolder, a name that is no date). So these three need no allow rule there, and the six deny rules below may stay, since deny rules apply even to a call a hook allows.
+- The hook leaves to the allow rules a call without the word `git` or `gh` (read in the text with quotes and backslashes removed, so `gi''t` and `g\it` count), and these read-only commands alone, with no shell operator, redirect, glob or expansion outside quotes: `gh issue list`, `gh issue view`, `gh pr list`, `gh pr view`, `gh pr checks`, `gh repo view`, `git fetch origin <branch>` (no option), `git rev-list`, `git remote get-url`, `git log`, `git status` (none with `--output`).
+- The hook denies every other call with the word `git` or `gh`: global options before the subcommand (`git -C`, `git -c`, `gh -R`), another write (`gh api`, `gh pr merge`, a push to another branch), a chained command, and any other form of the four writes (a second path or `--repo`, a tab, `${IFS}`, `..`, a subfolder, a name that is no date). So these four need no allow rule there, and the six deny rules below may stay, since deny rules apply even to a call a hook allows.
+- The hook reads the call's text only: a command name that an expansion (`${x}t`), a glob or another program (an interpreter, `xargs`) builds carries no word `git` or `gh`, so the run's allow rules decide it: an allow rule for a command that runs its arguments (`sh`, `node`, `xargs`, `env`) lets git run past the hook.
 - A runner install does not start the hook, and that is accepted: on the runner the three `*` rules and the six deny rules below are the limit, with the gaps named below, and the exact form holds in an exported run only (`commit` and `issue` are off by default and write in act mode only).
 - On the runner a rule cannot name a date, so with the default `digests/YYYY-MM-DD.md` three of the allow rules take `*` in its place:
 
@@ -253,8 +256,9 @@ Not offered: merging external pull requests, applying the agent label, changing 
   Bash(gh issue list *)
   Bash(gh issue view *)
   Bash(gh repo view *)
-  Bash(npx -y @cedarloom/app@0.1 sessions list)
-  Bash(npx -y @cedarloom/app@0.1 accounts status)
+  Bash(command -v cedarloom-app)
+  Bash(cedarloom-app sessions list)
+  Bash(cedarloom-app accounts status)
   Bash(git remote get-url origin)
   Bash(git rev-list *)
   Bash(git log *)

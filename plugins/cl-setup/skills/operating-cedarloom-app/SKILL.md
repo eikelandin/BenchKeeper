@@ -2,11 +2,12 @@
 name: operating-cedarloom-app
 description: "Manages the CedarLoom setup of this machine or a repository through the cedarloom-app CLI alone, without the web UI: plan, review the diff, apply with --yes, read the JSON, undo a run, run doctor and verify, update one project. Use when asked to install, update, check, change or undo the CedarLoom setup, or to read its state (projects, skills, packs, history, settings, rules) from the command line."
 writes: "What the `cedarloom-app` commands you approve write: rules, skills, settings and project setup files, each run recorded for `cedarloom-app undo`."
+disable-model-invocation: true
 ---
 
 # Operating the CedarLoom app through the CLI
 
-`npx @cedarloom/app@0.1 <command>` (below `cedarloom-app <command>`). `cedarloom-app help` lists every option.
+Run `command -v cedarloom-app` first. When it prints nothing, tell the user the CedarLoom app CLI is not installed and stop: never run it through `npx` or another package runner. `cedarloom-app help` lists every option.
 
 Every change the setup commands make is a plan, recorded as a run that `undo` reverses: a change that writes a file shows a diff, a removal is marked `destructive: true` and shows none.
 

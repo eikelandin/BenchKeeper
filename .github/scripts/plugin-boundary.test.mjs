@@ -10,8 +10,8 @@ const P = 'plugins/one';
 const names = (path, text) => offences(`${P}/${path}`, text, P);
 
 test('names of the app are found in text of any kind', () => {
-  assert.deepEqual(names('a.md', 'Run `npx benchkeeper@6 doctor`.'), ['app-package']);
-  assert.deepEqual(names('a.md', 'Run `npx -y @cedarloom/app@0 plan`.'), ['app-package']);
+  assert.deepEqual(names('a.md', 'The `benchkeeper` app.'), ['app-package']);
+  assert.deepEqual(names('a.md', 'Run `npx -y @cedarloom/app@0 plan`.'), ['app-package', 'app-registry']);
   assert.deepEqual(names('a.json', '{"command": "benchkeeper:ask"}'), ['app-package']);
   assert.deepEqual(names('a.md', 'State lives in .cedarloom-app/runs.'), ['app-state']);
   assert.deepEqual(names('a.mjs', 'const home = process.env.CEDARLOOM_APP_HOME;'), ['app-state']);
@@ -66,6 +66,35 @@ test('imports must stay inside the plugin or name a Node built-in or the Claude 
   assert.deepEqual(names('a.mjs', "const m = await import(/* chunk */ 'left-pad');"), ['import-outside']);
 });
 
+test('the app\'s registry package and a package runner call of its command are found in any form, its installed command is not', () => {
+  for (const text of [
+    'Run `npx @cedarloom/app@0.1 <command>`.',
+    'precheck = "k=$(npx --yes @cedarloom/app knowledge show --json)"',
+    ...['bunx', 'bun x', 'pnpx', 'pnpm dlx', 'npm exec --', 'yarn dlx'].map((runner) => `${runner} @cedarloom/app plan`),
+    'npx -y \\\n  @cedarloom/app@0.1 plan', // a line continuation
+    'npm --yes exec @cedarloom/app plan',
+    'npm -y x @cedarloom/app plan',
+    'pnpm --package=@cedarloom/app dlx cedarloom-app plan',
+    'yarn --silent dlx @cedarloom/app plan',
+    'deno run -A npm:@cedarloom/app plan',
+    'npm i -g @cedarloom/app',
+    'npx -y benchkeeper@6 doctor',
+    'npx cedarloom-app plan',
+    'npm x -y -- cedarloom-app plan',
+    'bun x cedarloom-app plan',
+    'pnpm dlx \\\n  benchkeeper doctor',
+  ]) assert.ok(names('a.sh', text).includes('app-registry'), text);
+  assert.deepEqual(names('a.md', 'Run `npx @cedarloom/app-ui`.'), ['app-package']);
+  assert.deepEqual(names('a.md', 'When `command -v cedarloom-app` finds it, run `cedarloom-app plan`.'), ['app-state']);
+  assert.deepEqual(names('a.md', 'Never run it through `npx` or another package runner. `cedarloom-app help` lists the commands.'), ['app-state']);
+});
+
+test('the app\'s registry package fails even when the allow list names it', () => {
+  assert.deepEqual(differences({ 'p/a.md': ['app-package', 'app-registry'] }, { 'p/a.md': ['app-package', 'app-registry'] }), [
+    "p/a.md: app-registry names the app's registry package or runs the app through a package runner: call the installed command when `command -v` finds it",
+  ]);
+});
+
 test('a difference is named for a new reference and for an allow entry that no longer matches', () => {
   assert.deepEqual(differences({ 'p/a.md': ['app-path'], 'p/b.md': ['app-package'] }, { 'p/a.md': ['app-path'], 'p/c.md': ['app-state'] }), [
     "p/b.md: app-package is a new reference to the app, a path outside the plugin or another plugin's matcher prefix",
@@ -89,7 +118,7 @@ test('scan reads tracked files of every folder under plugins, skips binaries and
     writeFileSync(join(dir, 'plugins/two/.claude-plugin/plugin.json'), '{"name": "two"}');
     writeFileSync(join(dir, 'plugins/two/hooks/own.json'), '{"hooks": {"UserPromptSubmit": [{"matcher": "^two:(ask)$"}]}}');
     writeFileSync(join(dir, 'plugins/two/hooks/copied.json'), '{"hooks": {"UserPromptSubmit": [{"matcher": "startup"}, {"matcher": "^one:(ask)$"}]}}');
-    writeFileSync(join(dir, 'plugins/one/skills/a.md'), 'npx benchkeeper doctor');
+    writeFileSync(join(dir, 'plugins/one/skills/a.md'), 'Run the benchkeeper doctor.');
     writeFileSync(join(dir, 'plugins/two/b.mjs'), "import x from '../one/c.mjs';");
     writeFileSync(join(dir, 'plugins/two/CHANGELOG.md'), 'benchkeeper');
     writeFileSync(join(dir, 'plugins/two/logo.png'), Buffer.from([0, 98, 101, 110, 99, 104, 107, 101, 101, 112, 101, 114]));
