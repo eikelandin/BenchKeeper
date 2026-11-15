@@ -3,7 +3,7 @@
 // <file> lies in .cedarloom/runs/ of the working directory (the run folder); any other path, or one through a link, exits 2.
 // The coordinator pastes these files into the spec, the reviewer's brief and the follow-up: workers and reviewers never read comments themselves.
 import { lstatSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { runFolder } from './facts.mjs';
 import { errorLine, escaped, isMain, read, sh } from './policy.mjs';
@@ -68,8 +68,9 @@ if (isMain(import.meta.url)) {
     settings = trackerSettings(values);
     if (positionals.length !== 3) throw new Error(usage);
     // The file comes from a session's command line: it is written only in a run folder facts.mjs accepts, never through .. or a link, as approval.mjs reads one.
-    file = resolve(positionals[2]);
-    if (runFolder(dirname(file)) !== dirname(file) || lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`refused: ${positionals[2]} is no file in .cedarloom/runs/ of the working directory`);
+    const named = resolve(positionals[2]), folder = runFolder(dirname(named));
+    file = folder && join(folder, basename(named));
+    if (folder !== dirname(named) || lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`refused: ${positionals[2]} is no file in .cedarloom/runs/ of the working directory`);
   } catch (e) {
     console.error(escaped(e.message.split('\n')[0]));
     process.exit(2);
