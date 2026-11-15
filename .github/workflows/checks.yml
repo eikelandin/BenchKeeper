@@ -117,10 +117,10 @@ jobs:
         working-directory: app
         run: npm run build && npm run test:ui
 
-  # The plugin as Claude Code reads it: manifest and skill front matter (strict), the marketplace file, the mod tests. Claude Code is pinned by `.github/claude-code/package-lock.json` (the `stable` tag of its npm package); bump it by hand.
+  # Each plugin as Claude Code reads it: manifest and skill front matter (strict), the marketplace file, the mod tests, an install of each plugin. Claude Code is pinned by `.github/claude-code/package-lock.json` (the `stable` tag of its npm package); bump it by hand.
   plugin-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     permissions:
       contents: read
     env:
@@ -136,15 +136,26 @@ jobs:
         working-directory: .github/claude-code
         # No install scripts: the native binary of the runner's platform package goes on PATH instead of the postinstall copy.
         run: npm ci --ignore-scripts --no-audit --no-fund && echo "$PWD/node_modules/@anthropic-ai/claude-code-linux-x64" >> "$GITHUB_PATH"
-      - name: Validate the plugin and the marketplace
-        run: claude plugin validate plugins/cedarloom --strict && claude plugin validate .
+      - name: Validate the plugins and the marketplace
+        run: |
+          shopt -s failglob
+          for dir in plugins/*/; do
+            claude plugin validate "$dir" --strict
+          done
+          claude plugin validate .
       - name: Plugin mod tests
-        run: claude plugin test plugins/cedarloom
+        run: |
+          shopt -s failglob
+          for mods in plugins/*/hooks/claude-code.json; do
+            claude plugin test "${mods%/hooks/claude-code.json}"
+          done
       # A broken manifest and a broken skill front matter must fail the validation (fixtures built from a valid scratch plugin).
       - name: Validation fixtures
         run: node --test .github/scripts/plugin-validate.test.mjs
+      - name: Install each plugin and the bundle into an empty config
+        run: node --test .github/scripts/plugin-install.test.mjs
 
-  # The plugin's scripts and hooks under Node.js alone: no app and no install.
+  # The plugins' scripts and hooks under Node.js alone: no app and no install.
   plugin-tests:
     strategy:
       fail-fast: false
@@ -165,7 +176,7 @@ jobs:
         run: |
           shopt -s failglob
           for dir in plugins/*/test; do
-            node --import "./$dir/setup.mjs" --test "$dir"/*.test.mjs
+            node --import ./.github/scripts/plugin-test-env.mjs --test "$dir"/*.test.mjs
           done
 
   # Required check: passes when all parallel jobs pass.

@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -137,4 +137,46 @@ test('release.yml waits up to 20 minutes for npm view to list the exact version'
 test('release.yml creates the tagged label before it marks the release pull request', () => {
   const block = runBlock(release, 'Mark the release pull request as tagged');
   assert.match(block, /^gh label create 'autorelease: tagged' .*--force\ngh pr edit /m);
+});
+
+// Stub: each gh call lands in calls/<n> as NUL-separated arguments; of the tags only setup's last one exists, no Release. The step reads the
+// config with jq: the runners have it, elsewhere the test skips without it.
+const noJq = spawnSync('jq', ['--version'], { stdio: 'ignore' }).status !== 0 && !process.env.CI;
+test('release.yml tags every plugin component at its version and creates one Release with the changelog section of each plugin', { skip: noJq }, () => {
+  const dir = mkdtempSync(join(tmpdir(), 'bk-tags-'));
+  try {
+    const packages = { app: { component: 'app' }, 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/cl-workflow': { component: 'cedarloom-workflow' }, 'plugins/cl-setup': { component: 'cedarloom-setup' }, 'plugins/cl-orchestration': { component: 'cedarloom-orchestration' } };
+    writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
+    // setup stays at its last release; orchestration has no changelog yet; workflow's first release has no compare link.
+    const manifest = { app: '6.27.0', 'plugins/cedarloom': '6.28.0', 'plugins/cl-workflow': '6.28.0', 'plugins/cl-setup': '6.27.0', 'plugins/cl-orchestration': '6.28.0' };
+    writeFileSync(join(dir, '.release-please-manifest.json'), JSON.stringify(manifest));
+    const changelogs = {
+      cedarloom: '# Changelog\n\n## [6.28.0](x) (2026-11-20)\n\n### Features\n\n* rules\n\n## [6.27.0](x)\n\n* old\n',
+      'cl-workflow': '# Changelog\n\n## 6.28.0 (2026-11-20)\n\n### Bug Fixes\n\n* review\n',
+      'cl-setup': '# Changelog\n\n## [6.27.0](x)\n\n* older\n',
+    };
+    for (const [name, text] of Object.entries(changelogs)) {
+      mkdirSync(join(dir, 'plugins', name), { recursive: true });
+      writeFileSync(join(dir, 'plugins', name, 'CHANGELOG.md'), text);
+    }
+    mkdirSync(join(dir, 'calls'));
+    const stubs = `n=0
+gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release view') return 1 ;; 'api repos/o/r/git/ref/tags/cedarloom-setup-v6.27.0') return 0 ;; 'api repos/o/r/git/ref/'*) return 1 ;; esac; }
+`;
+    const out = spawnSync('bash', ['-e', '-c', stubs + runBlock(release, 'Tag and create the GitHub Releases')], { cwd: dir, env: { ...process.env, REPO: 'o/r', SHA: 'abc', APP: '', CONTENT: '6.28.0' }, encoding: 'utf8' });
+    assert.equal(out.status, 0, out.stdout + out.stderr);
+    const calls = readdirSync(join(dir, 'calls')).sort((a, b) => a - b).map((f) => readFileSync(join(dir, 'calls', f), 'utf8').split('\0').slice(0, -1));
+    const tag = (t) => [['api', `repos/o/r/git/ref/tags/${t}`], ['api', 'repos/o/r/git/refs', '-f', `ref=refs/tags/${t}`, '-f', 'sha=abc']];
+    assert.deepEqual(calls, [
+      ...tag('cedarloom-v6.28.0'),
+      ...tag('cedarloom-workflow-v6.28.0'),
+      ['api', 'repos/o/r/git/ref/tags/cedarloom-setup-v6.27.0'],
+      ...tag('cedarloom-orchestration-v6.28.0'),
+      ['release', 'view', 'cedarloom-v6.28.0', '--repo', 'o/r'],
+      ['release', 'create', 'cedarloom-v6.28.0', '--repo', 'o/r', '--target', 'abc', '--title', 'cedarloom v6.28.0', '--notes',
+        '## cedarloom\n\n### Features\n\n* rules\n\n## cl-workflow\n\n### Bug Fixes\n\n* review\n\n', '--latest'],
+    ]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

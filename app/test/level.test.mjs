@@ -43,7 +43,9 @@ test('lite and standard plan the BenchKeeper plugin alone: no write, no removal,
   for (const level of ['lite', 'standard']) {
     const plan = globalPlan({ ctx: m.ctx, agents: ['claude', 'codex'], options: { level } });
     assert.ok(plan.length > 0);
-    assert.ok(plan.every((c) => c.kind === 'command' && !c.destructive && c.step.endsWith(ID)), JSON.stringify(plan.map((c) => c.step)));
+    assert.ok(plan.every((c) => c.kind === 'command' && !c.destructive), JSON.stringify(plan.map((c) => c.step)));
+    // Claude Code gets the bundle, Codex (no plugin dependencies) each plugin.
+    assert.deepEqual([...new Set(plan.map((c) => c.step))], ['plugin:claude:cedarloom@cedarloom', 'plugin:codex:cl-workflow@cedarloom', 'plugin:codex:cl-setup@cedarloom', 'plugin:codex:cl-orchestration@cedarloom']);
   }
   assert.ok(globalPlan({ ctx: m.ctx, agents: ['claude'], options: {} }).some((c) => c.kind === 'write'), 'no level plans everything');
   assert.throws(() => globalPlan({ ctx: m.ctx, agents: ['claude'], options: { level: 'tiny' } }), /level must be one of lite, standard, full/);

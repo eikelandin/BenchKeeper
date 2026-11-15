@@ -1,8 +1,8 @@
 name: Release
 
 # Nothing releases until the owner merges the release pull request (docs/releasing.md). release-please keeps one release
-# pull request open from the Conventional Commits on main (release-please-config.json, two components: the app under
-# app/, tag app-v<x.y.z>, and the content under plugins/cedarloom/, tag setup-v<x.y>). It creates no tag or Release:
+# pull request open from the Conventional Commits on main (release-please-config.json: the app under app/, tag
+# app-v<x.y.z>, and the plugins under plugins/, one version for all, Release cedarloom-v<x.y.z>). It creates no tag or Release:
 # after the merge the job `release` publishes the app to npm through npm.yml (built from the release commit, the commit
 # the tags name, also when main has moved on) and waits for the registry, and only then
 # tags, creates the GitHub Releases, moves the branch stable (the ref the app adds BenchKeeper's marketplace at) and
@@ -152,24 +152,36 @@ jobs:
             done
           fi
           echo "benchkeeper@$V is on npm"
-      # release-please finds a component's last release by the tag <component>-v<x.y.z>: content gets setup-v<x.y.0>
-      # for it and the Release on setup-v<x.y>, the tag that the docs and older releases use.
+      # release-please finds a component's last release by the tag <component>-v<x.y.z>, so every plugin gets its tag.
+      # The plugins share one version (linked-versions); the Release on the bundle's tag, cedarloom-v<x.y.z>, holds the
+      # changelog sections of all of them.
       - if: ${{ steps.v.outputs.app != '' || steps.v.outputs.content != '' }}
         name: Tag and create the GitHub Releases
         env:
           APP: ${{ steps.v.outputs.app }}
           CONTENT: ${{ steps.v.outputs.content }}
         run: |
-          notes() { awk '/^## /{if (f) exit; f=1; next} f' "$1"; }
+          # The section of version $2: the first one, and only when its heading names that version. A new package has
+          # no changelog until its first release, and that release has no previous tag to link: `## x.y.z (date)`.
+          notes() { [ -f "$1" ] || return 0; awk -v v="$2" '/^## /{if (f || !(index($0, "[" v "]") || $0 == "## " v || index($0, "## " v " ") == 1)) exit; f=1; next} f' "$1"; }
           release() {
             gh release view "$1" --repo "$REPO" >/dev/null 2>&1 && return
-            gh release create "$1" --repo "$REPO" --target "$SHA" --title "$2" --notes "$(notes "$3")" --latest
+            gh release create "$1" --repo "$REPO" --target "$SHA" --title "$2" --notes "$3" --latest
           }
-          if [ -n "$APP" ]; then release "app-v$APP" "app v$APP" app/CHANGELOG.md; fi
+          if [ -n "$APP" ]; then release "app-v$APP" "app v$APP" "$(notes app/CHANGELOG.md "$APP")"; fi
           if [ -n "$CONTENT" ]; then
-            gh api "repos/$REPO/git/ref/tags/setup-v$CONTENT" >/dev/null 2>&1 ||
-              gh api "repos/$REPO/git/refs" -f "ref=refs/tags/setup-v$CONTENT" -f "sha=$SHA" >/dev/null
-            release "setup-v${CONTENT%.0}" "setup v${CONTENT%.0}" plugins/cedarloom/CHANGELOG.md
+            # An assignment, not a process substitution, so that a jq failure stops the step.
+            plugins=$(jq -r --slurpfile m .release-please-manifest.json \
+              '.packages | to_entries[] | select(.key | startswith("plugins/")) | "\(.key) \(.value.component) \($m[0][.key])"' release-please-config.json)
+            body=
+            # Each plugin at its own version in the manifest: a plugin outside this release keeps its last tag.
+            while read -r path component version; do
+              gh api "repos/$REPO/git/ref/tags/$component-v$version" >/dev/null 2>&1 ||
+                gh api "repos/$REPO/git/refs" -f "ref=refs/tags/$component-v$version" -f "sha=$SHA" >/dev/null
+              section=$(notes "$path/CHANGELOG.md" "$CONTENT")
+              if [ -n "$section" ]; then body+="## ${path#plugins/}"$'\n'"$section"$'\n\n'; fi
+            done <<<"$plugins"
+            release "cedarloom-v$CONTENT" "cedarloom v$CONTENT" "$body"
           fi
       # stable only moves forward: main is linear, so this fast-forwards, and a rerun finds it in place.
       - if: ${{ steps.v.outputs.app != '' || steps.v.outputs.content != '' }}

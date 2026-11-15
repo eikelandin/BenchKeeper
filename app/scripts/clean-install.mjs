@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { contentDir } from '../src/content.mjs';
+import { ownSkills } from '../src/content.mjs';
 
 const FIXTURES = {
   typescript: {
@@ -35,7 +35,7 @@ const projects = Object.keys(FIXTURES).map((name) => ({ name, dir: join(root, 'p
 const run = (cmd, args) => spawnSync(cmd, args, { cwd: root, env, encoding: 'utf8' });
 const git = (...args) => { const r = run('git', args); assert.equal(r.status, 0, `git ${args.join(' ')}: ${r.stderr || r.error}`); };
 const node = (script, ...args) => run(process.execPath, [script, ...args]);
-const skill = (script) => join(contentDir, 'skills/orchestrating-projects', script);
+const skill = (script) => join(ownSkills().get('orchestrating-projects'), script);
 // One run of project setup, with its runs as the app's JSON reports them.
 const apply = (dir) => {
   const r = node(fileURLToPath(new URL('../bin/benchkeeper.mjs', import.meta.url)), 'projects', 'apply', dir, '--agents', 'claude', '--share', '--yes', '--json');

@@ -2,7 +2,7 @@
 // worktree so the user's checkout stays as it is.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, isAbsolute, join, resolve, sep } from 'node:path';
-import { agent } from './agents.mjs';
+import { agent, isOwnPlugin } from './agents.mjs';
 import { contentVersion } from './content.mjs';
 import { PACK_SCOPES, libraryWith, ownPacks, packScope, packScopes, scopeText, scopeWrite } from './packs.mjs';
 import { exists, hashText, isDir, readText, realish, writeAtomic } from './fsx.mjs';
@@ -131,7 +131,7 @@ export function projectInstalls(ctx, dir, a) {
     : { state: onDisk.get(n) ?? 'not installed', hint: 'only this project' }]));
   return { packs, skills,
     global: {
-      plugin: plugged.filter((x) => enabled[x].includes('cedarloom@cedarloom')).map((x) => agent(x).name),
+      plugin: plugged.filter((x) => enabled[x].some(isOwnPlugin)).map((x) => agent(x).name),
       packs: lib.packs.filter((p) => !a.packs.includes(p.id) && packs[p.id].scope === 'global' && packs[p.id].state === 'installed').map((p) => ({ id: p.id, title: p.title ?? p.id })),
       skills: plugged.map((x) => ({ agent: agent(x).name, count: globalSkills(ctx, x) })),
     } };

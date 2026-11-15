@@ -108,8 +108,11 @@ export function lintAgent(file) {
   return [...ignored, ...missing, ...model];
 }
 
+// The folder named part of each plugin under plugins/ that has one.
+const pluginParts = (part) => readdirSync(join(root, 'plugins')).map((p) => join(root, 'plugins', p, part)).filter((d) => existsSync(d));
+
 // Claude Code loads a plugin's agents from agents/ and its subfolders.
-export const ownAgents = () => markdownFiles(join(root, 'plugins/cedarloom/agents'));
+export const ownAgents = () => pluginParts('agents').flatMap(markdownFiles);
 
 // Hooks do not run in bare mode, the role guard's included (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
 // A line (continuations joined) whose words, split at spaces, quotes, commas, brackets and shell operators, hold claude and
@@ -144,7 +147,7 @@ function packSkills() {
 }
 
 export function ownSkills() {
-  const dirs = ['plugins/cedarloom/skills', 'plugins/cedarloom/library'].map((d) => join(root, d));
+  const dirs = [...pluginParts('skills'), ...pluginParts('library')];
   const own = dirs.flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
   return [...own, ...packSkills().filter((dir) => !VENDORED.includes(dir))];
 }

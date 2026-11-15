@@ -1,0 +1,21 @@
+{
+  "name": "cl-workflow",
+  "displayName": "CedarLoom workflow",
+  "version": "6.27.0",
+  "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and starts the planning, review and research agents it needs. Works next to other skill packs and plugins when they are installed.",
+  "author": {
+    "name": "eikelandin",
+    "url": "https://github.com/eikelandin"
+  },
+  "license": "MIT",
+  "hooks": "./hooks/claude-code.json",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "tierBand": {
+      "type": "boolean",
+      "title": "Status band above the prompt (terminal and desktop app)",
+      "description": "Off by default. Adds two rows above the prompt in the Claude Code terminal and desktop app: project, branch and Ponytail's level when it is installed, then the last test run and lint or type check, and ASK while terminal questions are allowed. It reads your working folder, git, one Ponytail flag file and the commands and edits of the main loop; it stores and sends nothing. Turn it off by setting this option to false. The VS Code extension does not draw it.",
+      "default": false
+    }
+  }
+}

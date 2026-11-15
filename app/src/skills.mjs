@@ -2,7 +2,7 @@
 // changes one skill (update, reset, remove, adopt, enable, disable). Reads only; the changes go through the project plan and its runner.
 import { join } from 'node:path';
 import { skillDirs } from './agents.mjs';
-import { contentDir } from './content.mjs';
+import { ownSkills } from './content.mjs';
 import { exists, isDir, listDir, readText } from './fsx.mjs';
 import { copied, libraryWith, ownSkillFiles, skillFolder } from './packs.mjs';
 import { latestCommits } from './remote.mjs';
@@ -82,7 +82,7 @@ export function projectSkills(ctx, dir, { check = false } = {}) {
 
 // Skill folders in an agent's global folder that no BenchKeeper setup put there (its own skills and the kept ones).
 export function globalUntracked(ctx, agents) {
-  const ours = new Set([...KEEP_SKILLS, ...subfolders(join(contentDir, 'skills'))]);
+  const ours = new Set([...KEEP_SKILLS, ...ownSkills().keys()]);
   const found = new Map();
   for (const { dir: d } of skillDirs(agents, 'global', ctx.home)) for (const name of subfolders(d).filter((n) => !ours.has(n))) found.set(name, [...(found.get(name) ?? []), d.slice(ctx.home.length + 1)]);
   return [...found].map(([name, folders]) => ({ name, folders }));

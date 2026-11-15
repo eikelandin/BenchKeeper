@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { appVersion, contentRefusal } from '../src/content.mjs';
@@ -34,16 +34,21 @@ test('update check: shown when newer, silent when off, offline or older', async 
 test('content.json: content version is the plugin version, minApp is not above the app, skill and automation text names the 0.1 range', () => {
   const c = json('../../plugins/cedarloom/content.json');
   assert.equal(c.schemaVersion, 1);
-  for (const agent of ['claude', 'codex']) assert.equal(c.contentVersion, json(`../../plugins/cedarloom/.${agent}-plugin/plugin.json`).version);
-  const root = new URL('../../plugins/cedarloom/', import.meta.url);
+  const plugins = new URL('../../plugins/', import.meta.url);
+  const folders = readdirSync(plugins).map((p) => new URL(`${p}/`, plugins)).filter((p) => existsSync(new URL('.claude-plugin/plugin.json', p)));
+  assert.ok(folders.length > 1, 'no plugins under plugins/');
+  for (const p of folders) for (const agent of ['claude', 'codex']) {
+    const manifest = new URL(`.${agent}-plugin/plugin.json`, p);
+    if (existsSync(manifest)) assert.equal(c.contentVersion, json(manifest).version, fileURLToPath(manifest));
+  }
   // App and content release separately: an app patch release leaves the content version behind and still fits.
   const [major, minor, patch] = appVersion.split('.').map(Number);
   assert.match(c.minApp, /^\d+\.\d+\.\d+$/);
-  for (const v of [appVersion, `${major}.${minor}.${patch + 1}`]) assert.equal(contentRefusal(fileURLToPath(root), v), null, v);
+  for (const v of [appVersion, `${major}.${minor}.${patch + 1}`]) assert.equal(contentRefusal(fileURLToPath(new URL('cedarloom/', plugins)), v), null, v);
   let pins = 0;
-  for (const dir of ['skills', 'library', 'automations']) {
-    for (const f of readdirSync(new URL(`${dir}/`, root), { recursive: true }).filter((x) => x.endsWith('.md'))) {
-      for (const [, pin] of readFileSync(new URL(`${dir}/${f}`, root), 'utf8').matchAll(/npx (?:-y )?@cedarloom\/app(?:@(\S+?))?(?=[\s`)])/g)) { pins++; assert.equal(pin, '0.1', `${dir}/${f}`); }
+  for (const p of folders) for (const dir of ['skills', 'library', 'automations'].map((d) => new URL(`${d}/`, p)).filter((d) => existsSync(d))) {
+    for (const f of readdirSync(dir, { recursive: true }).filter((x) => x.endsWith('.md'))) {
+      for (const [, pin] of readFileSync(new URL(f, dir), 'utf8').matchAll(/npx (?:-y )?@cedarloom\/app(?:@(\S+?))?(?=[\s`)])/g)) { pins++; assert.equal(pin, '0.1', fileURLToPath(new URL(f, dir))); }
     }
   }
   assert.ok(pins > 0, 'no npx @cedarloom/app pins under plugins/');

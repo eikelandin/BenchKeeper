@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, renameSync, symlinkSync, writeFil
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { test } from 'node:test';
-import { addProtected, anchorsOf, check, deadRefs, globRegex, loadConfig, locate, measure, planCuts, run, suggest, tokensOf } from '../../plugins/cedarloom/skills/debloat/token-budget.mjs';
+import { addProtected, anchorsOf, check, deadRefs, globRegex, loadConfig, locate, measure, planCuts, run, suggest, tokensOf } from '../../plugins/cl-setup/skills/debloat/token-budget.mjs';
 
 function repo(files) {
   const root = mkdtempSync(join(tmpdir(), 'token-budget-'));

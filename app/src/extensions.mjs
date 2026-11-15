@@ -5,7 +5,7 @@
 import { readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { parse as parseToml } from 'smol-toml';
-import { agent } from './agents.mjs';
+import { agent, isOwnPlugin } from './agents.mjs';
 import { exists, isDir, readText, real } from './fsx.mjs';
 import { activePlugins, display, frontMatter, markdownIn } from './instructions.mjs';
 import * as orca from './orca/index.mjs';
@@ -75,7 +75,7 @@ function tomlAgentRows(folder) {
 }
 
 // The ledger names files BenchKeeper wrote; a settings or config file holds the user's entries beside its own, so only a file that is one item counts.
-const ownerOf = (scope, path, written, id, kind) => (id?.startsWith('cedarloom@') || (kind !== 'mcp' && kind !== 'hook' && written.has(real(path))) ? 'BenchKeeper' : scope === 'managed' ? 'managed' : scope === 'plugin' ? 'plugin' : scope === 'project' ? 'project' : 'yours');
+const ownerOf = (scope, path, written, id, kind) => (isOwnPlugin(id) || (kind !== 'mcp' && kind !== 'hook' && written.has(real(path))) ? 'BenchKeeper' : scope === 'managed' ? 'managed' : scope === 'plugin' ? 'plugin' : scope === 'project' ? 'project' : 'yours');
 
 // Rows for one agent: { agent, kind, name, scope, owner, file (shown), path, runsCode, detail, transport?, matcher?, state?, removal }.
 // removal: Doctor offers to remove it at the full level: the user's global MCP servers, hooks of Claude Code's settings.json and of Codex's hooks.json.

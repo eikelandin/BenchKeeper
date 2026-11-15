@@ -33,7 +33,7 @@ jobs:
       pull-requests: write
     env:
       LC_ALL: C.UTF-8
-      TB: head/plugins/cedarloom/skills/debloat/token-budget.mjs
+      TB: head/plugins/cl-setup/skills/debloat/token-budget.mjs
     steps:
       # Two folders side by side: a base checkout inside the head's tree would count as untracked files of the head.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
