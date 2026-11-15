@@ -17,8 +17,9 @@ export const REFERENCES = {
 };
 
 const CODE = /\.(?:[cm]?js|[cm]?ts|tsx)$/;
-// Package names of import and export statements, dynamic import and require; relative paths are checked in every file below.
-const SPECIFIER = /^[ \t]*(?:import|export)\b[^'";]*\bfrom[ \t]*(['"])([^'"\n]+)\1|\bimport[ \t]*(?:\([ \t]*)?(['"])([^'"\n]+)\3|\brequire\([ \t]*(['"])([^'"\n]+)\5/gm;
+// Specifiers of import and export statements (at the start of a statement, so a string that says "from 'x'" is none), dynamic import and require.
+const STATIC = /^[ \t]*(?:import|export)\b[^'";]*\bfrom[ \t]*(['"])([^'"\n]+)\1/gm;
+const DYNAMIC = /\b(?:import[ \t]*(?:\([ \t]*)?|require\([ \t]*)(['"])([^'"\n]+)\1/g;
 // What Claude Code supplies to a plugin's mods besides Node's built-ins.
 const PROVIDED = /^(?:node:|claude-code(?:\/|$))/;
 // A path that climbs from the file's folder, in any file: a plugin is installed as its folder alone.
@@ -50,15 +51,14 @@ function matchers(value) {
 
 // Rule names that match in `text` of the file `path` (relative to the repository root), `plugin` being the plugin's folder and `name` its manifest name.
 export function offences(path, text, plugin, name) {
-  const found = new Set(Object.keys(REFERENCES).filter((name) => [REFERENCES[name]].flat().some((pattern) => pattern.test(text))));
+  const found = new Set(Object.keys(REFERENCES).filter((rule) => [REFERENCES[rule]].flat().some((pattern) => pattern.test(text))));
   const outside = (spec) => {
     const target = posix.join(posix.dirname(path), spec);
     return target !== plugin && !target.startsWith(`${plugin}/`);
   };
   if (ABOVE_ROOT.test(text) || [...text.matchAll(PARENT)].some(([spec]) => outside(spec))) found.add('import-outside');
   if (CODE.test(path)) {
-    for (const match of text.matchAll(SPECIFIER)) {
-      const spec = match[2] ?? match[4] ?? match[6];
+    for (const [, , spec] of [...text.matchAll(STATIC), ...text.matchAll(DYNAMIC)]) {
       if (spec.startsWith('.') ? outside(spec) : !PROVIDED.test(spec)) found.add('import-outside');
     }
   }
