@@ -218,7 +218,7 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
   npx @cedarloom/app@<version> apply
   ```
 
-  - From a clone: `git -C BenchKeeper fetch --tags && git -C BenchKeeper checkout setup-v<major>.<minor>`, then the same commands through `node BenchKeeper/app/bin/benchkeeper.mjs`.
+  - From a clone: `git -C BenchKeeper fetch --tags && git -C BenchKeeper checkout app-v<version>`, then the same commands through `node BenchKeeper/app/bin/benchkeeper.mjs`.
   - The app adds BenchKeeper's marketplace at the branch `stable`, which each release moves.
   - The plan does not update an installed plugin in the default Claude Code folder: the agent's own update does (`claude plugin marketplace update cedarloom` and `claude plugin update cedarloom@cedarloom`; Codex: `codex plugin marketplace upgrade cedarloom`).
   - Claude Code keeps one plugin cache per config folder, so every registered host account (`benchkeeper accounts list`) has its own copy of the plugin, which the default folder's update never reaches.

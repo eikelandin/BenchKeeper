@@ -47,7 +47,7 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | [plugins/setup/skills/operating-cedarloom-app](../plugins/setup/skills/operating-cedarloom-app/SKILL.md) | how an agent manages its own setup through the CLI: plan, review, apply with `--yes`, read the JSON, undo, doctor, update one project | plugin skill `setup:operating-cedarloom-app`, model-invoked |
 | [plugins/setup/skills/reviewing-rules](../plugins/setup/skills/reviewing-rules/SKILL.md) | reviews one rule file on request for contradictions, vague lines, lines a tool could enforce and lines that restate the code; changes nothing | plugin skill `/setup:reviewing-rules`, user-invoked |
 | [plugins/setup/library](../plugins/setup/library/README.md) | skills installed per project, grouped into packs (frontend, testing, security, science, docs, data, marketing, operations, Matt Pocock's) | installed into a project by `benchkeeper projects apply` |
-| [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then `app/CHANGELOG.md` (tags `app-v*`) and `plugins/cedarloom/CHANGELOG.md` (tags `setup-v*`), see [Releasing](releasing.md) | not linked |
+| [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then `app/CHANGELOG.md` (tags `app-v*`) and the changelog of each plugin, `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`, content up to 6.27 under `setup-v*`), see [Releasing](releasing.md) | not linked |
 | [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 
 ## How this stack was selected
