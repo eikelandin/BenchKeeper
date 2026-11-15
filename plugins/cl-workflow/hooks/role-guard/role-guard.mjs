@@ -42,15 +42,19 @@ const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot
 const BASH_QUOTED_ESCAPES = '$`"\\';
 // Bash's ANSI-C quoting $'...' (https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html).
 const ANSI_C = /\$'((?:[^'\\]|\\[\s\S])*)'?/y;
-const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c([\s\S]))/g;
+const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x\{([\da-fA-F]*)\}?|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c([\s\S]))/g;
 const ANSI_C_CHARS = { a: '\x07', b: '\b', e: '\x1b', E: '\x1b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
-// The text of $'...' as bash reads it: an unknown escape keeps its backslash, and a NUL ends the text.
+// The text of $'...' with its escapes decoded; an unknown escape keeps its backslash. Bash keeps the low byte of an octal
+// or \x{...} value, and a value above U+10FFFF stays as written.
 const ansiC = (body) =>
-  body.replace(ANSI_C_ESCAPE, (_, char, octal, hex, u, U, control) =>
-    char ? (ANSI_C_CHARS[char] ?? char)
-    : octal ? String.fromCharCode(parseInt(octal, 8) & 0xff)
-    : control ? String.fromCharCode(control.charCodeAt(0) & 0x1f)
-    : String.fromCodePoint(parseInt(hex ?? u ?? U, 16))).split('\0')[0];
+  body.replace(ANSI_C_ESCAPE, (escape, char, octal, braced, hex, u, U, control) => {
+    if (char) return ANSI_C_CHARS[char] ?? char;
+    if (octal) return String.fromCharCode(parseInt(octal, 8) & 0xff);
+    if (braced !== undefined) return String.fromCharCode(parseInt(braced.slice(-2) || '0', 16));
+    if (control) return String.fromCharCode(control.charCodeAt(0) & 0x1f);
+    const code = parseInt(hex ?? u ?? U, 16);
+    return code > 0x10ffff ? escape : String.fromCodePoint(code);
+  });
 
 // The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
 // continuation joins its lines, a quoted word stays whole, and redirections are dropped. The text of a quoted word is read again
@@ -94,7 +98,10 @@ function commands(source, powershell, nested = false) {
     } else if (!powershell && c === '$' && s[i + 1] === "'") {
       ANSI_C.lastIndex = i;
       const [whole, body] = ANSI_C.exec(s);
-      word += ansiC(body);
+      const [text, ...rest] = ansiC(body).split('\0');
+      word += text;
+      // Bash ends the word at a NUL, zsh keeps the text after it, and in a comment or here-document $' is no quote.
+      if (rest.length) out.push(...commands(rest.join('\n'), powershell, true));
       i += whole.length - 1;
       started = quoted = true;
     } else if (c === '"' || c === "'") {
@@ -197,9 +204,9 @@ function push(args, dir, known) {
   for (const spec of specs) {
     // git resolves tags/x and heads/x as refs/tags/x and refs/heads/x.
     const [src, dst = src] = spec.replace(/^\+/, '').split(':').map((side) => side.replace(/^(tags|heads)\//, 'refs/$1/'));
-    if (isTag(dir, src) || isTag(dir, dst)) return 'a tag push';
     // : and +: push the branches both sides have, a * pattern every branch it matches.
-    if ((!src && !dst) || `${src}${dst}`.includes('*')) return 'a push of every branch';
+    if ((!src && !dst) || `${src}${dst}`.includes('*')) return 'a push of every branch that : or a * pattern matches';
+    if (isTag(dir, src) || isTag(dir, dst)) return 'a tag push';
     targets.push(dst === '@' ? 'HEAD' : dst.replace(/^refs\/heads\//, ''));
   }
   // A push of the current branch passes only where the guard can read which branch that is.
