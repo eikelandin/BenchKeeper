@@ -134,7 +134,7 @@ test('on: the band names the project, branch, last test run and Ponytail level; 
   await step($)
   expect(await ui.find({ type: 'Text', text: /^shop \(feat\/cart\)  Ponytail: full$/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /^tests: not run  lint\/types: not run$/ })).toBeDefined()
-  await test('cd app && npm test')
+  await test('cd web && npm test')
   expect(await ui.find({ type: 'Text', text: /tests: passed/ })).toBeDefined()
   // A command that is no test run, and a failed command that is not a test failure, leave the result.
   outcome = { isError: true, text: 'Exit code 1\nnot ok' }
@@ -155,7 +155,7 @@ test('on: the band names the project, branch, last test run and Ponytail level; 
     expect(await ui.find({ type: 'Text', text: /tests: not run / })).toBeDefined()
   }
   // In a chain that failed, the failure may belong to another part: false && npm test ran no test, npm test && false passed it.
-  for (const command of ['false && npm test', 'npm test && false', 'cd app && npm test']) {
+  for (const command of ['false && npm test', 'npm test && false', 'cd web && npm test']) {
     outcome = { text: '12 passing' }
     await test('node --test')
     outcome = { isError: true, text: 'Exit code 1' }
@@ -164,7 +164,7 @@ test('on: the band names the project, branch, last test run and Ponytail level; 
   }
   // Redirections, a runner before the command and one sh -c script are read as the command they run.
   for (const command of ['npm test > test.log 2>&1', 'npm test>test.log', 'npm test &> test.log', 'npx vitest run', 'pnpm test', 'yarn jest', 'bunx vitest',
-    'npm run test:unit', 'python -m pytest', 'uv run pytest', "devcontainer exec --workspace-folder . sh -lc 'cd app && npm test'",
+    'npm run test:unit', 'python -m pytest', 'uv run pytest', "devcontainer exec --workspace-folder . sh -lc 'cd web && npm test'",
     'sh -c "npm test 2>&1 > log"']) {
     outcome = { isError: true, text: 'Exit code 1' }
     await test('node --test')
@@ -241,7 +241,7 @@ test('on: a lint or type check is read with the chain rules of a test run; a quo
   engine(on)
   const t = tools($, on)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  for (const command of ['ruff check .', 'cd app && npm run lint', 'npx tsc --noEmit', 'CI=1 eslint .', 'go vet ./...', 'cargo clippy', 'npx eslint .', 'npx biome check']) {
+  for (const command of ['ruff check .', 'cd web && npm run lint', 'npx tsc --noEmit', 'CI=1 eslint .', 'go vet ./...', 'cargo clippy', 'npx eslint .', 'npx biome check']) {
     t.set({ isError: true, text: 'Exit code 1' })
     await t.bash('mypy')
     t.set({ text: 'ok' })
