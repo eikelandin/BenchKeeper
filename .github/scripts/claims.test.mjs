@@ -13,7 +13,7 @@ test('every claim in facts.json has evidence that resolves', () => {
   assert.deepEqual(check(facts), []);
 });
 test('evidence kinds that pass', () => {
-  for (const e of ['docs/setup.md#accounts', 'docs/automations.md', 'app/test/cli.test.mjs', 'https://github.com/eikelandin/BenchKeeper-research/blob/main/README.md', ['docs/setup.md', 'app/package.json']]) {
+  for (const e of ['docs/setup.md#accounts', 'docs/automations.md', 'app/test/cli.test.mjs', ['docs/setup.md', 'app/package.json']]) {
     assert.deepEqual(check(part(e)), [], String(e));
   }
   assert.deepEqual(check(tool(['https://example.org/tool/docs', 'docs/stack.md#recommended-tools-optional'])), []);
@@ -37,7 +37,7 @@ test('failing fixture: each kind of bad evidence is reported', () => {
     ['docs/setup.md#no-such-heading', /no heading for #no-such-heading/],
     ['app/test/cli.test.mjs#plan writes nothing', /only a Markdown heading/],
     ['README.md', /written by hand/],
-    ['https://example.org/benchmark', /only BenchKeeper-research results/],
+    ['https://example.org/benchmark', /only a repository file may be cited here/],
   ];
   for (const [e, re] of cases) {
     const errors = check(part(e));

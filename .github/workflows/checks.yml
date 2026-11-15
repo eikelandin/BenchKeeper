@@ -76,7 +76,7 @@ jobs:
       # Plugin install lines in the docs that name a release tag name the plugins version (#cedarloom-v<x.y.z>).
       - name: Version pins
         run: node --test .github/scripts/version-pins.test.mjs && node .github/scripts/version-pins.mjs --check
-      # Each claim in web/src/data/facts.json names its evidence: a repository file or heading, a test title, or a BenchKeeper-research result.
+      # Each claim in web/src/data/facts.json names its evidence: a repository file or heading, or a test title.
       - name: Claims evidence
         run: node --test .github/scripts/claims.test.mjs && node .github/scripts/claims.mjs
       # The budget in .github/token-budget.json binds here, a required check; token-budget.yml only comments the change.
