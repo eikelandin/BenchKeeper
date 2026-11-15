@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { test } from 'node:test';
 
-const skill = readFileSync(new URL('../../plugins/cedarloom/skills/reviewing-rules/SKILL.md', import.meta.url), 'utf8');
+const skill = readFileSync(new URL('../skills/reviewing-rules/SKILL.md', import.meta.url), 'utf8');
 const dir = new URL('fixtures/reviewing-rules/', import.meta.url);
 const read = (name) => readFileSync(new URL(name, dir), 'utf8');
 const expected = JSON.parse(read('expected.json'));

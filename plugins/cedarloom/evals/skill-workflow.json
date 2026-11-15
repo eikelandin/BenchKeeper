@@ -52,6 +52,24 @@
       "expected": "the skill loads"
     },
     {
+      "id": "d1",
+      "query": "The CSV export in src/report.js sometimes writes an empty file and nobody knows why. Find the cause and fix it.",
+      "should": true,
+      "expected": "the skill loads and follows diagnose.md, with or without a diagnosis skill installed: a command that reproduces the empty file and fails before the first code change, the cause named with file and line, a regression test only where the test rule calls for one, no debug output left in the diff, and no question in the session while terminal questions are off"
+    },
+    {
+      "id": "p1",
+      "query": "Add a --since <date> flag to the export command in src/cli.js. The plan is in plan-since.md next to this repository: it has an acceptance table and the line 'Plan check: passed (a fresh session that did not write it)'.",
+      "should": true,
+      "expected": "the skill loads, writes Depth: standard, skips Settle, the Plan phase and the plan check, and builds against plan-since.md"
+    },
+    {
+      "id": "p2",
+      "query": "Rate-limit failed logins in src/auth.js. The plan is in plan-login.md next to this repository: it has an acceptance table and the line 'Depth: standard'.",
+      "should": true,
+      "expected": "the skill loads, writes Depth: deep with risky (authentication) despite the plan's Depth: standard line, skips Settle and the Plan phase, runs the plan check because the plan records none, and runs every later phase as a subagent"
+    },
+    {
       "id": "n1",
       "query": "What does the git command `git rebase --onto` do?",
       "should": false,
