@@ -29,8 +29,6 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | Path | What | Linked as |
 |---|---|---|
 | [.claude-plugin/marketplace.json](../.claude-plugin/marketplace.json) | the marketplace, read by Claude Code and Codex | `$HOME/.claude/plugins/`, `$HOME/.codex/plugins/` |
-| [plugins/cedarloom/rules/global.md](../plugins/cedarloom/rules/global.md) | global rules | written by the app to `$HOME/.claude/rules/00-global.md`, and as a block into the Codex, Gemini CLI and Copilot instruction files |
-| [plugins/cedarloom/rules/project.md](../plugins/cedarloom/rules/project.md) | repository rules (standard level and up) | part of the project block the app writes (`CLAUDE.local.md`, `AGENTS.override.md`, or `AGENTS.md` with `--share`) |
 | [plugins/cedarloom/rules/worker.md](../plugins/cedarloom/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `orchestrating-projects`; no setup installs it as a rule file |
 | [app](../app) | the installer: global setup, project setup, history and undo, CLI and browser UI ([README](../app/README.md)) | `npx benchkeeper@6.27.0` |
 | [plugins/cedarloom/skills/setting-up-projects](../plugins/cedarloom/skills/setting-up-projects/SKILL.md) | set up or update one repo after `projects apply`: devcontainer, the project parts of AGENTS.md with footgun docs (`docs/agents/`), stack skills, other configuration to remove | plugin skill `benchkeeper:setting-up-projects` |
@@ -45,7 +43,6 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | [plugins/cedarloom/skills/maintaining-repos](../plugins/cedarloom/skills/maintaining-repos/SKILL.md) | the Maintain pass on request: dead code and duplicates, dependency cycles, test audit by mutation, debt, dependency audit, version pins, docs drift, unused skills | plugin skill `benchkeeper:maintaining-repos` |
 | [plugins/cedarloom/skills/orchestrating-projects](../plugins/cedarloom/skills/orchestrating-projects/SKILL.md) | the coordinator on request: workers on labeled issues, projects in parallel, each pull request reviewed by a fresh reviewer, merge and cleanup by each repository's written policy | plugin skill `benchkeeper:orchestrating-projects` |
 | [plugins/cedarloom/skills/reviewing-rules](../plugins/cedarloom/skills/reviewing-rules/SKILL.md) | reviews one rule file on request for contradictions, vague lines, lines a tool could enforce and lines that restate the code; changes nothing | plugin skill `/benchkeeper:reviewing-rules`, user-invoked |
-| [plugins/cedarloom/library](../plugins/cedarloom/library/README.md) | skills installed per project, grouped into packs (frontend, testing, security, science, docs, data, marketing, operations, Matt Pocock's) | installed into a project by `benchkeeper projects apply` |
 | [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then `app/CHANGELOG.md` (tags `app-v*`) and `plugins/cedarloom/CHANGELOG.md` (tags `setup-v*`), see [Releasing](releasing.md) | not linked |
 | [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 

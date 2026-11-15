@@ -123,8 +123,8 @@ function packSkills() {
 }
 
 export function ownSkills() {
-  const dirs = ['plugins/cedarloom/skills', 'plugins/cedarloom/library'].map((d) => join(root, d));
-  const own = dirs.flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
+  const dir = join(root, 'plugins/cedarloom/skills');
+  const own = readdirSync(dir).map((n) => join(dir, n)).filter((p) => statSync(p).isDirectory());
   return [...own, ...packSkills().filter((dir) => !VENDORED.includes(dir))];
 }
 

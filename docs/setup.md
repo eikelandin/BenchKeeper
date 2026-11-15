@@ -2,7 +2,7 @@
 
 What BenchKeeper installs, where it writes and how to update or undo it. The short version is the [README](../README.md).
 
-Terms: a **tier** is how much process the `workflow` skill gives a software change (quick, standard or full). A **pack** is a named set of skills and plugins you choose per machine or project ([packs](../plugins/cedarloom/library/README.md#packs)). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
+Terms: a **tier** is how much process the `workflow` skill gives a software change (quick, standard or full). A **pack** is a named set of skills and plugins you choose per machine or project (packs). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
 
 ## Prerequisites
 
@@ -114,7 +114,7 @@ Lite level, plugin only: `npx benchkeeper@6.27.0 apply --level lite`, or by hand
    npx benchkeeper@6.27.0 projects apply --agents claude,codex
    ```
 
-   - Options: `--agents` names the agents the repository uses; `--pack <id>` adds [library packs](../plugins/cedarloom/library/README.md#packs); `--tier` sets the default tier; `--env` says where the agent runs.
+   - Options: `--agents` names the agents the repository uses; `--pack <id>` adds library packs; `--tier` sets the default tier; `--env` says where the agent runs.
    - It writes a block (the repository rules of `rules/project.md`; where commands run, default tier, skill pointers), the packs' skills from the default branch of their source, and `.benchkeeper/state.json`, whose answers later runs reuse.
    - By default the setup stays on this machine: the block goes into `CLAUDE.local.md` (which imports `AGENTS.md`) and `AGENTS.override.md` (Codex reads it instead of `AGENTS.md`, so the app's block there also holds the text of `AGENTS.md`, rebuilt on each apply; your lines outside the block stay). Every other file the app writes is listed in `.git/info/exclude`, so only the coordinator's two files below land in the repository.
    - `--share` commits the setup instead: the block in `AGENTS.md` and `CLAUDE.md` with `@AGENTS.md`. Your own `AGENTS.md` text, `docs/agents/` and `.devcontainer/` stay committed either way.

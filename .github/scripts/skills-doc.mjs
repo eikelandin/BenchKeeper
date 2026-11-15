@@ -1,4 +1,4 @@
-// Writes the skill tables of docs/skills.md from the SKILL.md front matter of the plugin's skills and from library.json.
+// Writes the skill tables of docs/skills.md from the SKILL.md front matter of the plugin's skills.
 // Usage: node .github/scripts/skills-doc.mjs [--check]   (--check: exit 1 when the page differs)
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -30,28 +30,22 @@ export function skillEntry(text) {
   return { name, purpose, start, when, writes };
 }
 
-export function render(skills, manifest) {
+export function render(skills) {
   const out = [row(['Skill', 'What it is for', 'Started by', 'When it runs', 'What it writes']), row(['---', '---', '---', '---', '---'])];
   for (const s of skills) out.push(row([`[${s.name}](../plugins/cedarloom/skills/${s.name}/SKILL.md)`, s.purpose, s.start, s.when, s.writes]));
-  const pack = manifest.packs.find((p) => p.pluginSkills);
-  const { version, skills: theirs } = pack.pluginSkills;
-  out.push('', `## ${pack.title}`, '', `The \`${pack.id}\` pack installs his plugin (skill list of version ${version}). Claude Code installs it from the official marketplace, which pins it to one commit ([marketplace.json](https://github.com/anthropics/claude-plugins-official/blob/main/.claude-plugin/marketplace.json)); the pin moves when that marketplace updates it. Skills you start run as \`/mattpocock-skills:<name>\` (Codex \`$mattpocock-skills:<name>\`); the agent starts the others on its own, and you can start them too.`, '');
-  out.push(row(['Skill', 'Started by', 'What it does']), row(['---', '---', '---']));
-  for (const s of theirs) out.push(row([`\`${s.name}\``, s.user ? 'you' : 'the agent or you', s.does]));
   return out.join('\n');
 }
 
-export function update(page, skills, manifest) {
+export function update(page, skills) {
   const a = page.indexOf(START);
   const b = page.indexOf(END);
   if (a < 0 || b < a) throw new Error(`docs/skills.md needs ${START} and ${END}`);
-  return `${page.slice(0, a + START.length)}\n${render(skills, manifest)}\n${page.slice(b)}`;
+  return `${page.slice(0, a + START.length)}\n${render(skills)}\n${page.slice(b)}`;
 }
 
 export function sources() {
   const dir = `${root}/plugins/cedarloom/skills`;
-  const skills = readdirSync(dir).sort().map((n) => skillEntry(readFileSync(`${dir}/${n}/SKILL.md`, 'utf8')));
-  return [skills, JSON.parse(readFileSync(`${root}/plugins/cedarloom/library/library.json`, 'utf8'))];
+  return [readdirSync(dir).sort().map((n) => skillEntry(readFileSync(`${dir}/${n}/SKILL.md`, 'utf8')))];
 }
 
 if (isMain(import.meta.url)) {
@@ -60,7 +54,7 @@ if (isMain(import.meta.url)) {
   const next = update(page, ...sources());
   if (process.argv[2] === '--check') {
     if (next !== page) {
-      console.log('::error::docs/skills.md differs from the skill front matter or library.json: run node .github/scripts/skills-doc.mjs');
+      console.log('::error::docs/skills.md differs from the skill front matter: run node .github/scripts/skills-doc.mjs');
       process.exit(1);
     }
   } else writeFileSync(file, next);

@@ -67,7 +67,7 @@ A local setup puts the project parts outside the block of `CLAUDE.local.md` (Cla
 
 Library packs and skills come from the app (the state file's `packs` and `singles`): skip what they cover.
 
-- Without a state file, propose the packs and single skills whose "Pick when" in [the library catalog](../../library/README.md) matches what the repository contains, and add `--pack <id>` or `--skill <name>` for each one the user keeps.
+- Without a state file, propose the packs and single skills whose "Pick when" in the library catalog matches what the repository contains, and add `--pack <id>` or `--skill <name>` for each one the user keeps.
 - An own library skill the setup selects whose row names folders for `paths`, when the user names folders other than the whole repository:
   - Add `--paths '<skill>=<glob>,<glob>'` to `projects plan` and the planned `projects apply` alike, one glob per folder (`--paths 'designing-technical-uis=app/ui/**,docs/**'`; a folder whose name holds a `'` or a `,` is left out).
   - Add the row's pointer line to each of those folders' `AGENTS.md` (the block already holds it for the root).

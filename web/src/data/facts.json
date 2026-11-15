@@ -36,7 +36,6 @@
     "url": "https://github.com/mattpocock/skills",
     "role": "the workflow owner: his skills run the phases of standard and full work when installed (grilling, spec and tickets, tdd, code review, pull request)",
     "evidence": [
-      "plugins/cedarloom/library/library.json",
       "plugins/cedarloom/skills/workflow/software.md#steps"
     ]
   },
@@ -324,14 +323,6 @@
   },
   "parts": [
     {
-      "id": "rules",
-      "title": "`rules/global.md`",
-      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/rules/global.md",
-      "scope": "Global, every session, full level",
-      "text": "Secrets kept out, confirmation before hard-to-reverse actions or actions visible to others, assumptions stated, the minimum change and the check that proves it done. The repository rules (when and how to ask, best practice with a source, writing without filler, sources for claims, checks never weakened, load the workflow skill) are in `rules/project.md`, part of each project's block.",
-      "evidence": ["plugins/cedarloom/rules/global.md", "plugins/cedarloom/rules/project.md", "docs/stack.md#contents"]
-    },
-    {
       "id": "workflow",
       "title": "`workflow`",
       "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/skills/workflow/SKILL.md",
@@ -368,7 +359,7 @@
       "title": "Devcontainer and browser checks",
       "href": "https://code.visualstudio.com/docs/devcontainers/devcontainer-cli",
       "scope": "Per repository",
-      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Domain skills come from the [BenchKeeper library](https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/library/README.md), stack skills from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
+      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Stack skills come from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
       "evidence": ["docs/stack.md#components", "plugins/cedarloom/skills/setting-up-projects/SKILL.md", "plugins/cedarloom/skills/setting-up-projects/devcontainer.md"]
     }
   ],

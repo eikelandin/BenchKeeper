@@ -13,11 +13,10 @@ test('docs/skills.md matches its sources', () => {
   const page = readFileSync(join(root, 'docs/skills.md'), 'utf8');
   assert.equal(update(page, ...sources()), page);
 });
-test('every plugin skill and every pack plugin skill has its row', () => {
-  const [skills, manifest] = sources();
+test('every plugin skill has its row', () => {
+  const [skills] = sources();
   const page = readFileSync(join(root, 'docs/skills.md'), 'utf8');
   for (const s of skills) assert.match(page, new RegExp(`^\\| \\[${s.name}\\]`, 'm'));
-  for (const s of manifest.packs.flatMap((p) => p.pluginSkills?.skills ?? [])) assert.match(page, new RegExp(`^\\| \`${s.name}\` \\|`, 'm'));
 });
 test('the when column comes from the field, else from the description after its first sentence', () => {
   const agent = skillEntry(skill(['name: a', 'description: "Does a. Use when b."', 'writes: "c"']));
@@ -50,7 +49,7 @@ test('--check fails on a page that differs from its sources', () => {
   const tmp = realpathSync(mkdtempSync(join(tmpdir(), 'skills-doc-')));
   const dir = join(tmp, 'repo');
   try {
-    for (const p of ['.github/scripts', 'plugins/cedarloom/skills', 'plugins/cedarloom/library/library.json', 'docs/skills.md']) cpSync(join(root, p), join(dir, p), { recursive: true });
+    for (const p of ['.github/scripts', 'plugins/cedarloom/skills', 'docs/skills.md']) cpSync(join(root, p), join(dir, p), { recursive: true });
     symlinkSync(dir, join(tmp, 'link'), 'dir');
     const page = join(dir, 'docs/skills.md');
     writeFileSync(page, readFileSync(page, 'utf8').replace('| Skill |', '| Skills |'));
