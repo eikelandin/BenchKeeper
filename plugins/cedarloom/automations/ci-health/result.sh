@@ -6,7 +6,8 @@
 set -e
 mode=$1 body=$2 repo=$3 wf=$4 run=$5 attempt=$6 result=$7 path=$8
 case "$result" in pass|fail) ;; *) echo "result must be pass or fail" >&2; exit 2 ;; esac
-printf '%s\n' "$repo" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*' || { echo "not a repository: $repo" >&2; exit 2; }
+repo() { case "$1/" in */./*|*/../*) return 1 ;; esac; printf '%s\n' "$1" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*'; }
+repo "$repo" || { echo "not a repository: $repo" >&2; exit 2; }
 printf '%s %s %s\n' "$wf" "$run" "$attempt" | grep -qxE '[0-9]+ [0-9]+ [0-9]+' || { echo "not a workflow, run and attempt: $wf $run $attempt" >&2; exit 2; }
 printf '%s\n' "$path" | grep -qxE '[A-Za-z0-9_.][A-Za-z0-9_./-]*' || { echo "not a workflow path: $path" >&2; exit 2; }
 [ -f "$body" ] || { echo "report file $body is missing" >&2; exit 2; }

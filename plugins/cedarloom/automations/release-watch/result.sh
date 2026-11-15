@@ -6,7 +6,8 @@ set -e
 mode=$1 repo=$2 tag=$3 result=$4 body=$5
 case "$result" in pass|fail) ;; *) echo "result must be pass or fail" >&2; exit 2 ;; esac
 "$(dirname "$0")/valid.sh" tag "$tag" >/dev/null
-printf '%s\n' "$repo" | grep -qxE '[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+' || { echo "not a repository: $repo" >&2; exit 2; }
+repo() { case "$1/" in */./*|*/../*) return 1 ;; esac; printf '%s\n' "$1" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*'; }
+repo "$repo" || { echo "not a repository: $repo" >&2; exit 2; }
 [ -f "$body" ] || { echo "report file $body is missing" >&2; exit 2; }
 dir=${XDG_STATE_HOME:-$HOME/.local/state}/cedarloom-app/release-watch
 mkdir -p "$dir"

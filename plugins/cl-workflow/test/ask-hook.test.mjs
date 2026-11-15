@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -43,6 +43,12 @@ test('ask hook: /clear keeps the window, a resumed conversation starts without i
   assert.equal(decision(data), 'none');
   run(data, start('resume'));
   assert.equal(decision(data), 'deny');
+});
+
+test('ask hook: a folder in the ask folder does not stop the start, which exits 0', () => {
+  const data = mkdtempSync(join(tmpdir(), 'ask-'));
+  mkdirSync(join(data, 'ask', 'sub'), { recursive: true });
+  run(data, start('startup'));
 });
 
 test('ask hook: input it cannot read exits 2, which blocks the question tool', () => {

@@ -39,9 +39,10 @@ if (input === null || typeof input !== 'object' || Array.isArray(input)) {
   // shortcut: a quit process's session window stays (a few bytes) until a process with its id starts; prune by age if they pile up.
   if (dir && (input.source === 'startup' || input.source === 'resume')) {
     rmSync(file, { force: true });
-    let names = [];
-    try { names = readdirSync(dir); } catch { /* no window was ever opened */ }
-    for (const name of names) if (openUntil(join(dir, name), now) === null) rmSync(join(dir, name), { force: true });
+    let entries = [];
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { /* no window was ever opened */ }
+    // Window files only: rmSync without recursive throws on a folder.
+    for (const entry of entries) if (entry.isFile() && openUntil(join(dir, entry.name), now) === null) rmSync(join(dir, entry.name), { force: true });
   }
   say(event, { additionalContext: line(now) });
 } else if (event === 'UserPromptExpansion' && ['cl-workflow:ask', 'cl-workflow:questions'].includes(input.command_name)) {

@@ -27,6 +27,7 @@ These hold in every step and for every outcome.
 - This session runs on `opus` at `high`. On `fable`, tell the owner once and go on only on their word.
 - A worker on `fable` follows Sessions on `fable` in the `cl-workflow:workflow` skill: it takes one issue whatever `issuesPerWorker` says, and after its report it gets no follow-up and is never resumed. Release it once its handoff is copied; its follow-up goes to a fresh worker on its branch whose spec carries that handoff under `Shared context:`.
 - Report each step with what was skipped or not checked.
+- The run folder holds against sandboxed workers only: no worker's sandbox may write the coordinator's working directory, while a worker without the sandbox can write it like every folder of the user and can merge with the owner's `gh` login; only the repository's rulesets bind such a worker (docs/security.md, Rules and skills against what is enforced).
 
 ## Names
 
@@ -71,6 +72,7 @@ Every session of a run has one role: the owner, the coordinator (this session), 
 3. **Start** one worker per free slot, up to `workersPerProject` and `hostWorkerLimit`, in its agent's default permission mode ([Rules](#rules)).
    - Projects run in parallel; a project with no free slot waits.
    - Before a project's first start in the run, take its baseline ([Reconciliation](#reconciliation)).
+   - Use an issue's branch in a command only when it is a plain name, as the `BRANCH` pattern of [merge-checks.mjs](merge-checks.mjs) requires: letters, digits, `.`, `_`, `/` and `-`, no `-` at the start, no `..`, not `HEAD`. Any other name starts nothing: list the issue for the owner.
    - Before each start, check the branch of each issue: `git -C <project path> ls-remote --heads origin <branch>`, `git -C <project path> worktree list` and `gh pr list -R <owner/repo> --head <branch> --state open --json number,isCrossRepository`. A row with `isCrossRepository` true does not count: anyone can open a pull request from a fork under that branch name.
    - When the issue's branch or an open PR for it exists, a follow-up goes to the worker that owns it as a runner message, and a new worker starts on that branch only after the owning one is released, with the existing-branch form of the spec's Branch line.
 4. **Watch** until every worker has settled.

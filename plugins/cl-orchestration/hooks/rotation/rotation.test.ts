@@ -22,12 +22,13 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
   // The handoff file's mtime: 1000 until a write; the repository's other files were changed at 2000.
   const mtimes: Record<string, number> = {}
   const ran: string[] = []
-  mock.env(on, { ORCA_TERMINAL_HANDLE: terminal })
+  mock.env(on, { ORCA_TERMINAL_HANDLE: terminal, PATH: '/usr/bin' })
   on('session.root', () => ({ value: ROOT }))
   on('session.surfaces', () => ({ value: surfaces }) as never)
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('fs.stat', (_, e) => {
     if (e.path === ROOT) return { value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: ROOT } }
+    if (e.path === '/usr/bin/git' || e.path === '/usr/bin/orca') return { value: { kind: 'file', size: 0, mtimeMs: 0, isLink: false, realPath: e.path } }
     if (e.path in files) return { value: { kind: 'file', size: 0, mtimeMs: mtimes[e.path] ?? 1000, isLink: false, realPath: link ? '/home/me/notes.md' : e.path } }
     if (e.path.startsWith(`${TOP}/`) && !e.path.startsWith(`${ROOT}/`)) return { value: { kind: 'file', size: 0, mtimeMs: 2000, isLink: false } }
     throw new Error('ENOENT')
@@ -35,10 +36,11 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
   on('process.run', async (_, e) => {
     await slow
     // Orca's task list holds one task still waiting besides the settled ones.
-    if (e.argv[0] === 'orca') {
+    if (e.argv[0] === '/usr/bin/orca') {
       const tasks = orca === undefined ? [] : [{ status: 'ready' }, ...Array.from({ length: orca.completed }, () => ({ status: 'completed' })), ...Array.from({ length: orca.failed }, () => ({ status: 'failed' }))]
       return { value: { exitCode: orca === undefined ? 1 : 0, stdout: JSON.stringify({ ok: true, result: { runId: orca?.run, tasks } }), stderr: '' } } as never
     }
+    if (e.argv[0] !== '/usr/bin/git') throw new Error(`not a program from PATH: ${e.argv[0]}`)
     // The log call lists the commits after its --since; the time is the second field of a line.
     const since = e.argv.find((arg) => arg.startsWith('--since-as-filter='))?.slice('--since-as-filter='.length)
     const log = () => changed.log.split('\n').filter((line) => line !== '' && Date.parse(line.split(' ')[1] ?? '') > Date.parse(since ?? '')).map((line) => `${line}\n`).join('')

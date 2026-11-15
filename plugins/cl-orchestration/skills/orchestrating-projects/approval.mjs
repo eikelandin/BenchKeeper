@@ -5,6 +5,8 @@ import { join, sep } from 'node:path';
 import { escaped, isMain, json, sh } from './policy.mjs';
 import { writers } from './precheck.mjs';
 
+// owner/name on GitHub; . and .. are no repository name.
+export const REPO = /^[A-Za-z0-9][A-Za-z0-9-]*\/(?!\.\.?$)[A-Za-z0-9._-]+$/;
 const FRONT = 'Front matter';
 // A placeholder starts with a letter, as the template's do: a URL autolink (<https://example.com/plan>) and a comparison (<5 sessions) are an answer.
 const PLACEHOLDER = /<(?![a-z][a-z0-9+.-]*:\S)[a-z][^<>]*>/i;
@@ -120,7 +122,8 @@ if (isMain(import.meta.url)) {
     const text = readFileSync(real, 'utf8');
     const issue = mode === 'answer' ? JSON.parse(text) : null;
     // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.
-    const [, host, repo] = /^https:\/\/([^/]+)\/([A-Za-z0-9-]+\/[A-Za-z0-9._-]+)\/issues\/\d+$/.exec(issue?.url ?? '') ?? [];
+    const [, host, named] = /^https:\/\/([^/]+)\/([^/]+\/[^/]+)\/issues\/\d+$/.exec(issue?.url ?? '') ?? [];
+    const repo = REPO.test(named ?? '') ? named : undefined;
     // gh api asks github.com, or the host GH_HOST names: on another host the same owner/repo and login are other accounts.
     const gh = (process.env.GH_HOST || 'github.com').toLowerCase();
     let writes = writers(repo, (cmd, args) => sh('.', cmd, args));
