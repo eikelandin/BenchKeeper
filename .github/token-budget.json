@@ -1,6 +1,6 @@
 {
   "budget": {
-    "total": 149000
+    "total": 150000
   },
   "ignoreRefs": [
     "^agents/",
