@@ -124,6 +124,33 @@ test('a repository filter driver does not run for status, snapshots and worktree
   }
 });
 
+test('a filter driver in a submodule config does not run for status and snapshots, and a submodule at another commit is a change', () => {
+  const inner = repo();
+  writeFileSync(join(inner, '.gitattributes'), '* filter=evil\n');
+  git(inner, 'add', '-A');
+  git(inner, 'commit', '-qm', 'attributes');
+  const dir = repo();
+  git(dir, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q', inner, 'sub');
+  git(dir, 'commit', '-qm', 'submodule');
+  const mark = join(home(), 'ran');
+  const script = join(home(), 'filter.sh');
+  writeFileSync(script, `#!/bin/sh\necho "$1" >> '${mark}'\ncat\n`, { mode: 0o755 });
+  git(join(dir, 'sub'), 'config', 'filter.evil.clean', `${script} clean`);
+  // A new mtime makes the index entry stat-dirty, so the status in the submodule hashes the file again through its filter.
+  const touch = (t) => utimesSync(join(dir, 'sub', 'README.md'), t, t);
+  touch(1e9);
+  git(dir, 'status', '--porcelain');
+  assert.equal(existsSync(mark), true, 'the driver runs under plain git');
+  rmSync(mark);
+  touch(2e9);
+  const c = context({ home: home(), run: runCommand });
+  assert.equal(clean(c, dir), true);
+  assert.match(snapshot(c, dir), /^[0-9a-f]{40,64}$/);
+  assert.equal(existsSync(mark), false, 'no driver of the submodule ran');
+  git(join(dir, 'sub'), '-c', 'user.email=t@example.com', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'moved');
+  assert.equal(clean(c, dir), false);
+});
+
 // A git-lfs first on PATH that records its arguments, and a repository whose attributes pick the driver lfsfake (a name apart from
 // a machine's own lfs config); f(c, dir, mark) runs with both.
 function withFakeLfs(f) {

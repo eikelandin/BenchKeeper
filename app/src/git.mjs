@@ -22,7 +22,7 @@ const LFS_DRIVER = /^(?:git-lfs (?:clean|smudge)(?: --skip)? -- %f|git-lfs filte
 // Commands that only read refs, objects and config never run a filter; every other command (add, status, commit, write-tree
 // re-checking racy index entries, a checkout, a diff) may, so a command the app starts using later is covered by default.
 const NO_FILTER = new Set(['config', 'rev-parse', 'symbolic-ref', 'remote', 'cat-file', 'ls-tree', 'ls-remote', 'fetch', 'push', 'merge-base', 'log', 'branch', 'diff-tree']);
-const subcommand = (args) => args.find((a, i) => !a.startsWith('-') && args[i - 1] !== '-c');
+const commandAt = (args) => args.findIndex((a, i) => !a.startsWith('-') && args[i - 1] !== '-c');
 // timeout is the later command's: a config that blocks (an include of a FIFO) must not hang the app before that command starts.
 // GIT_CONFIG makes `git config` (only that command) read one file instead of the repository's: it stays out of this call.
 function driverOverrides(ctx, dir, env, timeout) {
@@ -49,12 +49,15 @@ const withPairs = (env, pairs) => {
 // core.fsmonitor is a command the repository's own config names, and status and add would run it: off for every call.
 const git = (ctx, dir, args, { index, ...extra } = {}) => {
   let env = repoEnv(extra.env, index);
-  if (!NO_FILTER.has(subcommand(args))) {
+  const at = commandAt(args);
+  if (!NO_FILTER.has(args[at])) {
     const off = driverOverrides(ctx, dir, env, extra.timeout);
     if (!off) return { code: 128, stdout: '', stderr: 'the repository config cannot be read, so its filter drivers are unknown' };
     env = withPairs(env, off);
   }
-  return ctx.run(['git', '-C', dir, '-c', 'core.fsmonitor=false', ...args], { ...extra, env });
+  // A status starts a status in each submodule, which runs that repository's own config (its filter drivers): only a submodule at another commit counts.
+  const argv = args[at] === 'status' ? [...args.slice(0, at + 1), '--ignore-submodules=dirty', ...args.slice(at + 1)] : args;
+  return ctx.run(['git', '-C', dir, '-c', 'core.fsmonitor=false', ...argv], { ...extra, env });
 };
 
 // A branch name safe to pass on as an argument and a fetch refspec: no option, no refspec syntax, and a valid git ref
