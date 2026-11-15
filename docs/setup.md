@@ -160,7 +160,7 @@ Several logins per agent, for example work and personal, each in a folder of its
 - Usage, Claude Code: `accounts track <name>` adds a status line script and a `StopFailure` hook to the account's folder.
   - It is a plan with a diff and undo.
   - An account that already has a status line of its own is refused, except one that only runs Ponytail's `ponytail-statusline.sh` or `.ps1`: that one is replaced and comes back with `benchkeeper undo <run>` or `accounts track <name> --off`. A dev container account has no undo run: there `--off` is the way back.
-  - The status line prints what the plugin option `statusStyle` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it with `/plugin` in a session of that account):
+  - The status line prints what the key `statusStyle` under `pluginConfigs."cedarloom@cedarloom".options` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it in its own `settings.json`):
     - `merged` (default): the windows and Ponytail's level from the account's `.ponytail-active` (`[PONYTAIL]`, or `[PONYTAIL:LITE]` and `[PONYTAIL:ULTRA]`, coloured as Ponytail's own badge)
     - `plugin`: the level only
     - `benchkeeper`: the windows only
@@ -288,9 +288,9 @@ Three rows of text above the prompt in the Claude Code terminal and desktop app;
     - Quick asks for the tests or a lint or type check; standard and full ask for the tests and show `ready, review is yours`, as no hook sees a review.
     - A check that failed after the last edit is always named.
     - Research and no tier show no verdict.
-- Third row: the tier of the last answer (the `Tier:` line the BenchKeeper workflow skill writes at the start of a task; `none yet` before the first), the session's override, `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the buttons `quick`, `standard`, `full`, `auto`, `board`, `doctor` and `?`.
+- Third row: the tier of the last answer (the `Tier:` line the BenchKeeper workflow skill writes at the start of a task; `none yet` before the first), the session's override, `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the buttons `quick`, `standard`, `full`, `auto` and `?`.
 
-The tier buttons run `/benchkeeper:tier` (a skill of the BenchKeeper plugin) for this session (`auto` ends the override); the override survives compaction and resume. `board` opens the sessions board the app last wrote (`$HOME/.config/benchkeeper/board.html`; run `benchkeeper sessions board` or open Sessions in the app first). `doctor` asks the agent to run `benchkeeper doctor` for the project and list the findings, so the agent runs the command and the usual permission prompt applies. `?` shows a short version of this text.
+The tier buttons run `/benchkeeper:tier` (a skill of the BenchKeeper plugin) for this session (`auto` ends the override); the override survives compaction and resume. `?` shows a short version of this text.
 
 Turn it on: `benchkeeper apply` and accept the change "BenchKeeper status band", the switch Terminal tier strip in the app's Preferences view, or set `tierBand` to `true` for `cedarloom@cedarloom` under `pluginConfigs` in `$HOME/.claude/settings.json`. Turn it off: the same switch, set that value to `false` (or `benchkeeper undo <run>` for the run that turned it on; `benchkeeper history` lists the run ids). Start a new Claude Code session after changing the option. The band reads the working folder, git, Ponytail's flag file `.ponytail-active` and the commands and edits of the main loop; it keeps the session's tier override in the plugin's own store, writes nothing else and sends nothing, and what it shows stays on this machine.
 
@@ -343,7 +343,7 @@ Set the options with `/plugin` or under `pluginConfigs` for `cedarloom@cedarloom
 
 ## Sessions board
 
-`benchkeeper sessions board` writes `$HOME/.config/benchkeeper/board.html` and opens it; the browser UI shows the same page under Sessions and rewrites the file on each scan, and the status band's board button opens it.
+`benchkeeper sessions board` writes `$HOME/.config/benchkeeper/board.html` and opens it; the browser UI shows the same page under Sessions and rewrites the file on each scan.
 
 Per Claude Code and Codex session on this machine, the board shows:
 

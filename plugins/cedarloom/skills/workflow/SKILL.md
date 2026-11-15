@@ -1,7 +1,7 @@
 ---
 name: workflow
 description: "Picks the workflow and tier for a task: a software change (quick, standard, full), a docs pass, research, or a batch of tasks on one branch, with the checks and reviews each needs. Use before the first edit in a repository, before issue or pull request work, and before research with two or more items."
-writes: "The tier line `Tier: <tier> (<change type>)` before the first edit; through its playbooks commits and a pull request in the project's convention."
+writes: "The tier line `Tier: <tier> (<change type>)` and the risk line `Risk: <class> (<reason>)` before the first edit; through its playbooks commits and a pull request in the project's convention."
 ---
 
 # Workflow
@@ -24,6 +24,7 @@ Every tier:
    - Which tier wins, first match: the user's explicit tier for the task; a session override from `/benchkeeper:tier` (a risky change still names the full tier and asks); the [change-type table](#change-types); a `Default tier:` line in `AGENTS.md`.
    - Several requests in one prompt: tier each.
    - Before the first edit or command, write the tier line `Tier: <tier> (<change type>)`, with the change type's name from that table or a few words when none fits (`Tier: research` and `Tier: <tier> (override)` stay as they are).
+   - A software change also gets its risk class and the `Risk:` line ([risk.md](risk.md)). The class raises a tier from the table or `Default tier:`: high to full, medium to standard.
    - The work grows past its tier: say so, write a new tier line, and run the skipped steps before the next edit.
 
 2. **Settle.** Standard and full tier: when goal, scope or result is open, grill the user in rounds (each question with your recommendation, all open ones per round) until goal, scope, acceptance criteria and risks are settled; a settled request skips the grill. Then explore read-only, as the plan phase where [software.md](software.md#phases) runs phases (Claude Code: in plan mode, only while terminal questions are allowed). Without terminal questions: go on with the plan.
@@ -32,7 +33,7 @@ Every tier:
    - Standard and full tier, and any risky change: also [software.md](software.md), full tier also [full-tier.md](full-tier.md).
    - Docs pass: [docs.md](docs.md). Research: [research.md](research.md).
    - Branches, commits and pull requests follow the project's own convention (`AGENTS.md`, a contributing guide, the history).
-   - A pull request body holds the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (what could break, who is affected) and How to revert.
+   - A pull request body holds the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (the `Risk:` line, then what could break, who is affected) and How to revert.
    - Two or more independent items that each need more than a few files or searches: one subagent per item in parallel, then one merged report. Smaller items run in this session.
 
    The playbooks hold the detail; these are the steps, in order:
