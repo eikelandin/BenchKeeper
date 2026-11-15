@@ -4,8 +4,11 @@
     "duplicatedLines": {
       "app": 0,
       "tests": 386,
-      "web": 6,
-      "plugins": 18
+      "web": 0,
+      "plugins/cedarloom": 18,
+      "plugins/cl-orchestration": 0,
+      "plugins/cl-setup": 0,
+      "plugins/cl-workflow": 0
     }
   },
   "mutation": {

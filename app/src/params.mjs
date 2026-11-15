@@ -1,12 +1,12 @@
 // The orchestrator policy as validated JSON, checked by the coordinator's own reader (policy.mjs in the content), so the editor refuses exactly the files the reader refuses; the document is returned as parsed, so "//" comment keys survive a round trip.
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { contentDir } from './content.mjs';
+import { contentDir, ownSkills } from './content.mjs';
 import { readText } from './fsx.mjs';
 
 export const FILES = { policy: ['docs/agents/orchestration.json'] };
-// No static path names the content (content/ in the package, plugins/cedarloom/ in a clone); a content folder whose reader does not load must not keep the app from starting, so only the editor fails, with the reason.
-const reader = await import(pathToFileURL(join(contentDir, 'skills/orchestrating-projects/policy.mjs')).href).catch((e) => ({ failed: e.message.split('\n')[0] }));
+// No static path names the content (content/ in the package, plugins/cl-orchestration/ in a clone); a content folder whose reader does not load must not keep the app from starting, so only the editor fails, with the reason.
+const reader = await Promise.resolve().then(() => import(pathToFileURL(join(ownSkills().get('orchestrating-projects'), 'policy.mjs')).href)).catch((e) => ({ failed: e.message.split('\n')[0] }));
 const VALIDATE = { policy: reader.validate };
 
 // text: the file's content, null when it does not exist. Returns the document as parsed and the errors; no input is changed.

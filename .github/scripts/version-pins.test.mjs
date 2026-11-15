@@ -1,18 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { SKIP, minAppPin, nodeDrift, pins, playwrightDrift, pnpmDrift } from './version-pins.mjs';
+import { SKIP, nodeDrift, pins, playwrightDrift, pnpmDrift } from './version-pins.mjs';
 
-test('install commands get the current version, other version mentions stay', () => {
-  const text = 'Run `npx @cedarloom/app@6.0.0 apply`, or `git clone --branch setup-v6.0 x`. setup-v3.3 took 8 minutes; benchkeeper@6.0.0 in prose.';
-  assert.equal(pins(text, '6.1.0'), 'Run `npx @cedarloom/app@6.1.0 apply`, or `git clone --branch app-v6.1.0 x`. setup-v3.3 took 8 minutes; benchkeeper@6.0.0 in prose.');
-});
-
-test('the clone tag is the app tag with three parts; older setup-v pins are rewritten', () => {
-  assert.equal(pins('--branch setup-v6.23.0 a, --branch setup-v6.23 b, --branch app-v6.24.0 c', '6.24.1'), '--branch app-v6.24.1 a, --branch app-v6.24.1 b, --branch app-v6.24.1 c');
+test('plugin install lines that name a release tag get the plugins version; app commands and prose stay', () => {
+  const text = 'claude plugin marketplace add o/r#cedarloom-v0.1.0, codex plugin marketplace add o/r@cedarloom-v0.1.0. npx @cedarloom/app@6.27.0 and --branch app-v6.27.0 stay; the tag cedarloom-v0.1.0 in prose stays.';
+  assert.equal(pins(text, '0.2.0'), 'claude plugin marketplace add o/r#cedarloom-v0.2.0, codex plugin marketplace add o/r@cedarloom-v0.2.0. npx @cedarloom/app@6.27.0 and --branch app-v6.27.0 stay; the tag cedarloom-v0.1.0 in prose stays.');
 });
 
 test('files under plugins/ are not rewritten: their pins name the 0.x minor range', () => {
-  assert.ok(SKIP.test('plugins/cedarloom/skills/operating-cedarloom-app/SKILL.md'));
+  assert.ok(SKIP.test('plugins/cl-setup/skills/operating-cedarloom-app/SKILL.md'));
   assert.ok(SKIP.test('plugins/cedarloom/content.json'));
   assert.ok(!SKIP.test('README.md'));
 });
@@ -50,11 +46,4 @@ test('the dev container Node must equal NODE_VERSION of cedarloom.yml', () => {
   for (const line of ['NODE_VERSION: "26.13.0"', "NODE_VERSION: '26.13.0'  # bumped by hand", 'NODE_VERSION: 26.13.0 # bumped by hand']) {
     assert.equal(nodeDrift(dockerfile, `env:\n  ${line}\n`).ci, '26.13.0', line);
   }
-});
-
-test('minApp follows the release app version; other versions in content.json stay', () => {
-  const text = '{\n  "schemaVersion": 1,\n  "contentVersion": "6.25.0",\n  "minApp": "6.25.0"\n}\n';
-  assert.equal(minAppPin(text, '6.26.0'), '{\n  "schemaVersion": 1,\n  "contentVersion": "6.25.0",\n  "minApp": "6.26.0"\n}\n');
-  assert.equal(minAppPin('{"minApp":"6.25.0"}', '7.0.0'), '{"minApp":"7.0.0"}');
-  assert.equal(minAppPin('{"contentVersion": "6.25.0"}', '7.0.0'), '{"contentVersion": "6.25.0"}');
 });

@@ -1,6 +1,6 @@
 // Writes the skill tables of docs/skills.md from the SKILL.md front matter of the plugin's skills and from library.json.
 // Usage: node .github/scripts/skills-doc.mjs [--check]   (--check: exit 1 when the page differs)
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
@@ -14,7 +14,7 @@ const row = (cells) => `| ${cells.join(' | ')} |`;
 const unquote = (v) => (v ?? '').replace(/^"(.*)"$/, '$1');
 
 // One skill's row fields; the "when" comes from the field of that name, else from the description after its first sentence.
-export function skillEntry(text) {
+export function skillEntry(text, plugin) {
   const fm = frontMatter(text);
   const name = fm?.name;
   const writes = unquote(fm?.writes);
@@ -26,13 +26,13 @@ export function skillEntry(text) {
   const when = unquote(fm.when) || rest;
   if (!when) throw new Error(`${name}: needs a when field or a second sentence in the description`);
   const user = fm['disable-model-invocation'] === 'true';
-  const start = user ? `you: \`/cedarloom:${name}\` (Codex \`$cedarloom:${name}\`)` : `the agent, or you with \`/cedarloom:${name}\``;
-  return { name, purpose, start, when, writes };
+  const start = user ? `you: \`/${plugin}:${name}\` (Codex \`$${plugin}:${name}\`)` : `the agent, or you with \`/${plugin}:${name}\``;
+  return { name, plugin, purpose, start, when, writes };
 }
 
 export function render(skills, manifest) {
   const out = [row(['Skill', 'What it is for', 'Started by', 'When it runs', 'What it writes']), row(['---', '---', '---', '---', '---'])];
-  for (const s of skills) out.push(row([`[${s.name}](../plugins/cedarloom/skills/${s.name}/SKILL.md)`, s.purpose, s.start, s.when, s.writes]));
+  for (const s of skills) out.push(row([`[${s.name}](../plugins/${s.plugin}/skills/${s.name}/SKILL.md)`, s.purpose, s.start, s.when, s.writes]));
   const pack = manifest.packs.find((p) => p.pluginSkills);
   const { version, skills: theirs } = pack.pluginSkills;
   out.push('', `## ${pack.title}`, '', `The \`${pack.id}\` pack installs his plugin (skill list of version ${version}). Claude Code installs it from the official marketplace, which pins it to one commit ([marketplace.json](https://github.com/anthropics/claude-plugins-official/blob/main/.claude-plugin/marketplace.json)); the pin moves when that marketplace updates it. Skills you start run as \`/mattpocock-skills:<name>\` (Codex \`$mattpocock-skills:<name>\`); the agent starts the others on its own, and you can start them too.`, '');
@@ -48,10 +48,15 @@ export function update(page, skills, manifest) {
   return `${page.slice(0, a + START.length)}\n${render(skills, manifest)}\n${page.slice(b)}`;
 }
 
+// Every plugin's skills in one table, sorted by name; library.json lies in the plugin that has a library folder.
 export function sources() {
-  const dir = `${root}/plugins/cedarloom/skills`;
-  const skills = readdirSync(dir).sort().map((n) => skillEntry(readFileSync(`${dir}/${n}/SKILL.md`, 'utf8')));
-  return [skills, JSON.parse(readFileSync(`${root}/plugins/cedarloom/library/library.json`, 'utf8'))];
+  const plugins = readdirSync(`${root}/plugins`).sort();
+  const skills = plugins.filter((p) => existsSync(`${root}/plugins/${p}/skills`))
+    .flatMap((p) => readdirSync(`${root}/plugins/${p}/skills`).map((n) => skillEntry(readFileSync(`${root}/plugins/${p}/skills/${n}/SKILL.md`, 'utf8'), p)))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  const library = plugins.map((p) => `${root}/plugins/${p}/library/library.json`).find((f) => existsSync(f));
+  if (!library) throw new Error('no plugin has library/library.json');
+  return [skills, JSON.parse(readFileSync(library, 'utf8'))];
 }
 
 if (isMain(import.meta.url)) {

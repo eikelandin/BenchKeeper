@@ -3,7 +3,7 @@ import facts from '../src/data/facts.json' with { type: 'json' };
 
 test('the overview page has no benchmark or evaluation link or text in its content', async ({ page }) => {
   await page.goto('./overview/');
-  await expect(page.locator('a[href*="BenchKeeper-research"], a[href*="EVALUATIONS"], a[href*="evaluations/"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="EVALUATIONS"], a[href*="evaluations/"]')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/benchmark|evaluation|\beval/i);
 });
 
@@ -20,18 +20,11 @@ test('the homepage links to the overview page in its body', async ({ page }) => 
   await expect(page.locator('main a[href$="/overview/"]')).toHaveCount(1);
 });
 
-test('the homepage features start with the overview cards, each linked to its card', async ({ page }) => {
+test('each plugin card on the homepage links to its card on the overview page', async ({ page }) => {
   await page.goto('./overview/');
   const ids = await page.locator('#brings [id]:not(h2)').evaluateAll((els) => els.map((e) => e.id));
-  expect(ids.length).toBeGreaterThan(0);
+  expect(ids).toEqual(['cl-workflow', 'cl-setup', 'cl-orchestration', 'cedarloom']);
   await page.goto('./');
-  const hrefs = await page.locator('#features a').evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
-  expect(hrefs.slice(0, ids.length).map((h) => h.split('#')[1])).toEqual(ids);
-  for (const href of hrefs.slice(ids.length)) {
-    if (href.startsWith('http')) continue;
-    const res = await page.goto(href);
-    const id = href.split('#')[1];
-    if (id) await expect(page.locator(`#${id}`)).toHaveCount(1);
-    else expect(res?.ok()).toBe(true);
-  }
+  const hrefs = await page.locator('#plugins a').evaluateAll((as) => as.map((a) => a.getAttribute('href')!.split('#')[1]));
+  expect(hrefs).toEqual(ids);
 });

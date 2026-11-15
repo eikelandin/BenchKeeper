@@ -16,7 +16,7 @@ The legacy BenchKeeper app (in `app/`):
 
 The site (in `web/`): `npm ci`, `npm run build`, `npm test`.
 
-The plugins (in `plugins/*/`, Node.js alone, no install), in `sh -lc`: `for dir in plugins/*/test; do node --import "./$dir/setup.mjs" --test "$dir"/*.test.mjs || exit 1; done`.
+The plugins (in `plugins/*/`, Node.js alone, no install), in `sh -lc`: `for dir in plugins/*/test; do node --import ./.github/scripts/plugin-test-env.mjs --test "$dir"/*.test.mjs || exit 1; done`.
 
 The changed-files check, for each area the change touches:
 - `packages/`: `git fetch origin main` on the host, then `pnpm --filter "...[origin/main]" --filter "!{.}" run typecheck && pnpm run lint && pnpm run format:check && pnpm run knip && pnpm run jscpd && pnpm --filter "...[origin/main]" --filter "!{.}" run test`. A change to the root configuration or `scripts/` runs `pnpm run typecheck` and `pnpm test` in full, as CI does. A change to `packages/ui` also runs `pnpm --filter @cedarloom/ui run catalog` (then `git diff --exit-code -- packages/ui/locales packages/ui/schema` on the host) and `pnpm --filter @cedarloom/ui run test:ui`.
@@ -49,7 +49,7 @@ The changed-files check, for each area the change touches:
 ## Every change considers
 
 - CedarLoom: macOS, Linux and Windows (its test job runs on all three); the CLI (`packages/cli`), the server (`packages/server`) and the UI (`packages/ui`).
-- The legacy app: Linux and macOS, Node.js 22 or newer; Windows only as far as its CI smoke test goes (start, plan, apply) ([app README](app/README.md)).
+- The legacy app: Linux and macOS, Node.js 22 or newer; Windows untested ([app README](app/README.md)). CI runs no app job: its checks run in the dev container.
 - Footguns, read before changing that area: [git and child processes](docs/agents/git-and-processes.md).
 
 ## Pointers

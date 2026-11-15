@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isMain } from './main.mjs';
-import { lintAgent, lintSkill, ownAgents, ownSkills } from './skill-lint.mjs';
+import { bareLaunches, lintAgent, lintSkill, ownAgents, ownSkills, pluginFiles } from './skill-lint.mjs';
 
 function skill(name, { fm = `name: ${name}\ndescription: "Does a thing. Use when asked."`, body = '', yaml = 'interface:\n  display_name: "X"\n' } = {}) {
   const dir = join(mkdtempSync(join(tmpdir(), 'lint-')), name);
@@ -71,10 +71,26 @@ test('a Depth line naming the Depth minimum line ahead of the workflow skill fai
   assert.match(lintSkill(skill('a', { body: '```text\nDepth: <issue depth, else the Depth minimum line of AGENTS.md, else the workflow skill decides>\n```' })).join(), /Depth minimum line ahead/);
   assert.deepEqual(lintSkill(skill('a', { body: 'Depth: <issue depth, else leave this line out: the workflow skill decides>' })), []);
 });
-test('a skill naming a skills CLI version fails, inside a code block too', () => {
-  for (const body of ['Run `npx -y skills@npm:skills@1.7.2 find x`.', '```sh\nnpx skills@1.8.0 add a/b\n```'])
-    assert.match(lintSkill(skill('a', { body })).join(), /names a skills CLI version/);
-  assert.deepEqual(lintSkill(skill('a', { body: 'Run `<skills> find x` with the line `npx @cedarloom/app@0.1 skills cli` prints.' })), []);
+
+test('a plugin file that starts claude with --bare fails, in a command line and in a spawn call', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-'));
+  const file = (name, body) => (writeFileSync(join(dir, name), body), join(dir, name));
+  const launches = {
+    'after.sh': 'timeout 600 claude -p "$PROMPT" --bare\n',
+    'first.sh': 'claude --bare -p "$PROMPT"\n',
+    'timeout.sh': 'timeout 600 claude --bare -p "$PROMPT" --allowedTools "Read"\n',
+    'continued.sh': 'claude -p "$PROMPT" \\\n  --bare\n',
+    'continued.ps1': 'claude -p $prompt `\n  --bare\n',
+    'operator.sh': 'claude -p "$PROMPT" --bare; echo done\n',
+    'spawn.mjs': "spawn('claude', ['-p', prompt, '--bare']);\n",
+    'variable.mjs': "execFile(claude, ['-p', prompt, '--bare']);\n",
+  };
+  for (const [name, body] of Object.entries(launches)) assert.match(bareLaunches([file(name, body)]).join(), /starts claude with --bare/, name);
+  assert.deepEqual(bareLaunches([file('ok.sh', 'claude -p "$PROMPT" --permission-mode dontAsk\ngit init --bare origin\n')]), []);
+});
+test('own plugin files start no bare session', () => {
+  assert.ok(pluginFiles().some((p) => p.endsWith(`${sep}SKILL.md`)));
+  assert.deepEqual(bareLaunches(pluginFiles()), []);
 });
 
 // isMain (main.mjs) guards the command line of every script here; this file runs in CI, so its tests are here.
@@ -106,4 +122,12 @@ test('the checks run their command line when started through a symlinked folder'
   symlinkSync(scripts, join(dir, 'link'), 'dir');
   const out = execFileSync(process.execPath, [join(dir, 'link/skill-lint.mjs')], { encoding: 'utf8' });
   assert.match(out, /skills checked, 0 errors/);
+});
+
+// The coordinator skill also works copied alone, without the questions skill, so it keeps its own copy of the hub rule.
+test('approvals.md quotes the questions skill\'s hub rule word for word', () => {
+  const read = (path) => readFileSync(new URL(`../../plugins/${path}`, import.meta.url), 'utf8');
+  const quote = read('cl-orchestration/skills/orchestrating-projects/approvals.md').match(/as the `questions` skill reads it[^"]*"([^"]+)"/)?.[1];
+  assert.ok(quote?.startsWith('taken only from what CedarLoom writes'), 'approvals.md has no quote of the hub rule');
+  assert.ok(read('cl-workflow/skills/questions/SKILL.md').includes(quote), 'the quote in approvals.md differs from the questions skill');
 });

@@ -1,8 +1,10 @@
 # Coordinator workflow: where each rule lives
 
+> **Not in CedarLoom 0.1:** the app steps this design names (`projects apply`, `doctor`, `verify`, the app's state file) arrive with the 0.2 command-line tool. In 0.1 the `setting-up-projects` skill proposes the policy file and the project rules as plan items you approve.
+
 A coordinator run needs rules for models, reviews, merges, owner-only changes, batches and worker conduct. This note gives each rule one home (a policy field, skill text, the worker rule file or an agent default), so that a project gets the same run by installing the plugin and committing its policy, its worker rules and its Claude Code settings.
 
-This is the design. The State column says what exists and which change adds the rest ([Changes](#changes)); each change updates that column and the line references it moves. The rules come from a coordinator run over several repositories from 2026-11-04 to 2026-11-11, called "the source run" below. File names are relative to `plugins/cedarloom/`, except those that start with `app/`, `packages/` or `docs/` and `release-please-config.json`, which are from the repository root; `SKILL.md` without a folder is `skills/orchestrating-projects/SKILL.md`, and `spec-template.md`, `orca.md`, `review-and-merge.md` and `approvals.md` are in the same folder.
+This is the design. The State column says what exists and which change adds the rest ([Changes](#changes)); each change updates that column and the line references it moves. The rules come from a coordinator run over several repositories from 2026-11-04 to 2026-11-11, called "the source run" below. File names are relative to the plugin folder that holds them: `plugins/cl-workflow/` for `skills/workflow/` and `agents/`, `plugins/cl-orchestration/` for `skills/orchestrating-projects/` and `rules/worker.md`, `plugins/cl-setup/` for `rules/project.md`; except those that start with `app/`, `packages/` or `docs/` and `release-please-config.json`, which are from the repository root; `SKILL.md` without a folder is `skills/orchestrating-projects/SKILL.md`, and `spec-template.md`, `orca.md`, `review-and-merge.md` and `approvals.md` are in the same folder.
 
 ## What a project commits
 
@@ -61,10 +63,10 @@ A change is sensitive when its diff touches a `review.sensitivePaths` entry or a
 |---|---|---|
 | The worker's model and effort follow the task, leaning to the stronger model | policy `models.worker`, its default table in `SKILL.md`, the `Agent:` line of the spec (`spec-template.md:25`) | exists |
 | A strong model only in named projects | each project's own policy names `models.worker` | exists |
-| Each phase has its model and effort | the workflow skill names each phase's alias where it starts the phase ([Phases](../plugins/cedarloom/skills/workflow/software.md#phases) of `skills/workflow/software.md`) and the session passes it in the call. The agent files then say `inherit` (`agents/<phase>.md:5`), so a phase the policy sets to `inherit` runs on the worker's model. Policy `models.phases`, passed in the spec's Flow line | exists |
-| A sensitive change is planned and reviewed on `fable` at `high`, implemented on `opus`; `xhigh` only for the first review of a security or firmware-safety change | policy `models.sensitive`; skill text ([Phases](../plugins/cedarloom/skills/workflow/software.md#phases) of `skills/workflow/software.md`, the Review section of `review-and-merge.md`) | exists |
+| Each phase has its model and effort | the workflow skill names each phase's alias where it starts the phase ([Phases](../plugins/cl-workflow/skills/workflow/software.md#phases) of `skills/workflow/software.md`) and the session passes it in the call. The agent files then say `inherit` (`agents/<phase>.md:5`), so a phase the policy sets to `inherit` runs on the worker's model. Policy `models.phases`, passed in the spec's Flow line | exists |
+| A sensitive change is planned and reviewed on `fable` at `high`, implemented on `opus`; `xhigh` only for the first review of a security or firmware-safety change | policy `models.sensitive`; skill text ([Phases](../plugins/cl-workflow/skills/workflow/software.md#phases) of `skills/workflow/software.md`, the Review section of `review-and-merge.md`) | exists |
 | Read-and-report work (searches, log and CI output, inventories, pull request status) runs on `sonnet` at `medium`, `haiku` only for a bounded lookup; neither edits | agent default (`agents/gather.md`); skill text, step 5 of `skills/workflow/SKILL.md` | exists |
-| A `fable` session takes one ticket, hands off at a task boundary at 100,000 to 150,000 tokens and is never resumed; the coordinator runs on `opus` | skill text ([Sessions on `fable`](../plugins/cedarloom/skills/workflow/SKILL.md#sessions-on-fable), Rules of `SKILL.md`) | exists |
+| A `fable` session takes one ticket, hands off at a task boundary at 100,000 to 150,000 tokens and is never resumed; the coordinator runs on `opus` | skill text ([Sessions on `fable`](../plugins/cl-workflow/skills/workflow/SKILL.md#sessions-on-fable), Rules of `SKILL.md`) | exists |
 | A decision in the owner's place, a design trade-off and a legal or security call go to a subagent on `fable`, and the coordinator checks its answer | skill text, Rules of `SKILL.md` | exists |
 | Reports name the concrete model behind each alias, and a worker's report names each phase it ran, the loops back and the tokens where its session shows them | the coordinator's handoff file (`SKILL.md:67`); `Models:` and `Phases:` lines in the worker's handoff block (`spec-template.md:55-56`) | exists |
 
@@ -98,7 +100,9 @@ The coordinator merges, never a worker (`spec-template.md:27`), and only where t
 | A data removal or a wide refactor merges `strict` in either mode: a consumer can break without a shared file | skill text | exists |
 | The pull request title is checked against the project's convention, as the default branch's `AGENTS.md` has it, before the merge: the squash commit takes it | skill text | exists |
 | Squash with that pin (`gh pr merge --squash --match-head-commit <sha>`, [gh manual](https://cli.github.com/manual/gh_pr_merge)), unless the default branch's `AGENTS.md` names another method. The coordinator passes the commit's subject (the checked title) and body (its own text) itself, so that neither a commit's title nor a closing keyword in a commit message lands unchecked | skill text | exists |
-| One merge at a time per project; the default branch's CI is watched after each, and a red default branch is fixed before the next merge (`rules/project.md:11`). A queued run that a newer one replaced is covered by the newer one | skill text | exists |
+| One merge at a time per project; the default branch's CI is watched after each, and a red default branch is fixed before the next merge (`rules/project.md:11`). The watch starts once the pull request reads `MERGED`, since on a merge queue `gh pr merge` may only enqueue; auto-merge that the command turned on is switched off at once, and a queued pull request whose head moved, or that is still open after 60 minutes, is taken out of the queue and left for the owner, and a merge of another head than the one that passed the pin goes to the owner and holds the project's merges; it waits for each workflow that ran on the previous default-branch commit (up to 30 minutes); a cancelled run counts as replaced only by a later run of the same workflow id on the merge commit | skill text (`review-and-merge.md`, Merge step 6) | exists |
+| The squash body holds the pull request's number, the reviewed head and the issue reference only, no attribution line | skill text (`review-and-merge.md`, Merge step 5) | exists |
+| Each merge gets a line in a merge log that outlives the run; a daily reconciliation, based on a baseline taken before the project's first worker starts, compares GitHub's merges, tags and rulesets, the local git config without its `branch.` keys and the hash of the user settings against it | skill text (`review-and-merge.md#merge-log`, `SKILL.md#reconciliation`) | exists |
 | A branch is brought up to date by merging the default branch in, never by rebasing or force-pushing | spec (`spec-template.md:27`) for force-push; worker rule file (`rules/worker.md:7`) for rebase | exists |
 
 ### Owner-only
@@ -150,7 +154,7 @@ The source run ended with a stricter delete rule: no delete command at all and n
 
 Each of these rules is wording a worker follows, not a control. The app's global `apply` refusing when an agent runs it would make the user-scope rule a control; that is proposed as work of its own.
 
-Rules that already have a home stay there: tests, reuse, naming and comments (`rules/project.md:12-24`), secrets (`rules/global.md:1`), trusted authors and the Authority block (`spec-template.md:15`, `spec-template.md:22-27`), one report on the worker's own dispatch (`orca.md:32`, `spec-template.md:50`). The CI line of the project rules (`rules/project.md:10`) has the same `--interval 30`: `gh run watch` refreshes every 3 seconds by default (`gh run watch --help`).
+Rules that already have a home stay there: tests (`workflow/SKILL.md:98-104`), reuse, naming and comments (`rules/project.md:12-20`), secrets (`rules/global.md:1`), trusted authors and the Authority block (`spec-template.md:15`, `spec-template.md:22-27`), one report on the worker's own dispatch (`orca.md:32`, `spec-template.md:50`). The CI line of the project rules (`rules/project.md:10`) has the same `--interval 30`: `gh run watch` refreshes every 3 seconds by default (`gh run watch --help`).
 
 ### Keep running
 
@@ -171,13 +175,25 @@ The default is false because an open run spends a turn at every tick, and a sche
 | The owner's answer to a filed approval lifts a `design` gate only. For a `merge` or an `owner-only` gate the merge stays the owner's: the answer is a recorded decision, nothing merges because of it, and the run goes on when it sees the pull request merged. An answer counts only for the head the approval names | `answer` in `approval.mjs` (the newest comment by time that starts as an answer or is an option's label, such as `(a)`, or the one letter or digit of such a label alone, by the repository's owner or a member with write access); skill text (`approvals.md:50-56`, `SKILL.md:53`) | exists |
 | A worker takes the safest reversible option and writes it in the pull request | spec (`spec-template.md:42`) | exists |
 | A worker flags work that is wrong, too big or against a recorded decision, and never widens its scope | spec (`spec-template.md:46`), and the question path below | exists |
-| Work that splits into several pull requests: the worker reports NEEDS_REPLAN with the slices, and the coordinator lists them for the owner, who splits the issue | spec (`spec-template.md:46`), skill text (`SKILL.md:80`) | exists |
+| Work that splits into several pull requests: the worker posts the list on the issue before implementing and reports NEEDS_REPLAN; the coordinator approves it when every pull request stays inside the issue, the owned paths and the policy, and starts them as a batch, else lists them for the owner | spec (Needs replan), skill text (`SKILL.md`, Outcomes) | exists |
+| Who does what: the roles table (merge, split, model ceiling, shared git directory, review of record, threads, issue closes, follow-ups, headless jobs, answers) | skill text (`SKILL.md#roles`) | exists |
 | A worker is released only once it has settled (after its report, or after it was stopped), and one with a pull request only after the merge or once the pull request is left for the owner | `orca.md:125` | exists |
 | Phases with a gate between them: plan, implement, test, review | skill text (`skills/workflow/software.md:11-20`) | exists |
 | One digest file: merges, decisions on the owner's behalf, open questions, risks, models | skill text (`orchestrating-projects/digest.md`) | exists |
 | A wake-up and a restart read the run's state from a generated file instead of `gh` status turns: jobs, open pull requests with head, required checks, open threads and the verdict for the current head, approvals, account limits and the default branch's CI; the job cost and fix rounds per merged pull request come from the same script | `facts.mjs` (`write` and `costs`), read at `SKILL.md:55`; `docs/restart-safe-coordinator.md:18` | exists |
 
-The source run posted a plan in the issue before a larger piece of work fanned out. In the loop one issue is one pull request, so the owner splits the issue instead, and the coordinator needs no right to write plans into the tracker.
+### Roles and guards
+
+All sessions of a run may share one GitHub login, so each role's limit holds by the skill's steps alone. Three of the guards are text: the merge log with the review of record bound to a head and a round (`review-and-merge.md`), the daily reconciliation (`SKILL.md#reconciliation`) and the containment of headless jobs (`SKILL.md#headless-jobs`). A hook that blocks merge, release, tag push, settings, `gh auth`, `git config` and `git stash` outside the coordinator's role is not shipped yet.
+
+### User steps
+
+These make the limits technical. Each is a setting of your accounts that the plugin documents and never performs:
+
+- Give agent sessions a GitHub credential without administration or workflow permission, such as a fine-grained token or a machine account ([setup guide](setup.md#agent-sessions-as-your-github-machine-account)), and keep owner actions in the browser behind two-factor authentication.
+- Put the default branch and the release tags under a ruleset with an empty bypass list ([rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)).
+- Give headless jobs that run on an API key a key of their own with a spend limit in the Claude Console.
+- Create the label `follow-up` in the tracker, so workers can file follow-up issues.
 
 ### Not shipped
 

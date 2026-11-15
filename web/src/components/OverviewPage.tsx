@@ -1,12 +1,11 @@
-import { Anchor, Container, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
+import { Anchor, Code, Container, List, Paper, SimpleGrid, Stack, Text, Title } from '@mantine/core';
 import type { ReactNode } from 'react';
 import { sdlcSvg } from '../lib/sdlc';
-import facts from '../data/facts.json';
+import { defaults, plugins, tagline } from '../data/plugins';
 import { SiteShell } from './SiteShell';
-import { SDLC_INTRO, StepList, half, md } from './Page';
+import { SDLC_INTRO, StepList, half } from './Page';
 
 const REPO = 'https://github.com/eikelandin/BenchKeeper';
-const { overview } = facts;
 
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: ReactNode }) {
   return (
@@ -20,18 +19,14 @@ function Section({ id, title, intro, children }: { id: string; title: string; in
   );
 }
 
-function Source({ path }: { path: string }) {
-  return <Text size="sm" mt="xs">Source: <Anchor href={`${REPO}/blob/main/${path}`} size="sm">{path}</Anchor></Text>;
-}
-
 export default function OverviewPage({ base }: { base: string }) {
   return (
     <SiteShell base={base}>
       <Stack gap={56}>
         <Stack gap="xs" maw={720}>
-          <Title order={1} fz={{ base: 34, md: 44 }}>{overview.title}</Title>
-          <Text size="lg">{md(facts.description)}</Text>
-          <Text>{overview.audience} <Anchor href={`${base}/#start`}>Quick start</Anchor>, <Anchor href={`${base}/app/`}>the app with screenshots</Anchor>, <Anchor href={`${REPO}/blob/main/docs/skills.md`}>what each skill does</Anchor>.</Text>
+          <Title order={1} fz={{ base: 34, md: 44 }}>What CedarLoom is</Title>
+          <Text size="lg">{tagline}</Text>
+          <Text>For developers who run Claude Code in more than one repository and want the same workflow and setup in each. <Anchor href={`${base}/#install`}>Install</Anchor>, <Anchor href={`${base}/#commands`}>commands</Anchor>.</Text>
         </Stack>
         <Section id="sdlc" title="The workflow" intro={SDLC_INTRO}>
           <div className="ring-wrap" dangerouslySetInnerHTML={{ __html: sdlcSvg }} />
@@ -40,25 +35,29 @@ export default function OverviewPage({ base }: { base: string }) {
             <StepList from={half} />
           </SimpleGrid>
         </Section>
-        <Section id="brings" title="What it brings">
+        <Section id="brings" title="What the plugins bring">
           <SimpleGrid cols={{ base: 1, md: 2 }}>
-            {overview.parts.map((p) => (
+            {plugins.map((p) => (
               <Paper key={p.id} id={p.id} withBorder p="lg" radius="lg">
                 <Title order={3} fz="lg">{p.title}</Title>
-                <Text size="sm" mt="xs">{md(p.text)}</Text>
-                <Source path={p.evidence} />
+                <Text size="sm" mt="xs">{p.summary}</Text>
+                {p.skills.length > 0 && (
+                  <List size="sm" spacing={4} mt="sm">
+                    {p.skills.map((s) => <List.Item key={s.name}><Code>{s.name}</Code>: {s.text}</List.Item>)}
+                  </List>
+                )}
+                <List size="sm" spacing={4} mt="sm">{p.notes.map((n) => <List.Item key={n}>{n}</List.Item>)}</List>
+                <Text size="sm" mt="sm">Source: <Anchor href={`${REPO}/tree/main/plugins/${p.id}`} size="sm">plugins/{p.id}</Anchor></Text>
               </Paper>
             ))}
           </SimpleGrid>
         </Section>
-        <Section id="defaults" title="Opinionated defaults">
+        <Section id="defaults" title="Defaults">
           <SimpleGrid cols={{ base: 1, md: 2 }}>
-            {overview.defaults.map((d) => (
+            {defaults.map((d) => (
               <Paper key={d.title} withBorder p="lg" radius="lg">
                 <Title order={3} fz="lg">{d.title}</Title>
-                <Text size="sm" mt="xs">{md(d.text)}</Text>
-                <Text size="sm" mt="xs"><Text span fw={700} size="sm">Why:</Text> {d.reason}</Text>
-                <Source path={d.evidence} />
+                <Text size="sm" mt="xs">{d.text}</Text>
               </Paper>
             ))}
           </SimpleGrid>

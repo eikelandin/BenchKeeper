@@ -6,7 +6,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSyn
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
-import { contentDir, library } from './content.mjs';
+import { library, libraryDir } from './content.mjs';
 import { exists, listDir, listFiles, move, readText, real, writeAtomic } from './fsx.mjs';
 import { mergeJson } from './merge.mjs';
 
@@ -36,7 +36,7 @@ export const invalidPacks = (ctx) => scan(ctx).invalid;
 export const userSkillDir = (ctx, name) => join(ctx.config, 'skills', name);
 // A skill copied from a folder, not added through the skills CLI, and the folder it is copied from.
 export const copied = (s) => s?.source === 'own' || s?.source === 'user';
-export const skillFolder = (ctx, s) => (s.source === 'user' ? userSkillDir(ctx, s.name) : join(contentDir, 'library', s.name));
+export const skillFolder = (ctx, s) => (s.source === 'user' ? userSkillDir(ctx, s.name) : join(libraryDir, s.name));
 // A copied skill's files (src: its folder) as they are written: text with the path globs of the setup first in SKILL.md's front matter
 // (after a block-scalar description it would not parse),
 // and a file that is not UTF-8 text (an image of a user skill) as a byte copy, from, with its bytes.

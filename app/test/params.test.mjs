@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { context } from '../src/runner.mjs';
-import { contentDir } from '../src/content.mjs';
+import { ownSkills } from '../src/content.mjs';
 import { FILES, format, load } from '../src/params.mjs';
 import { addProject } from '../src/projects.mjs';
 import { api } from '../src/server.mjs';
@@ -27,7 +27,7 @@ for (const name of readdirSync(fixtures)) {
 }
 
 test('the shipped policy example passes, and so does a policy without schemaVersion', () => {
-  const example = readFileSync(join(contentDir, 'skills/orchestrating-projects/policy.example.json'), 'utf8');
+  const example = readFileSync(join(ownSkills().get('orchestrating-projects'), 'policy.example.json'), 'utf8');
   assert.deepEqual(load('policy', example).errors, []);
   // A policy written before schemaVersion existed stays valid, also with the $schema hint an editor reads.
   assert.deepEqual(load('policy', '{"$schema":"https://example.com/orchestration.schema.json","merge":{"allowed":false}}').errors, []);

@@ -29,7 +29,11 @@ function machine({ failCodexInstall = false } = {}) {
     if (cmd === 'claude plugin marketplace list --json') return ok(JSON.stringify([{ name: 'ponytail' }, ...(s.removed.has('c-mr') ? [] : [{ name: 'old' }])]));
     if (cmd === 'codex plugin marketplace list --json') return ok(JSON.stringify({ marketplaces: [{ name: 'ponytail' }] }));
     if (cmd === 'codex mcp list --json') return ok(JSON.stringify(s.removed.has('x-mcp') ? [] : [{ name: 'extra' }]));
-    if (cmd.startsWith('claude plugin install ')) { s.claude.add(argv[3]); return ok(); }
+    if (cmd.startsWith('claude plugin install ')) {
+      // Claude Code installs a plugin's dependencies with it.
+      for (const id of argv[3] === 'cedarloom@cedarloom' ? ['cl-workflow@cedarloom', 'cl-setup@cedarloom', 'cl-orchestration@cedarloom', argv[3]] : [argv[3]]) s.claude.add(id);
+      return ok();
+    }
     if (cmd.startsWith('codex plugin add ')) { if (failCodexInstall) return { code: 1, stdout: '', stderr: 'network down' }; s.codex.add(argv[3]); return ok(); }
     if (cmd === 'claude plugin uninstall other@x') { s.removed.add('c-pu'); return ok(); }
     if (cmd === 'codex plugin remove other@x') { s.removed.add('x-pu'); return ok(); }
@@ -133,7 +137,7 @@ test('full apply: rules, removals, plugins, settings, tools; a second plan is em
   for (const p of ['.claude/CLAUDE.md', '.claude/rules/10-other.md']) assert.equal(existsSync(join(m.home, p)), true, `${p} is the user's: kept`);
   const backup = run.entries.find((e) => e.path?.endsWith('.claude/skills/following-dev-workflow')).backup;
   assert.match(backup, new RegExp(`${run.id}/\\d+/\\.claude/skills/following-dev-workflow$`), 'backup keeps the path below HOME');
-  assert.deepEqual([...m.s.claude].sort(), ['cedarloom@cedarloom', 'mattpocock-skills@claude-plugins-official', 'ponytail@ponytail']);
+  assert.deepEqual([...m.s.claude].sort(), ['cedarloom@cedarloom', 'cl-orchestration@cedarloom', 'cl-setup@cedarloom', 'cl-workflow@cedarloom', 'mattpocock-skills@claude-plugins-official', 'ponytail@ponytail']);
   assert.ok(m.s.removed.has('c-pu') && m.s.removed.has('c-mr') && m.s.removed.has('x-pu') && m.s.removed.has('x-mcp'));
   assert.deepEqual(JSON.parse(readFileSync(join(m.home, '.claude.json'), 'utf8')).mcpServers, {});
   const st = settings(m.home);
@@ -146,7 +150,7 @@ test('full apply: rules, removals, plugins, settings, tools; a second plan is em
   assert.equal(st.remoteControlAtStartup, undefined, 'Remote Control is opt-in');
   assert.ok(st.cleanupPeriodDays === 14 && st.autoUpdatesChannel === 'stable' && st.env.DISABLE_FEEDBACK_COMMAND === '1' && st.env.CLAUDE_CODE_SUBAGENT_MODEL === 'sonnet');
   assert.equal(st.autoCompactWindow, 400000);
-  assert.equal(st.pluginConfigs['cedarloom@cedarloom'].options.tierBand, true);
+  assert.equal(st.pluginConfigs['cl-workflow@cedarloom'].options.tierBand, true);
   assert.deepEqual(st.modelSettings, { 'claude-opus-5-5': { effortLevel: 'high' }, 'claude-sonnet-5-5': { effortLevel: 'high' }, 'claude-haiku-5-5': { effortLevel: 'high' } });
   assert.equal(st.permissions, undefined, 'ask rules offered and removed when selected');
   assert.ok(st.autoMode === undefined && st.sandbox === undefined, 'keys the settings catalog only offers are not written by the setup');
@@ -252,19 +256,19 @@ test('an installed plugin gets no update step from the app, BenchKeeper\'s own a
   const ctx = context({ home, appVersion: '6.0.0', run: (argv) => ({ code: argv[0] === 'npm' ? 1 : 0, stdout: '', stderr: '' }) });
   mkdirSync(join(home, '.claude/plugins'), { recursive: true });
   mkdirSync(join(home, '.codex/plugins/cache/ponytail/ponytail/5.2.0'), { recursive: true });
-  mkdirSync(join(home, '.codex/plugins/cache/cedarloom/cedarloom/6.0.0'), { recursive: true });
+  mkdirSync(join(home, '.codex/plugins/cache/cedarloom/cl-workflow/6.0.0'), { recursive: true });
   writeFileSync(join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: {
     'ponytail@ponytail': [{ scope: 'user', version: '5.2.0' }], 'cedarloom@cedarloom': [{ scope: 'user', version: '5.4.0' }], 'mattpocock-skills@claude-plugins-official': [{ scope: 'user', version: '1.2.0' }] } }));
   writeFileSync(join(home, '.claude/plugins/known_marketplaces.json'), JSON.stringify({ ponytail: { source: { repo: 'DietrichGebert/ponytail' } }, cedarloom: { source: { ref: 'stable' } } }));
   writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { 'ponytail@ponytail': true, 'cedarloom@cedarloom': true, 'mattpocock-skills@claude-plugins-official': true } }));
-  writeFileSync(join(home, '.codex/config.toml'), '[marketplaces.ponytail]\nsource = "x"\nref = "v5.3.2"\n\n[plugins."ponytail@ponytail"]\nenabled = true\n\n[plugins."cedarloom@cedarloom"]\nenabled = true\n');
+  writeFileSync(join(home, '.codex/config.toml'), '[marketplaces.ponytail]\nsource = "x"\nref = "v5.3.2"\n\n[plugins."ponytail@ponytail"]\nenabled = true\n\n[plugins."cl-workflow@cedarloom"]\nenabled = true\n');
   const steps = (id, packs) => globalPlan({ ctx, agents: ['claude', 'codex'], options: { packs } }).filter((c) => c.step === id);
   const argv = (id) => steps(id).map((c) => c.argv.join(' '));
   // 5.4.0 against an app at 6.0.0: the agent's own update decides, so no refresh, update or removal step.
   assert.deepEqual(argv('plugin:claude:cedarloom@cedarloom'), []);
   assert.deepEqual(argv('plugin:claude:ponytail@ponytail'), []);
   assert.deepEqual(argv('plugin:codex:ponytail@ponytail'), []);
-  assert.deepEqual(argv('plugin:codex:cedarloom@cedarloom'), []);
+  assert.deepEqual(argv('plugin:codex:cl-workflow@cedarloom'), []);
   // An installed pack plugin is left to the agent's own update, with or without its pack chosen.
   assert.deepEqual(argv('plugin:claude:mattpocock-skills@claude-plugins-official'), []);
   // A pack for all projects (the default of a plugin pack) is not tied to a project selecting it: no removal offered.
@@ -300,7 +304,7 @@ test('an installed plugin gets no update step from the app, BenchKeeper\'s own a
   writeFileSync(join(home, '.claude/plugins/installed_plugins.json'), JSON.stringify({ version: 2, plugins: {
     'ponytail@ponytail': [{ scope: 'user', version: '5.2.0' }], 'cedarloom@cedarloom': [{ scope: 'user', version: '5.4.0' }], 'mattpocock-skills@claude-plugins-official': [{ scope: 'user', version: '0a1b2c3d4e5f' }] } }));
   assert.deepEqual(argv('plugin:claude:mattpocock-skills@claude-plugins-official'), []);
-  assert.equal(inv.find((i) => i.step === 'plugin:codex:cedarloom@cedarloom').state, 'current');
+  assert.equal(inv.find((i) => i.step === 'plugin:codex:cl-workflow@cedarloom').state, 'current');
   assert.deepEqual(pin(PLUGINS.claude[0], '6.0.0'), { ref: 'stable', version: '6.0.0' });
   // A marketplace at another ref is left as it is: no step at all, so none is by hand and none is destructive.
   writeFileSync(join(home, '.claude/plugins/known_marketplaces.json'), JSON.stringify({ ponytail: { source: { ref: 'v5.2.0' } }, cedarloom: { source: { ref: 'v5.2.0' } } }));
@@ -310,11 +314,11 @@ test('an installed plugin gets no update step from the app, BenchKeeper\'s own a
   writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { 'ponytail@ponytail': false, 'cedarloom@cedarloom': true } }));
   const [on] = steps('plugin:claude:ponytail@ponytail', ['ponytail']).filter((c) => c.title.endsWith('turn on'));
   assert.ok(on.kind === 'write' && on.title.endsWith('turn on') && JSON.parse(on.edit('{}')).enabledPlugins['ponytail@ponytail'] === true);
-  writeFileSync(join(home, '.codex/config.toml'), '[plugins."ponytail@ponytail"]\nenabled = false\n\n[plugins."cedarloom@cedarloom"]\nenabled = true\n');
+  writeFileSync(join(home, '.codex/config.toml'), '[plugins."ponytail@ponytail"]\nenabled = false\n\n[plugins."cl-workflow@cedarloom"]\nenabled = true\n');
   assert.match(steps('plugin:codex:ponytail@ponytail', ['ponytail']).find((c) => c.error).error, /turned off/);
-  assert.deepEqual(argv('plugin:codex:cedarloom@cedarloom'), []);
+  assert.deepEqual(argv('plugin:codex:cl-workflow@cedarloom'), []);
   rmSync(join(home, '.codex/plugins/cache/cedarloom'), { recursive: true });
-  assert.deepEqual(argv('plugin:codex:cedarloom@cedarloom'), ['codex plugin add cedarloom@cedarloom']);
+  assert.deepEqual(argv('plugin:codex:cl-workflow@cedarloom'), ['codex plugin add cl-workflow@cedarloom']);
 });
 
 test('the BenchKeeper plugin behind the app is reported, not updated by apply', () => {
@@ -337,11 +341,11 @@ test('the BenchKeeper plugin behind the app is reported, not updated by apply', 
   writeFileSync(installedFile, JSON.stringify({ version: 2, plugins: {} }));
   assert.equal(cedarloomPlugin(ctx, 'claude').installed, null);
   // Codex reads the version from its plugin cache; the same holds.
-  const cache = join(home, '.codex/plugins/cache/cedarloom/cedarloom');
+  const cache = join(home, '.codex/plugins/cache/cedarloom/cl-workflow');
   const cctx = context({ home, appVersion: '6.5.0', run });
   mkdirSync(join(cache, '6.0.0'), { recursive: true });
-  writeFileSync(join(home, '.codex/config.toml'), '[marketplaces.cedarloom]\nsource = "x"\nref = "stable"\n\n[plugins."cedarloom@cedarloom"]\nenabled = true\n');
-  assert.deepEqual(globalPlan({ ctx: cctx, agents: ['codex'] }).filter((c) => c.step === 'plugin:codex:cedarloom@cedarloom'), []);
+  writeFileSync(join(home, '.codex/config.toml'), '[marketplaces.cedarloom]\nsource = "x"\nref = "stable"\n\n[plugins."cl-workflow@cedarloom"]\nenabled = true\n');
+  assert.deepEqual(globalPlan({ ctx: cctx, agents: ['codex'] }).filter((c) => c.step === 'plugin:codex:cl-workflow@cedarloom'), []);
   assert.deepEqual(cedarloomPlugin(cctx, 'codex'), { installed: '6.0.0', available: '6.5.0' });
   assert.ok(!calls.some((c) => /plugin (marketplace (update|upgrade)|update)/.test(c)));
 });
@@ -471,8 +475,8 @@ test('third-party plugins are not pinned: the marketplace is added as the agent 
   assert.equal(add('codex', 'ponytail@ponytail', { packs: ['ponytail'] }), 'DietrichGebert/ponytail');
   assert.equal(add('codex', 'mattpocock-skills@mattpocock', { packs: ['matt-pocock'] }), 'mattpocock/skills');
   assert.equal(add('claude', 'cedarloom@cedarloom'), 'eikelandin/BenchKeeper#stable');
-  assert.equal(add('codex', 'cedarloom@cedarloom'), 'eikelandin/BenchKeeper@stable');
-  assert.deepEqual(pin(PLUGINS.codex[1], '6.0.0'), { ref: undefined, version: undefined });
+  assert.equal(add('codex', 'cl-workflow@cedarloom'), 'eikelandin/BenchKeeper@stable');
+  assert.deepEqual(pin(PLUGINS.codex.find((p) => p.id === 'ponytail@ponytail'), '6.0.0'), { ref: undefined, version: undefined });
   // Any marketplace ref, any installed version and any installed commit: no step, nothing to move by hand.
   mkdirSync(join(home, '.codex/plugins/cache/ponytail/ponytail/5.10.0'), { recursive: true });
   for (const ref of ['v5.2.0', 'main', '16352ac229eb']) {
@@ -522,7 +526,8 @@ test('install units: each install step of the global plan maps to one unit, and 
   const map = Object.fromEntries(plan.filter((c) => c.installUnit).map((c) => [c.step, `${c.installUnit.id} ${c.installUnit.kind} ${c.installUnit.source.type}`]));
   assert.deepEqual(map, {
     'rules:claude': 'rules:claude rules library', 'rules:codex': 'rules:codex rules library',
-    'plugin:claude:cedarloom@cedarloom': 'plugin:cedarloom@cedarloom plugin marketplace', 'plugin:codex:cedarloom@cedarloom': 'plugin:cedarloom@cedarloom plugin marketplace',
+    'plugin:claude:cedarloom@cedarloom': 'plugin:cedarloom@cedarloom plugin marketplace', 'plugin:codex:cl-workflow@cedarloom': 'plugin:cl-workflow@cedarloom plugin marketplace',
+    'plugin:codex:cl-setup@cedarloom': 'plugin:cl-setup@cedarloom plugin marketplace', 'plugin:codex:cl-orchestration@cedarloom': 'plugin:cl-orchestration@cedarloom plugin marketplace',
     'plugin:claude:mattpocock-skills@claude-plugins-official': 'pack:matt-pocock pack marketplace', 'plugin:codex:mattpocock-skills@mattpocock': 'pack:matt-pocock pack marketplace',
     'plugin:claude:ponytail@ponytail': 'pack:ponytail pack marketplace', 'plugin:codex:ponytail@ponytail': 'pack:ponytail pack marketplace',
     ...Object.fromEntries(plan.filter((c) => c.step.startsWith('tools:skill:')).map((c) => [c.step, `skill:${c.step.slice('tools:skill:'.length)} skill git`])),

@@ -72,7 +72,7 @@ function stubAgent(calls) {
     if (argv[0] !== 'claude') return null;
     const q = argv[2];
     calls.push({ q, lib: existsSync(join(o.cwd, '.claude/skills/designing-technical-uis/SKILL.md')) });
-    const skill = /table|README/i.test(q) ? (/table/i.test(q) ? 'designing-technical-uis' : 'cedarloom:workflow') : null;
+    const skill = /table|README/i.test(q) ? (/table/i.test(q) ? 'designing-technical-uis' : 'cl-workflow:workflow') : null;
     const lines = [{ type: 'system' }, skill && { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Skill', input: { skill } }] } }].filter(Boolean);
     return { code: 0, stdout: lines.map((l) => JSON.stringify(l)).join('\n'), stderr: '' };
   };
@@ -113,7 +113,7 @@ test('triggered counts a skill call or a read of its SKILL.md, not a listed path
   assert.equal(triggered(listed, 'workflow'), false);
   assert.equal(triggered(stream(use('Read', { file_path: '/tmp/bk-eval-x/.claude/skills/workflow/SKILL.md' })), 'workflow'), true);
   assert.equal(triggered(stream(use('Read', { file_path: '/tmp/bk-eval-x/.claude/skills/other/SKILL.md' })), 'workflow'), false);
-  assert.equal(triggered(stream(use('Skill', { skill: 'cedarloom:workflow' })), 'workflow'), true);
+  assert.equal(triggered(stream(use('Skill', { skill: 'cl-workflow:workflow' })), 'workflow'), true);
   // Codex: the command reads the file; a listing that prints the path in its output does not.
   assert.equal(triggered(stream(cmd(['bash', '-lc', 'cat .agents/skills/workflow/SKILL.md'])), 'workflow'), true);
   assert.equal(triggered(stream(cmd('bash -lc "ls -R .agents/skills"', '.agents/skills/workflow/SKILL.md')), 'workflow'), false);

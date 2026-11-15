@@ -1,12 +1,30 @@
 {
   "name": "cedarloom",
   "owner": { "name": "eikelandin", "url": "https://github.com/eikelandin" },
-  "description": "CedarLoom: workflow and setup skills for Claude Code and Codex.",
+  "description": "CedarLoom: the cl-workflow, cl-setup and cl-orchestration plugins for Claude Code and Codex, and the cedarloom bundle that installs all three.",
   "plugins": [
     {
       "name": "cedarloom",
       "source": "./plugins/cedarloom",
-      "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and sets up and maintains projects. Works next to other skill packs and plugins when they are installed.",
+      "description": "Installs the CedarLoom plugins cl-workflow, cl-setup and cl-orchestration together.",
+      "category": "development"
+    },
+    {
+      "name": "cl-workflow",
+      "source": "./plugins/cl-workflow",
+      "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and starts the planning, review and research agents it needs.",
+      "category": "development"
+    },
+    {
+      "name": "cl-setup",
+      "source": "./plugins/cl-setup",
+      "description": "Sets up and maintains projects: agent instructions and dev container per repository, a maintenance pass and a review of the rules files.",
+      "category": "development"
+    },
+    {
+      "name": "cl-orchestration",
+      "source": "./plugins/cl-orchestration",
+      "description": "Coordinates the issues of several projects from one session: worker jobs, reviews and merge checks. Installs cl-workflow with it.",
       "category": "development"
     }
   ]

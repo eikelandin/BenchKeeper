@@ -1,5 +1,5 @@
 // Every claim in web/src/data/facts.json (the source of the README blocks and the site) names its evidence: a repository file,
-// a Markdown file with `#<heading>` (as GitHub anchors it, outside a generated block), or a result in BenchKeeper-research,
+// a Markdown file with `#<heading>` (as GitHub anchors it, outside a generated block),
 // or a list of these. Entries about another product may add its official https pages, next to a repository file for what BenchKeeper says.
 // Usage: node .github/scripts/claims.mjs   (exit 1 and one line per claim when evidence is missing or does not resolve)
 import { existsSync, readFileSync } from 'node:fs';
@@ -15,7 +15,6 @@ const THIRD_PARTY = ['core', 'prerequisites[]', 'parallelTools[]', 'openhands'];
 const STRINGS = ['description', 'tagline', 'overview.audience', 'sdlc.requirements', 'quickstart.needs', 'quickstart.choose', 'quickstart.next', 'quickstart.changes'];
 // A new top-level key is either a claim above or named here, so nothing new goes unchecked.
 const NOT_CLAIMS = ['evidence'];
-const RESEARCH = 'https://github.com/eikelandin/BenchKeeper-research/';
 
 const slug = (h) => h.trim().toLowerCase().replace(/[^a-z0-9 _-]/g, '').replace(/ /g, '-');
 // A generated block repeats facts.json, so a heading whose section holds nothing else cannot back a claim.
@@ -45,13 +44,12 @@ function problem(evidence, thirdParty, dir) {
   const list = [evidence].flat();
   if (!list.length || list.some((e) => typeof e !== 'string' || !e)) return 'no evidence';
   for (const e of list) {
-    if (e.startsWith(RESEARCH)) continue;
     if (/^https?:/.test(e)) {
       if (thirdParty && e.startsWith('https://')) continue;
-      return `only BenchKeeper-research results may be cited by URL here: ${e}`;
+      return `only a repository file may be cited here, not a URL: ${e}`;
     }
     const [file, anchor] = e.split('#');
-    if (file === 'README.md') return 'README.md is generated from facts.json';
+    if (file === 'README.md') return 'README.md is written by hand and cannot be cited as evidence; cite a file under docs/ or a plugin file';
     if (!existsSync(resolve(dir, file))) return `file not found: ${file}`;
     if (anchor === undefined) continue;
     if (!file.endsWith('.md')) return `#${anchor}: only a Markdown heading can be cited, not a place in ${file}`;
@@ -59,7 +57,7 @@ function problem(evidence, thirdParty, dir) {
     if (body === undefined) return `no heading for #${anchor} in ${file}`;
     if (!body) return `#${anchor} in ${file} holds only generated text`;
   }
-  if (list.every((e) => /^https?:/.test(e) && !e.startsWith(RESEARCH))) return 'what BenchKeeper says needs a repository file next to the official pages';
+  if (list.every((e) => /^https?:/.test(e))) return 'what BenchKeeper says needs a repository file next to the official pages';
   return null;
 }
 

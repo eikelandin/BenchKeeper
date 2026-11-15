@@ -1052,7 +1052,7 @@ test('the tier strip switch: off by default; on and off are plans in the Claude 
   mkdirSync(join(ctx.home, '.claude'), { recursive: true });
   writeFileSync(file, JSON.stringify({ pluginConfigs: { 'other@x': { options: { a: 1 } } } }));
   const band = () => routes['GET /api/tier-band']();
-  assert.deepEqual(band(), { key: 'pluginConfigs.cedarloom@cedarloom.options.tierBand', on: false });
+  assert.deepEqual(band(), { key: 'pluginConfigs.cl-workflow@cedarloom.options.tierBand', on: false });
   const keys = [];
   const set = async (on) => {
     const plan = routes['POST /api/settings-plan']({ agent: 'claude', layer: 'user', edits: { [band().key]: on } });
@@ -1066,7 +1066,7 @@ test('the tier strip switch: off by default; on and off are plans in the Claude 
   assert.deepEqual(keys, ['new', 'changed']);
   assert.equal(routes['POST /api/settings-plan']({ agent: 'claude', layer: 'user', edits: { [band().key]: null } }).changes[0].keyState, 'removed');
   assert.equal(band().on, false);
-  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pluginConfigs, { 'other@x': { options: { a: 1 } }, 'cedarloom@cedarloom': { options: { tierBand: false } } });
+  assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')).pluginConfigs, { 'other@x': { options: { a: 1 } }, 'cl-workflow@cedarloom': { options: { tierBand: false } } });
   routes['POST /api/undo']({ run: off.id });
   assert.equal(band().on, true);
 });

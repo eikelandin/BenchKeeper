@@ -4,8 +4,9 @@ import { appendFileSync, chmodSync, cpSync, mkdirSync, mkdtempSync, rmSync, writ
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { codexMcpOff, noTrace } from './advise.mjs';
+import { OWN_PLUGINS } from './agents.mjs';
 import { agentEnv, childEnv } from './childenv.mjs';
-import { contentDir } from './content.mjs';
+import { ruleFile } from './content.mjs';
 import { mask } from './redact.mjs';
 import { claudeResult } from './runner.mjs';
 import { hashPath, hashText, readText } from './fsx.mjs';
@@ -15,7 +16,7 @@ const results = (ctx) => join(userEvals(ctx), 'results.jsonl');
 
 // What a target's result depends on: the skill or rules text, and its cases.
 function targetHash(ctx, target, cases) {
-  const src = target.startsWith('rule:') ? join(contentDir, 'rules', `${target.slice('rule:'.length)}.md`) : skillSource(ctx, target, cases[0]?.project)?.dir;
+  const src = target.startsWith('rule:') ? ruleFile(`${target.slice('rule:'.length)}.md`) : skillSource(ctx, target, cases[0]?.project)?.dir;
   return hashText(`${src ? hashPath(src) : 'missing'}\n${JSON.stringify(cases.map(({ file, ...c }) => c))}`);
 }
 
@@ -53,7 +54,7 @@ export function triggered(output, name) {
     let e;
     try { e = JSON.parse(line); } catch { continue; }
     const uses = e.message?.content?.filter?.((c) => c.type === 'tool_use') ?? [];
-    if (uses.some((u) => u.name === 'Skill' && [name, `cedarloom:${name}`].includes(u.input?.skill ?? u.input?.command))) return true;
+    if (uses.some((u) => u.name === 'Skill' && [name, ...OWN_PLUGINS.map((p) => `${p}:${name}`)].includes(u.input?.skill ?? u.input?.command))) return true;
     if (uses.some((u) => u.name === 'Read' && new RegExp(`${path.source}$`).test(u.input?.file_path ?? ''))) return true;
     if (e.item?.type === 'command_execution' && e.item.exit_code === 0 && read.test([e.item.command ?? []].flat().join(' '))) return true;
   }

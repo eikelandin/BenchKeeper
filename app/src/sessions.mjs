@@ -3,6 +3,7 @@
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { OWN_PLUGINS } from './agents.mjs';
 import { library } from './content.mjs';
 import { move, readText, walkDir, writeAtomic } from './fsx.mjs';
 import { repoEnv } from './git.mjs';
@@ -38,7 +39,7 @@ async function lines(file, each) {
 }
 const parse = (line) => { try { return JSON.parse(line); } catch { return null; } };
 const texts = (content) => (typeof content === 'string' ? [content] : Array.isArray(content) ? content.map((c) => c.text ?? (typeof c.content === 'string' ? c.content : '')) : []);
-// `(override)` marks a tier set with /cedarloom:tier: no change type.
+// `(override)` marks a tier set with /cl-workflow:tier: no change type.
 const tiers = (data, text) => { for (const m of text.matchAll(TIER)) data.tiers.push([m[1], m[2] && m[2] !== 'override' ? m[2] : null]); };
 const sec = (iso) => Math.round(Date.parse(iso) / 1000);
 // [start, end] pairs in epoch seconds, sorted, overlapping or adjacent ones merged.
@@ -296,7 +297,8 @@ async function withRepos(ctx, entries) {
 // whose skills are all there or whose plugin is (its skills carry the plugin's name).
 function setupLabels(names = []) {
   const has = new Set(names.map(bare));
-  const labels = [['cedarloom:', 'BenchKeeper']].filter(([p]) => names.some((n) => n.startsWith(p))).map(([, l]) => l);
+  // Transcripts of earlier versions name every own skill cedarloom:<name>.
+  const labels = names.some((n) => [...OWN_PLUGINS, 'cedarloom'].some((p) => n.startsWith(`${p}:`))) ? ['BenchKeeper'] : [];
   const viaPlugin = (p) => Object.values(p.plugins ?? {}).some((x) => names.some((n) => n.startsWith(`${x.id.split('@')[0]}:`)));
   for (const p of library().packs) if ((p.skills?.length && p.skills.every((s) => has.has(s))) || viaPlugin(p)) labels.push(p.id);
   return labels;
