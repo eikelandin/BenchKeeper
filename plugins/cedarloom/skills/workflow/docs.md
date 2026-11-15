@@ -1,6 +1,6 @@
 # Docs
 
-READMEs, docs sites, changelogs, skill texts and product copy. Tier by the [change-type table](SKILL.md#change-types); a pass over several documents is standard: the steps below, commit, and a pull request when the project uses them ([software.md](software.md#steps)). Test-first does not apply. The review before pushing runs when the change is risky or touches code (including whatever the repository's `AGENTS.md` counts as code).
+READMEs, docs sites, changelogs, skill texts and product copy. Depth by step 1 of [SKILL.md](SKILL.md); a pass over several documents is standard: the steps below, commit, and a pull request when the project uses them ([software.md](software.md#steps)). Test-first does not apply. The review before pushing runs when the change is risky or touches code (including whatever the repository's `AGENTS.md` counts as code).
 
 1. **Inventory.** List each document in scope, its generator when it has one (edit the source, then regenerate), and the facts it states.
 2. **Two analysts, one editor.** Claude (a subagent) and Codex (`codex exec --sandbox read-only`) each get the same brief: the documents, the code they describe, the repository's `AGENTS.md` and its writing rules.

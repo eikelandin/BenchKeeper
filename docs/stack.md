@@ -11,7 +11,7 @@ The components BenchKeeper sets up, where each file lives and why these were cho
 | [Dev Containers](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli) | tooling on host, configuration per repo | the agent runs inside the container by default; `--env` also offers the agent on the host with project commands in the container, a Docker Sandboxes microVM (untested), or no container |
 | [Ponytail](https://github.com/DietrichGebert/ponytail), level `full`, optional | the `ponytail` pack: global plugin in both agents, its level written when the pack is chosen | implementation simplicity |
 | [Matt Pocock's skills](https://github.com/mattpocock/skills), his install, optional | global plugin in both agents: Claude Code from the official marketplace (it pins a commit of his repository), Codex from his marketplace | workflow: grilling, domain docs, spec and tickets, TDD, bug diagnosis, code review, pull request, handoff. Per repo it reads the issue tracker, triage labels and domain docs from `docs/agents/` |
-| [workflow](../plugins/cedarloom/skills/workflow/SKILL.md) | global, Claude + Codex | task kind (software change, docs pass, research) and tier (quick, standard, full), pre-push correctness review, security review for risky changes; uses installed skills that match a step |
+| [workflow](../plugins/cedarloom/skills/workflow/SKILL.md) | global, Claude + Codex | task kind (software change, docs pass, research) and depth (quick, standard, deep), pre-push correctness review, security review for risky changes; uses installed skills that match a step |
 | [find-skills](https://github.com/vercel-labs/skills) | global | skill search, used by `setting-up-projects` |
 
 Per repo, committed: `.devcontainer/`, `AGENTS.md` (your own text), `docs/agents/` (with Matt Pocock's skills: from his `/setup-matt-pocock-skills`, with its `## Agent skills` block), `.mcp.json`, `.codex/config.toml`. Local by default, listed in `.git/info/exclude` (committed with `--share`): `CLAUDE.local.md` (shared: `CLAUDE.md`), `AGENTS.override.md`, `.agents/skills/` and `.claude/skills/` (library and stack skills), `skills-lock.json`, `.benchkeeper/`, and `.worktreeinclude`, which lists them for new worktrees (with `--share` it lists only the personal files).
@@ -21,7 +21,7 @@ Global (per machine): the rules, the BenchKeeper plugin, the plugins of the pack
 With the `ponytail` pack, another Ponytail level for the current session: `/ponytail lite` or `/ponytail ultra` (Claude Code).
 
 <!-- generated:core -->
-**Optional: [mattpocock/skills](https://github.com/mattpocock/skills) by Matt Pocock:** the workflow owner: his skills run the phases of standard and full work when installed (grilling, spec and tickets, tdd, code review, pull request).
+**Optional: [mattpocock/skills](https://github.com/mattpocock/skills) by Matt Pocock:** the workflow owner: his skills run the phases of standard and deep work when installed (grilling, spec and tickets, tdd, code review, pull request).
 <!-- /generated:core -->
 
 ## Contents
@@ -34,10 +34,9 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 | [plugins/cedarloom/rules/worker.md](../plugins/cedarloom/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `orchestrating-projects`; no setup installs it as a rule file |
 | [app](../app) | the installer: global setup, project setup, history and undo, CLI and browser UI ([README](../app/README.md)) | `npx benchkeeper@6.27.0` |
 | [plugins/cedarloom/skills/setting-up-projects](../plugins/cedarloom/skills/setting-up-projects/SKILL.md) | set up or update one repo after `projects apply`: devcontainer, the project parts of AGENTS.md with footgun docs (`docs/agents/`), stack skills, other configuration to remove | plugin skill `benchkeeper:setting-up-projects` |
-| [plugins/cedarloom/skills/workflow](../plugins/cedarloom/skills/workflow/SKILL.md) | task kind and tier, then the playbook for software changes, docs passes or research, batch mode, long checks at the end | plugin skill `benchkeeper:workflow` |
-| [plugins/cedarloom/agents](../plugins/cedarloom/agents) | the phase agents the workflow starts at standard and full tier (plan, implement, test, review) and per item when research runs items in parallel, each with its effort and tools; the workflow skill passes the model in the call | Claude Code plugin agents `benchkeeper:<role>`; Codex and app installs use general subagents |
-| [plugins/cedarloom/skills/tier](../plugins/cedarloom/skills/tier/SKILL.md) | sets the tier for the rest of the session (`quick`, `standard`, `full`, `research`, or `auto` to let the workflow pick) | plugin skill `/benchkeeper:tier`, user-invoked |
-| [plugins/cedarloom/hooks/tier](../plugins/cedarloom/hooks/tier/register.tsx) | the optional status band in the Claude Code terminal and desktop app: project, branch and Ponytail's level, the last test run and lint or type check with the edits since and a verdict for the tier, the tier of the last answer, buttons for `/benchkeeper:tier`, the sessions board and the doctor, the override kept through compaction and resume ([setup](setup.md#the-status-band)) | Claude Code plugin option `tierBand`, off by default |
+| [plugins/cedarloom/skills/workflow](../plugins/cedarloom/skills/workflow/SKILL.md) | task kind and depth, then the playbook for software changes, docs passes or research, batch mode, long checks at the end | plugin skill `benchkeeper:workflow` |
+| [plugins/cedarloom/agents](../plugins/cedarloom/agents) | the phase agents the workflow starts at standard and deep (plan, implement, test, review) and per item when research runs items in parallel, each with its effort and tools; the workflow skill passes the model in the call | Claude Code plugin agents `benchkeeper:<role>`; Codex and app installs use general subagents |
+| [plugins/cedarloom/hooks/tier](../plugins/cedarloom/hooks/tier/register.tsx) | the optional status band in the Claude Code terminal and desktop app: project, branch and Ponytail's level, the last test run and lint or type check with the edits since, ASK while terminal questions are allowed ([setup](setup.md#the-status-band)) | Claude Code plugin option `tierBand`, off by default |
 | [plugins/cedarloom/hooks/rotation](../plugins/cedarloom/hooks/rotation/register.ts) | clears an idle coordinator of `orchestrating-projects` above a context threshold and hands its handoff file back after a clear or compaction; only with that file ([setup](setup.md#coordinator-context-rotation)) | Claude Code plugin options `rotateAtTokens` (200000) and `rotateAtPercent` (off); the restore also as a Codex `SessionStart` hook |
 | [plugins/cedarloom/skills/ask](../plugins/cedarloom/skills/ask/SKILL.md) | allows terminal questions for a while (`for 30m`, `until HH:MM`, `off`) | plugin skill `/benchkeeper:ask`, user-invoked |
 | [plugins/cedarloom/skills/questions](../plugins/cedarloom/skills/questions/SKILL.md) | asks the open question issues of the hub repository in batches, records each answer, keeps deferred ones out of the queue, and allows terminal questions for the session | plugin skill `/benchkeeper:questions`, user-invoked |
@@ -53,10 +52,10 @@ With the `ponytail` pack, another Ponytail level for the current session: `/pony
 ## How this stack was selected
 
 <!-- generated:reasons -->
-- Checks by tier: every change runs the checks and reviews its tier names: the tests of the touched code after each edit, a review before pushing for standard and full work.
+- Checks by depth: every change runs the checks and reviews its depth names: the tests of the touched code after each edit, a review before pushing for standard and deep work.
 - Long checks last: the full suite, end-to-end tests and builds run once after the last edit, in a subagent that returns only failures and key lines.
 - Simplicity: the optional Ponytail pack adds a plugin that steers the agent to the smallest complete change.
-- Skills by level: the full flow runs only for full-tier work. Small changes load one targeted skill.
+- Skills by level: the full flow runs only for deep work. Small changes load one targeted skill.
 - One install: one machine setup covers every repository. Each repository adds only its tracker, docs and stack.
 <!-- /generated:reasons -->
 
