@@ -9,7 +9,7 @@ writes: "Nothing until you approve the findings (Edit and Write are off), apart 
 
 # Maintaining repositories
 
-Read only until the findings are approved. Start on a clean tree (`git status --porcelain` prints nothing; else stop and say so) and note `git rev-parse HEAD`. Read the project's local knowledge base first and write the verdicts back at the end ([knowledge.md](knowledge.md); the owner shows or clears it with `benchkeeper knowledge show|clear`). Run each part the repository supports:
+Read only until the findings are approved. Start on a clean tree (`git status --porcelain` prints nothing; else stop and say so) and note `git rev-parse HEAD`. Read the project's local knowledge base first and write the verdicts back at the end ([knowledge.md](knowledge.md)). Run each part the repository supports:
 
 - A code audit skill, when installed.
 - Shortcut debt: each `shortcut:` comment is still valid, upgraded, or becomes an issue (a debt-ledger skill lists them, when installed).
@@ -21,7 +21,6 @@ Read only until the findings are approved. Start on a clean tree (`git status --
 - Architecture (cycles, shallow or forwarding modules, one source of truth, documented against actual structure): [architecture.md](architecture.md). With an architecture-improvement skill installed, suggest it for the deepening work; the user starts it.
 - Test audit (a mutation tester for the stack, last because it is the longest part): [test-audit.md](test-audit.md). It sets the time and memory bounds for the run.
 - Open requests and sessions that went sideways: suggest a triage skill and a retro skill, when installed; the user starts them.
-- BenchKeeper setup: `npx benchkeeper@6 doctor` and `verify` in the repository; `projects update` when its setup version is behind. Skill proposals: `npx benchkeeper@6 insights --json --project .`, the findings of signal `skills` (turn off, add or update a skill, from the project's sessions and what the repository matches). List each with its `fix`; run a `fix` only after the owner approves that proposal (it shows a plan with a diff and an undo).
 - Repository hygiene: merged branches and worktrees, stopped containers, tickets in the project's tracker that the merged work already closed.
 
 A tool that is missing and cannot be installed is not a failed pass: do that part by reference search and reading, and say so in the report.
