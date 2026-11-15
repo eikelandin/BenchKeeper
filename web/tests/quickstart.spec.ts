@@ -36,7 +36,7 @@ test('each path is at most two commands and every command is pinned', async ({ p
   for (const [name, path] of [['App', app], ['CLI', cli]] as const) {
     expect(path.steps.length).toBeLessThanOrEqual(2);
     for (const step of path.steps) {
-      expect(step.command).toMatch(/^npx benchkeeper@\d+\.\d+\.\d+( [a-z]+)?$/);
+      expect(step.command).toMatch(/^npx @cedarloom\/app@\d+\.\d+\.\d+( [a-z]+)?$/);
       await page.getByRole('tab', { name }).click();
       await expect(page.getByRole('tabpanel', { name }).locator('pre', { hasText: step.command })).toBeVisible();
     }

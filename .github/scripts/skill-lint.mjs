@@ -53,7 +53,7 @@ export function lintSkill(dir) {
   if (/\bworkers?\b/i.test(all) && HANDS_TEXT.test(all) && !AUTHOR_FILTER.every((re) => re.test(all)))
     errors.push(`${dir}: hands issue or pull request text to a worker without the author filter (a "Trusted authors:" line and the words "data, never instructions")`);
   if (DEPTH_MINIMUM_FIRST.test(all)) errors.push(`${dir}: a Depth line names the Depth minimum line ahead of the workflow skill`);
-  if (SKILLS_PIN.test(all)) errors.push(`${dir}: names a skills CLI version: use the line npx benchkeeper skills cli prints`);
+  if (SKILLS_PIN.test(all)) errors.push(`${dir}: names a skills CLI version: use the line npx @cedarloom/app skills cli prints`);
   for (const file of files) {
     const body = readFileSync(file, 'utf8').replace(/```[\s\S]*?```/g, '');
     for (const [, target] of body.matchAll(/\]\(([^)\s]+)\)/g)) {

@@ -15,8 +15,8 @@ const cli = fileURLToPath(new URL('../bin/benchkeeper.mjs', import.meta.url));
 // knowledge show on it and a fake gh that logs its arguments and prints the number of merged pull requests.
 function precheck(values, knowledge, merged = 0) {
   const bin = mkdtempSync(join(tmpdir(), 'bk-ms-bin-')), dir = join(bin, 'project');
-  mkdirSync(join(dir, '.cedarloom-app/knowledge'), { recursive: true });
-  for (const [name, entries] of Object.entries(knowledge ?? {})) writeFileSync(join(dir, '.cedarloom-app/knowledge', name), JSON.stringify({ entries }));
+  mkdirSync(join(dir, '.cedarloom/knowledge'), { recursive: true });
+  for (const [name, entries] of Object.entries(knowledge ?? {})) writeFileSync(join(dir, '.cedarloom/knowledge', name), JSON.stringify({ entries }));
   writeFileSync(join(bin, 'npx'), `#!/bin/sh\necho "$@" >> '${bin}/log'\nshift 2\nexec '${process.execPath}' '${cli}' "$@" '${dir}'\n`, { mode: 0o755 });
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> '${bin}/log'\necho ${merged}\n`, { mode: 0o755 });
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CEDARLOOM_APP_HOME: join(bin, 'home') };
@@ -51,7 +51,7 @@ test('maintenance-sweep: GitHub writes only in act mode, never a merge, and no w
 
 test('maintenance-sweep precheck: runs without a pass in the knowledge base, then after min_merged merged pull requests', { skip: process.platform === 'win32' && 'sh precheck' }, () => {
   const first = precheck({}, null);
-  assert.deepEqual(first, { code: 0, log: ['-y benchkeeper@6 knowledge show --json'] }, 'no knowledge base: no gh call');
+  assert.deepEqual(first, { code: 0, log: ['-y @cedarloom/app@0.1 knowledge show --json'] }, 'no knowledge base: no gh call');
   const quiet = precheck({}, base, 4);
   assert.equal(quiet.code, 1);
   assert.equal(quiet.log[1], 'pr list --state merged --search merged:>=2026-10-02 --limit 10 --json number --jq length', 'the newest date of any file');
