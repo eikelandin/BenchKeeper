@@ -23,7 +23,7 @@ Not installed by BenchKeeper.
 
 ## Levels
 
-Three levels, from the smallest: the BenchKeeper plugin ships no rule file and no hook that injects workflow context (its always-on hooks only refuse the question tool and plan mode and add one line on that, see [Terminal questions](#terminal-questions); the optional `tierBand` hook is off by default, and the [coordinator rotation](#coordinator-context-rotation) hooks act only on a coordinator's handoff file), so lite relies on the `workflow` skill description to trigger (trigger rate unverified: [evaluation](https://github.com/ESchuderer/BenchKeeper-research/blob/main/evaluations/practices/lite-install.md)). Each level contains the one before.
+Three levels, from the smallest: the BenchKeeper plugin ships no rule file and no hook that injects workflow context (its always-on hooks only refuse the question tool and plan mode and add one line on that, see [Terminal questions](#terminal-questions); the optional `tierBand` hook is off by default, and the [coordinator rotation](#coordinator-context-rotation) hooks act only on a coordinator's handoff file), so lite relies on the `workflow` skill description to trigger (trigger rate unverified: [evaluation](https://github.com/eikelandin/BenchKeeper-research/blob/main/evaluations/practices/lite-install.md)). Each level contains the one before.
 
 <!-- generated:levels -->
 | Level | Contains | Writes | Command |
@@ -104,7 +104,7 @@ Undo: each run is recorded in `$HOME/.config/benchkeeper/ledger/`, and replaced 
 
 The app writes its setup files below your home directory and in the projects you choose, plus scratch folders in the system temp folder and the Dev Containers CLI in your npm prefix. It needs no root, sends no telemetry and never runs on its own. In a terminal it makes one request to the npm registry for a newer version and shows it (off with `BENCHKEEPER_NO_UPDATE_CHECK=1`, and when `CI` is set).
 
-Lite level, plugin only: `npx benchkeeper@6.27.0 apply --level lite`, or by hand `claude plugin marketplace add ESchuderer/BenchKeeper#stable --sparse .claude-plugin plugins && claude plugin install cedarloom@cedarloom` (Codex: `codex plugin marketplace add ESchuderer/BenchKeeper@stable --sparse .claude-plugin --sparse plugins && codex plugin add cedarloom@cedarloom`).
+Lite level, plugin only: `npx benchkeeper@6.27.0 apply --level lite`, or by hand `claude plugin marketplace add eikelandin/BenchKeeper#stable --sparse .claude-plugin plugins && claude plugin install cedarloom@cedarloom` (Codex: `codex plugin marketplace add eikelandin/BenchKeeper@stable --sparse .claude-plugin --sparse plugins && codex plugin add cedarloom@cedarloom`).
 
 ## Per repo
 
