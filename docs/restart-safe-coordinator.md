@@ -51,7 +51,7 @@ env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN -u CLAUDE_CODE_OAUTH_TOKEN -u C
 | `env -u` of the login variables | In `-p`, `ANTHROPIC_API_KEY` is always used when present, and `CLAUDE_CODE_OAUTH_TOKEN` ranks above the stored login ([authentication](https://code.claude.com/docs/en/authentication)). `CLAUDE_CODE_RETRY_WATCHDOG` retries 429 and 529 errors indefinitely and can wait inside the run until a limit resets ([environment variables](https://code.claude.com/docs/en/env-vars)); whether a subscription session limit takes that path: unverified |
 | `timeout`, `--max-turns` | Keep a cycle bounded; `--max-turns` exits with an error at the limit ([CLI reference](https://code.claude.com/docs/en/cli-reference)) |
 | `--output-format json` | The result carries `is_error`, `api_error_status`, `terminal_reason` and `permission_denials` ([Agent SDK reference](https://code.claude.com/docs/en/agent-sdk/typescript)). Which values a subscription limit produces: unverified |
-| No `--bare` | Bare mode does not use the subscription login ([headless mode](https://code.claude.com/docs/en/headless#start-faster-with-bare-mode)) |
+| No `--bare` | Bare mode does not use the subscription login and runs no hooks, the [role guard](setup.md#role-guard) included ([headless mode](https://code.claude.com/docs/en/headless#start-faster-with-bare-mode)) |
 
 Keep the settings file and the cycle prompt outside the checkout (`<supervisor folder>`), so a cycle cannot change its own rights or its next prompt. The cycle may edit only `decisions.md` and `questions.md`; the owner token, the stop switch, the generated facts and the saved inbox are written by the loop and denied explicitly, so a later, wider allow cannot open them.
 

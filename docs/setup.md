@@ -314,19 +314,21 @@ By default a Claude Code session with the BenchKeeper plugin on never uses the q
 
 ## Role guard
 
-Only the coordinator merges, releases and changes shared repository state. In every other Claude Code session with the plugin on, the plugin's `PreToolUse` hook for Bash denies:
+Only the coordinator merges, releases and changes shared repository state. In every other Claude Code session with the plugin on, and in every subagent, the plugin's `PreToolUse` hook for the Bash, Monitor and PowerShell tools denies:
 
-- merging (`gh pr merge`, the merge endpoints and mutations of `gh api`) and releases (`gh release` except `list`, `view`, `download` and `verify`)
-- tag pushes (`git push --tags`, `--follow-tags`, `--mirror`, `tag <name>`, a `refs/tags/` or version refspec)
+- merging (`gh pr merge`, the merge endpoints and mutations of `gh api`) and releases (`gh release` except `list`, `view`, `download` and `verify`, `gh workflow run`, and the `dispatches` endpoints of `gh api`)
+- tag pushes (`git push --tags`, `--follow-tags`, `--mirror`, `tag <name>`, or a refspec that is under `refs/tags/`, names a tag of the repository, or names a version such as `v1.2.0` or `app-v6.27.0` and is no local branch) and pushes to the default branch (`main`, `master`, the branch `refs/remotes/<remote>/HEAD` names, or the current branch's push target for a `git push` without a refspec), `--all` and `--branches` included; git takes a unique prefix of a long option, so `--tag` counts as `--tags`
 - repository settings and security: `gh repo edit`, `rename`, `archive`, `delete` and `deploy-key`, `gh secret` and `gh variable` writes, `gh workflow enable` and `disable`, and `gh api` calls other than GET to settings, rulesets, branch protection, secrets and security alerts
 - `gh auth`, gh's own config, aliases and keys
 - `git config` except its `--get` and `--list` forms, `git -c`, and `git stash`
+- `claude --bare`: hooks do not run in bare mode, this one included, even for a plugin loaded with a flag ([headless mode](https://code.claude.com/docs/en/headless#start-faster-with-bare-mode)). No launch line in a plugin passes `--bare` (skill lint). Bare mode is announced as the future default for `-p`; once it is, a `-p` launch from a guarded session runs unguarded unless the hook covers it too.
 
-Start the coordinator's session with `CEDARLOOM_ROLE=coordinator` in its environment, for example `CEDARLOOM_ROLE=coordinator claude`, and nowhere else: a variable in your shell profile or in the `env` of user settings reaches every session, workers included. A session without it, or with another value, is guarded, and so is a session started from a guarded one.
+Start the coordinator's session with `CEDARLOOM_ROLE=coordinator` in its environment, for example `CEDARLOOM_ROLE=coordinator claude`, and nowhere else: a variable in your shell profile or in the `env` of user settings reaches every session, workers included. A session without it, or with another value, is guarded, and so is a session started from a guarded one, as long as it runs hooks.
 
-- The hook reads the words of the command, quoted ones included, so `bash -c "gh pr merge 1"` is denied, and so is a commit message or comment text that names such a command: put that text in a file (`-F`, `--body-file`).
-- It stops a model that forgets its role, not one that works around it (a variable as the command, a git alias, a script, a tool other than Bash). The boundary is a GitHub token without those rights and rulesets on the default branch and release tags, which you set up yourself.
-- The hook needs `node` on the PATH; when it cannot start, every Bash call is refused ([`onFailure: "block"`](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails)). Whether it runs in `bypassPermissions` mode is unverified.
+- The coordinator's subagents inherit its environment, so the hook guards every call whose input names a subagent or teammate (`agent_id`, [hooks reference](https://code.claude.com/docs/en/hooks)). A session or script started from the coordinator's shell inherits the variable as well: start it without, for example `env -u CEDARLOOM_ROLE claude -p "<prompt>"`.
+- The hook reads the command as the shell splits it: line continuations join, quoted words stay whole, and the text of each quoted word is read again as commands, so `bash -c "gh pr merge 1"` is denied, and so is a commit message or comment text that names such a command: put that text in a file (`-F`, `--body-file`).
+- It stops a model that forgets its role, not one that works around it (a variable as the command, a git or gh alias, a script, `node -e`, an MCP tool). The boundary is a GitHub token without those rights and rulesets on the default branch and release tags, which you set up yourself.
+- The hook needs `node` on the PATH; when it cannot start or cannot read its input, the call is refused ([`onFailure: "block"`](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails), Claude Code 2.1.295 or later; an older version runs the call). Monitor's commands reach the hook from Claude Code 2.1.314. Whether it runs in `bypassPermissions` mode is unverified.
 - Codex runs no such hook.
 
 ## Coordinator context rotation
