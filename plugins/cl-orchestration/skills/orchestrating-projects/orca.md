@@ -183,7 +183,7 @@ ORCA orchestration worker-release --dispatch <dispatch id> --json
 ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 ```
 
-`--run-hooks` runs the project's `orca.yaml` archive script before the removal; the one the CedarLoom app's project setup writes removes the worktree's dev containers and exits 0 even when that fails, so the removal goes ahead. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
+`--run-hooks` runs the project's `orca.yaml` archive script before the removal. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
 A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that no `send` carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 

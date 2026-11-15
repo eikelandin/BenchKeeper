@@ -1,6 +1,6 @@
 # Worker spec template
 
-This is the spec of the issue runs this skill coordinates. An attended Orca fan-out without this skill uses another template, the `worker-spec.md` that the CedarLoom app writes into the `orca` folder of its config folder.
+This is the spec of the issue runs this skill coordinates.
 
 Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets. The repository's rules stay in its `AGENTS.md`; this spec only points to them.
 
@@ -14,7 +14,7 @@ What the lines take, policy fields as the reader prints them:
 - `Review:` takes `review.depth`, or `review.sensitiveDepth` and the security review for an issue that reads as sensitive, in a batch when one of its issues does.
 - Flow takes each phase the reader prints under `models.phases`; for an issue that reads as sensitive, plan and review take `models.sensitive.plan` and `models.sensitive.review`.
 - `Worker rules:` takes two texts, each whole and unchanged.
-  - The plugin's: the file `rules/worker.md` two folders above this skill folder, only where `.claude-plugin/plugin.json` (the plugin) or `content.json` (the app's packed content) lies beside that `rules` folder.
+  - The plugin's: the file `rules/worker.md` two folders above this skill folder, only where `.claude-plugin/plugin.json` (the plugin) lies beside that `rules` folder.
   - A skill folder copied alone has neither, and a `rules` folder above it is not the plugin's: start no worker and tell the owner that the coordinator needs the plugin.
   - The project's: `docs/agents/worker-rules.md` as the default branch has it, which `gh api repos/<owner/repo>/contents/docs/agents/worker-rules.md -H "Accept: application/vnd.github.raw"` prints. Never read it in the project's checkout or a worker's worktree: workers share that git directory, so one worker's text would reach every other worker's spec.
   - `HTTP 404` from that `gh api` call means the project has none only when `gh api repos/<owner/repo> --jq .full_name` exited 0 right before: GitHub answers the same for a repository the login cannot see.
@@ -77,7 +77,7 @@ Needs replan: if the spec does not fit the issue (a path you must change is not 
 
 No change needed: if the issue does not apply, comment why with the evidence on the issue, report DONE with "no change needed", and end.
 
-Report: once, through the runner's report command, then stop; in a batch after the last issue, with DONE when you worked through every issue. Outcome DONE, BLOCKED or NEEDS_REPLAN, and this handoff block in .cedarloom-app/handoff.md of your worktree (in the report body instead when `git check-ignore -q .cedarloom-app/handoff.md` fails; in a batch one block per issue, and in the report each issue with its outcome and pull request):
+Report: once, through the runner's report command, then stop; in a batch after the last issue, with DONE when you worked through every issue. Outcome DONE, BLOCKED or NEEDS_REPLAN, and this handoff block in the report body (in a batch one block per issue, and in the report each issue with its outcome and pull request):
 Issue: <tracker>#<number>
 Outcome: <DONE|BLOCKED|NEEDS_REPLAN>
 What changed: <pull request number, commits, files>
