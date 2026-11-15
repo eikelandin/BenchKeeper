@@ -2,39 +2,39 @@
 
 BenchKeeper releases only when the owner merges the release pull request or starts a release workflow by hand. No workflow merges that pull request or enables auto-merge on it.
 
+A release ships the plugins only. The app in `app/` does not release, and no release publishes to npm.
+
 ## Components
 
 | Component | Files | Version | Tag | Changelog |
 | --- | --- | --- | --- | --- |
-| App | `app/` (npm package `benchkeeper`) | semver: `fix` and `perf` raise the patch, `feat` the minor version | `app-v<x.y.z>` | `app/CHANGELOG.md` |
-| Plugins | `plugins/<name>/`: the bundle `cedarloom` (rules, content) and the plugins `cl-workflow`, `cl-setup` and `cl-orchestration` | one version for all four (`linked-versions`), `<x.y>.0`: every release raises the minor version (`plugin.json` of each agent a plugin ships for, `content.json` `contentVersion` in the bundle) | `cedarloom-v<x.y.z>` for the bundle and the Release, `cedarloom-<name>-v<x.y.z>` for each plugin | `plugins/<name>/CHANGELOG.md`; the Release holds the sections of all four |
+| Plugins | `plugins/<name>/`: the bundle `cedarloom` and the plugins `cl-workflow`, `cl-setup` and `cl-orchestration` | one version for all four (`linked-versions`), in each plugin's `.claude-plugin/plugin.json` and, where a plugin ships for Codex, its `.codex-plugin/plugin.json`. Below 1.0 (`bump-minor-pre-major`) `feat` and breaking changes raise the minor version, `fix` and `perf` the patch | `cedarloom-v<x.y.z>` for the bundle and the Release, `cedarloom-<name>-v<x.y.z>` for each plugin | `plugins/<name>/CHANGELOG.md`; the Release holds the sections of all four |
 
-`CHANGELOG.md` at the repository root holds the single setup version up to 6.25; the tags `setup-v<x.y>` and `setup-v<x.y>.0` name the content releases up to 6.27. The plugin components carry the `cedarloom-` prefix in their tags because the packages under `packages/` release with their own components, one of them `orchestration`. Skill and automation text under `plugins/` names the app by its 0.x minor range (`npx @cedarloom/app@0.1`, `npx -y @cedarloom/app@0.1`), so an app release outside that range releases the app and the plugins and changes the range in that text; it is set with `release-as` in `release-please-config.json` on the release pull request. The package test fails while any of that text names another range, or when it finds no pin.
+The first release is 0.1.0, set with `release-as` on each plugin in `release-please-config.json`. Remove those four lines after that release: while they stay, every release pull request proposes 0.1.0 again.
+
+`CHANGELOG.md` at the repository root holds the single setup version up to 6.25; the tags `setup-v<x.y>` and `setup-v<x.y>.0` name the content releases up to 6.27, and `app-v<x.y.z>` the app releases up to 6.27.0. The plugin components carry the `cedarloom-` prefix in their tags because the packages under `packages/` release with their own components, one of them `orchestration`.
 
 ## Steps
 
 1. Pull requests target `main`, squash-merged; the title is a Conventional Commit and becomes the changelog line (`.github/workflows/pr-title.yml`). `docs`, `refactor`, `test`, `chore` and `ci` release nothing.
-2. On every push to `main`, release-please (`.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`) keeps one release pull request open with the new versions and changelogs, titled `chore(main): release benchkeeper` for all components (the title of a pull request that groups components carries no version; its body lists each component with its version). The same workflow pins the install commands in the docs to the new app version on that branch and sets `minApp` in `plugins/cedarloom/content.json` to it, so the released content refuses an older app (`.github/scripts/version-pins.mjs --release`; without `--release` the script leaves `minApp` alone). The policy is "the content supports only the app of its own release", the simplest one in [Cargo's `rust-version` guidance](https://doc.rust-lang.org/cargo/reference/rust-version.html). It fits because the app and the content release together and the refusal names `npx @cedarloom/app@<major>`, which fetches the newest app of that major. The cost is that content which would still work with an older app refuses it too. Supporting older apps would need `minApp` set by hand to the oldest app the content works with, plus a check of the content's commands and flags against that app.
-3. Before an app release, the owner checks the Codex price table `app/src/codex-prices.json` (the board's Codex cost estimate) against the page in its `source` field, adds every new Codex model and sets `date`. Then the owner merges the release pull request.
+2. On every push to `main`, release-please (`.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`) keeps one release pull request open with the new versions and changelogs, titled `chore(main): release cedarloom` (the title of a pull request that groups components carries no version; its body lists each component with its version). The same workflow sets the plugin install lines in the docs that name a release tag (`#cedarloom-v<x.y.z>`, `@cedarloom-v<x.y.z>`) to the new version on that branch (`.github/scripts/version-pins.mjs`).
+3. The owner merges the release pull request.
 4. The job `release` of the Release workflow, on that merge:
-   1. starts `npm.yml` when the app version changed and npm does not have it, waits for the run and checks that the registry serves the version. The run is on `main`, but it builds and publishes the release commit (input `sha`, the commit the tags name) and fails before installing anything when that commit is not on `main`. npm takes the provenance from the run, so when `main` has moved past the release commit (a rerun after later merges) the provenance names the head of `main` at the dispatch and the run shows a warning;
-   2. creates the tags and the GitHub Releases;
-   3. moves the branch `stable` (the ref the app adds BenchKeeper's marketplace at) to the release commit;
-   4. starts `.github/workflows/pages.yml`;
-   5. labels the release pull request `autorelease: tagged`, so release-please opens the next one;
-   6. starts the Release workflow once more, so release-please sees the new label even when a push during the release ran it before the label changed.
+   1. tags each plugin at the version of its `.claude-plugin/plugin.json` and creates the Release `cedarloom-v<x.y.z>`;
+   2. moves the branch `stable` (the ref users add the marketplace at) to the commit of that tag;
+   3. starts `.github/workflows/pages.yml`;
+   4. labels the release pull request `autorelease: tagged`, so release-please opens the next one;
+   5. starts the Release workflow once more, so release-please sees the new label even when a push during the release ran it before the label changed.
 
-A failed publish creates no tag or Release and moves nothing. Rerun the job after the fix: each step skips what an earlier run did. Until then the docs on `main` name a version npm does not have, and release-please opens no new release pull request.
+A failed step moves nothing after it. Rerun the job after the fix: each step skips what an earlier run did. Until then release-please opens no new release pull request.
 
-Pushes to `main` right after the merge do not stop the release. The job `release` has a concurrency group per commit, so a later push never cancels the run of the release merge; its own run of the job finds no release pull request and does nothing. Only the job `release-please` shares one group: a pending one that a newer push replaces is dropped, and the newer one updates the release pull request. A release-please job that runs while the job `release` is still publishing finds the pending pull request and does nothing; step 6 runs it again afterwards.
-
-The owner starts `npm.yml` by hand (Actions, npm publish, Run workflow) with both inputs, the version and the full hash of the release commit: `gh workflow run npm.yml --repo eikelandin/BenchKeeper --ref main -f version=<x.y.z> -f sha=<release commit>`. That is also the way out for a run of the job `release` that started before `npm.yml` required `sha`: a rerun of such a run uses its old workflow file and dispatches without `sha`, which fails. Publish by hand, then rerun the job; it finds the version on npm and continues.
+Pushes to `main` right after the merge do not stop the release. The job `release` has a concurrency group per commit, so a later push never cancels the run of the release merge; its own run of the job finds no release pull request and does nothing. Only the job `release-please` shares one group: a pending one that a newer push replaces is dropped, and the newer one updates the release pull request. A release-please job that runs while the job `release` is still running finds the pending pull request and does nothing; step 5 runs it again afterwards.
 
 ## Site
 
 `.github/workflows/pages.yml` builds one Pages artifact on pushes to `main`, on `release: published` and by hand:
 
-- `/BenchKeeper/`: the latest GitHub Release, built from its tag. Without a release the root redirects to `/next/`.
+- `/BenchKeeper/`: the newest Release `cedarloom-v<x.y.z>`, built from its tag. Without one the root redirects to `/next/`.
 - `/BenchKeeper/next/`: `main` (`SITE_EDITION=next`).
 
 Both editions share one origin, so `next` stores its color scheme under its own key (`web/src/lib/edition.ts`).
@@ -42,6 +42,5 @@ Both editions share one origin, so `next` stores its color scheme under its own 
 ## Owner settings
 
 - A release GitHub App (variable `RELEASE_APP_CLIENT_ID`, secret `RELEASE_APP_PRIVATE_KEY`) or a token, so checks run on the release pull request. Without it the owner approves its runs.
-- The `github-pages` environment allows `main` and the release tags (`cedarloom-v*`, `app-v*`).
+- The `github-pages` environment allows `main` and the release tags `cedarloom-v*`.
 - The ruleset keeps the required check names and lets the owner merge the release pull request.
-- The npm trusted publisher keeps naming `npm.yml`.

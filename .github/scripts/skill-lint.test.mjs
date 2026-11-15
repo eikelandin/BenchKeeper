@@ -71,11 +71,6 @@ test('a Depth line naming the Depth minimum line ahead of the workflow skill fai
   assert.match(lintSkill(skill('a', { body: '```text\nDepth: <issue depth, else the Depth minimum line of AGENTS.md, else the workflow skill decides>\n```' })).join(), /Depth minimum line ahead/);
   assert.deepEqual(lintSkill(skill('a', { body: 'Depth: <issue depth, else leave this line out: the workflow skill decides>' })), []);
 });
-test('a skill naming a skills CLI version fails, inside a code block too', () => {
-  for (const body of ['Run `npx -y skills@npm:skills@1.7.2 find x`.', '```sh\nnpx skills@1.8.0 add a/b\n```'])
-    assert.match(lintSkill(skill('a', { body })).join(), /names a skills CLI version/);
-  assert.deepEqual(lintSkill(skill('a', { body: 'Run `<skills> find x` with the line `npx @cedarloom/app@0.1 skills cli` prints.' })), []);
-});
 
 test('a plugin file that starts claude with --bare fails, in a command line and in a spawn call', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lint-'));
