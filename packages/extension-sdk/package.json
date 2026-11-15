@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Write a CedarLoom extension: the JSON-RPC protocol between the extension host and an extension, and defineExtension, which serves an extension's actions over stdio.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

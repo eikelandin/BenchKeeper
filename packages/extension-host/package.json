@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The extension host of CedarLoom: starts an extension under Node's permission flags, speaks the extension protocol with it, and refuses what its trust level may not run.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

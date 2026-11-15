@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The CedarLoom web UI: Mantine views over the local API, built by Vite into dist/, which the local server serves.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     "./package.json": "./package.json"

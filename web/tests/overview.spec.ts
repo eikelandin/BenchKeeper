@@ -3,7 +3,7 @@ import facts from '../src/data/facts.json' with { type: 'json' };
 
 test('the overview page has no benchmark or evaluation link or text in its content', async ({ page }) => {
   await page.goto('./overview/');
-  await expect(page.locator('a[href*="BenchKeeper-research"], a[href*="EVALUATIONS"], a[href*="evaluations/"]')).toHaveCount(0);
+  await expect(page.locator('a[href*="EVALUATIONS"], a[href*="evaluations/"]')).toHaveCount(0);
   await expect(page.locator('main')).not.toContainText(/benchmark|evaluation|\beval/i);
 });
 

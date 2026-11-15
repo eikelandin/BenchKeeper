@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The hardened Git reader of CedarLoom: fetches one ref into a throwaway repository and reads its files without a checkout, hooks or a transport other than https and ssh.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

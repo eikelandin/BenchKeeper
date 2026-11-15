@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Mantine",
   "description": "Skills for building UIs on Mantine: traps and checks for any Mantine project with the family's conventions, and Mantine's form skill.",
-  "license": "MIT",
+  "license": "ISC AND MIT",
   "minApp": "0.1.0",
   "entries": {
     "skills/mantine-family": {

@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Core",
   "description": "Claude Code with the CedarLoom plugin, CedarLoom's global rules and Claude Code settings; in each project the AGENTS.md rules, the deny rules and the default tier.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "agents": ["claude-code"],
   "packs": {

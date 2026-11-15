@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The CedarLoom run store: plans, approvals, the apply journal and the outbox of writes to hub issues in SQLite, undo backups as files.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

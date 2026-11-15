@@ -25,7 +25,7 @@ Not installed by BenchKeeper.
 
 ## Levels
 
-Three levels, from the smallest: the BenchKeeper plugin ships no rule file and no hook that injects workflow context (its always-on hooks only refuse the question tool and plan mode and add one line on that, see [Terminal questions](plugins.md#terminal-questions); the optional `tierBand` hook is off by default, and the [coordinator rotation](plugins.md#coordinator-context-rotation) hooks act only on a coordinator's handoff file), so lite relies on the `workflow` skill description to trigger (trigger rate unverified: [evaluation](https://github.com/eikelandin/BenchKeeper-research/blob/main/evaluations/practices/lite-install.md)). Each level contains the one before.
+Three levels, from the smallest: the BenchKeeper plugin ships no rule file and no hook that injects workflow context (its always-on hooks only refuse the question tool and plan mode and add one line on that, see [Terminal questions](plugins.md#terminal-questions); the optional `tierBand` hook is off by default, and the [coordinator rotation](plugins.md#coordinator-context-rotation) hooks act only on a coordinator's handoff file), so lite relies on the `workflow` skill description to trigger (trigger rate unverified). Each level contains the one before.
 
 <!-- generated:levels -->
 | Level | Contains | Writes | Command |

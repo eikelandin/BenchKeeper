@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "CedarLoom's hub issues as work items: the tracker port, and the outbox that sends each approved write once.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
