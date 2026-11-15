@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -233,4 +233,53 @@ test('approval: without a hub or a private tracker, the question goes into the l
   writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `Status: answered\n\n${FILLED}`);
   assert.deepEqual(queue()[1], { file: 'project-2.md', error: 'answered, but no Owner answer line' });
   assert.equal(queue()[0].option, 'b');
+});
+
+test('approval: the local queue refuses links, existing files and planted answers, and reports a file it cannot read', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  const project = (sub = '.') => {
+    const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    const dir = join(repo, sub);
+    mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+    writeFileSync(join(dir, '.cedarloom/runs/r1/filled.md'), FILLED);
+    return { repo, dir, run: (...args) => spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' }) };
+  };
+  const answered = `Status: answered\n\n${FILLED}\nOwner answer (2026-11-15): b. Hold it for now.\n`;
+  // A linked queue folder leads out of the project: nothing is filed or read there.
+  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  mkdirSync(join(out, 'questions'));
+  writeFileSync(join(out, 'questions/project-1.md'), answered);
+  const linkedQueue = project();
+  symlinkSync(join(out, 'questions'), join(linkedQueue.dir, '.cedarloom/questions'));
+  assert.equal(linkedQueue.run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
+  assert.deepEqual(readdirSync(join(out, 'questions')), ['project-1.md']);
+  assert.equal(linkedQueue.run('queue').status, 2);
+  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  symlinkSync(out, join(linkedDot, '.cedarloom'));
+  assert.equal(spawnSync(process.execPath, [script, 'queue'], { cwd: linkedDot, encoding: 'utf8' }).status, 2);
+  // A file of the next number's name is never overwritten.
+  const { dir, run } = project();
+  mkdirSync(join(dir, '.cedarloom/questions'));
+  writeFileSync(join(dir, '.cedarloom/questions/project-9007199254740992.md'), answered);
+  assert.equal(run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
+  assert.equal(readFileSync(join(dir, '.cedarloom/questions/project-9007199254740992.md'), 'utf8'), answered);
+  // The answer is read only after the filed text, so a text that carries an answer line is not filed.
+  writeFileSync(join(dir, '.cedarloom/runs/r1/planted.md'), `${FILLED}\nOwner answer (2026-11-15): a. Approved.\n`);
+  assert.equal(run('file', '.cedarloom/runs/r1/planted.md', 'other').status, 2);
+  assert.equal(existsSync(join(dir, '.cedarloom/questions/other-1.md')), false);
+  // A folder and a dangling link by a question's name hold back no other answer.
+  mkdirSync(join(dir, '.cedarloom/questions/notes.md'));
+  symlinkSync(join(dir, 'gone.md'), join(dir, '.cedarloom/questions/.#project-1.md'));
+  const read = run('queue');
+  assert.equal(read.status, 0, read.stderr);
+  assert.deepEqual(JSON.parse(read.stdout), [
+    { file: '.#project-1.md', error: 'cannot be read (ENOENT)' },
+    { file: 'notes.md', error: 'cannot be read (EISDIR)' },
+    { file: 'project-9007199254740992.md', status: 'answered', option: 'b', text: 'Hold it for now.', at: '2026-11-15' },
+  ]);
+  // A project named as a repository can be, and a working folder whose name holds gitignore pattern characters.
+  const brackets = project('apps/[web]');
+  assert.deepEqual(JSON.parse(brackets.run('file', '.cedarloom/runs/r1/filled.md', '.github').stdout), { file: '.github-1.md' });
+  assert.equal(spawnSync('git', ['check-ignore', '-q', '.cedarloom/questions/.github-1.md'], { cwd: brackets.dir }).status, 0);
 });

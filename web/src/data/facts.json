@@ -1,146 +1,4 @@
 {
-  "description": "BenchKeeper sets up Claude Code and Codex the same way on your machine and in each repository: short global rules and a workflow skill that sizes each task, plus a dev container, `AGENTS.md` and skills per repository. Its app shows every change before it applies it and records each run so you can undo it.",
-  "levels": [
-    {
-      "name": "Lite",
-      "contains": "the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app`, `reviewing-rules`, `audit`, `improve` and `debloat` skills",
-      "writes": "nothing outside the plugin install, besides the app's run record for undo",
-      "command": "npx @cedarloom/app@6.27.0 apply --level lite",
-      "evidence": "app/test/level.test.mjs"
-    },
-    {
-      "name": "Standard",
-      "contains": "lite plus the local project block: `CLAUDE.local.md`, `AGENTS.override.md` and the git exclude list",
-      "writes": "local files in each project you run `projects apply` in",
-      "command": "npx @cedarloom/app@6.27.0 apply --level standard && npx @cedarloom/app@6.27.0 projects apply",
-      "evidence": [
-        "app/test/level.test.mjs",
-        "docs/setup.md#per-repo"
-      ]
-    },
-    {
-      "name": "Full",
-      "contains": "standard plus the global rules, Claude Code and Codex settings, packs and the app",
-      "writes": "global rule files, settings and packs",
-      "command": "npx @cedarloom/app@6.27.0 apply --level full",
-      "evidence": [
-        "app/test/level.test.mjs",
-        "docs/setup.md#setup-details"
-      ]
-    }
-  ],
-  "quickstart": {
-    "needs": "Node.js 22 and at least one agent, Claude Code or Codex.",
-    "choose": "Choose the App to review each change in the browser. Choose the CLI in a terminal-only session or in a script.",
-    "paths": [
-      {
-        "name": "App",
-        "steps": [
-          {
-            "command": "npx @cedarloom/app@6.27.0",
-            "text": "Opens the browser on the Dashboard with the doctor findings (the read-only checks of this machine). Select Fix everything, review the changes and press Apply; nothing is written before.",
-            "evidence": [
-              "app/README.md#web-ui",
-              "app/test/server.test.mjs"
-            ]
-          }
-        ]
-      },
-      {
-        "name": "CLI",
-        "steps": [
-          {
-            "command": "npx @cedarloom/app@6.27.0 plan",
-            "text": "Lists each change and writes nothing.",
-            "evidence": "app/test/cli.test.mjs"
-          },
-          {
-            "command": "npx @cedarloom/app@6.27.0 apply",
-            "text": "Asks per change. `--yes` applies the default selection without questions.",
-            "evidence": "app/test/cli.test.mjs"
-          }
-        ]
-      }
-    ],
-    "next": "After either path, restart the agents.",
-    "changes": "`npx @cedarloom/app@6.27.0 history` lists what changed, `npx @cedarloom/app@6.27.0 undo <run>` reverses a run.",
-    "links": [
-      { "label": "Lite level, the plugin alone", "anchor": "levels" },
-      { "label": "Full setup description", "anchor": "setup-details" },
-      { "label": "What the app writes and what it never does", "anchor": "what-the-app-writes-and-what-it-never-does" }
-    ]
-  },
-  "prerequisites": [
-    {
-      "name": "Claude Code",
-      "url": "https://code.claude.com/docs/en/setup",
-      "for": "agent, at least one; Gemini CLI and GitHub Copilot CLI get rules, skills, settings, doctor and project setup only. Version 2.1.292 or later for the effort a skill passes to a subagent call, such as `xhigh` for a security review: 2.1.267 to 2.1.291 run each subagent at the `effort` of its definition (`high` for the reviewer), and an older one ignores that field on Opus 4.7, Opus 4.8 and Fable 5",
-      "evidence": [
-        "docs/setup.md#agent-and-os-support",
-        "plugins/cl-orchestration/skills/orchestrating-projects/review-and-merge.md#review",
-        "https://code.claude.com/docs/en/sub-agents#choose-an-effort-level",
-        "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21292",
-        "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21267"
-      ]
-    },
-    {
-      "name": "Codex CLI",
-      "url": "https://developers.openai.com/codex/cli",
-      "for": "agent, at least one; Gemini CLI and GitHub Copilot CLI get rules, skills, settings, doctor and project setup only",
-      "evidence": "docs/setup.md#agent-and-os-support"
-    },
-    {
-      "name": "Git",
-      "url": "https://git-scm.com/downloads",
-      "for": "clone, branches, commits",
-      "evidence": [
-        "https://git-scm.com/downloads",
-        "plugins/cl-workflow/skills/workflow/SKILL.md"
-      ]
-    },
-    {
-      "name": "GitHub CLI",
-      "url": "https://cli.github.com/",
-      "for": "issues and pull requests (optional, local branches without it)",
-      "evidence": [
-        "https://cli.github.com/",
-        "plugins/cl-workflow/skills/workflow/software.md#steps"
-      ]
-    },
-    {
-      "name": "Node.js and npm",
-      "url": "https://nodejs.org/en/download",
-      "for": "the app (Node.js 22), Dev Containers CLI and skills CLI, npm with a user prefix such as `$HOME/.local`",
-      "evidence": [
-        "app/package.json",
-        "docs/setup.md#setup-details"
-      ]
-    },
-    {
-      "name": "Docker Engine",
-      "url": "https://docs.docker.com/engine/install/",
-      "for": "dev containers (`container` and `host-agent` modes; Podman works too)",
-      "evidence": "docs/setup.md#per-repo"
-    },
-    {
-      "name": "VS Code",
-      "url": "https://code.visualstudio.com/download",
-      "for": "optional, attach to the devcontainer",
-      "evidence": [
-        "https://code.visualstudio.com/download",
-        "docs/setup.md#per-repo"
-      ]
-    },
-    {
-      "name": "Orca",
-      "url": "https://github.com/stablyai/orca",
-      "for": "optional, the runner the `orchestrating-projects` skill needs (CLI `orca`)",
-      "evidence": [
-        "https://github.com/stablyai/orca",
-        "plugins/cl-orchestration/skills/orchestrating-projects/orca.md"
-      ]
-    }
-  ],
   "parallelTools": [
     {
       "name": "Orca",
@@ -204,7 +62,7 @@
     ],
     "evidence": [
       "https://github.com/OpenHands/OpenHands",
-      "docs/setup.md#per-repo"
+      "plugins/cl-setup/skills/setting-up-projects/SKILL.md"
     ]
   },
   "overview": {
@@ -332,24 +190,13 @@
         "name": "One install",
         "text": "one machine setup covers every repository. Each repository adds only its tracker, docs and stack.",
         "evidence": [
-          "docs/setup.md#setup-details",
-          "docs/setup.md#per-repo"
+          ".claude-plugin/marketplace.json",
+          "plugins/cl-setup/skills/setting-up-projects/SKILL.md"
         ]
       }
     ]
   },
   "evidence": {
-    "description": [
-      "docs/setup.md#setup-details",
-      "docs/setup.md#per-repo"
-    ],
-    "sdlc.requirements": "plugins/cl-orchestration/skills/orchestrating-projects/SKILL.md",
-    "quickstart.needs": "app/package.json",
-    "quickstart.choose": [
-      "app/README.md#web-ui",
-      "app/README.md#commands"
-    ],
-    "quickstart.next": "docs/setup.md#update",
-    "quickstart.changes": "docs/setup.md#setup-details"
+    "sdlc.requirements": "plugins/cl-orchestration/skills/orchestrating-projects/SKILL.md"
   }
 }

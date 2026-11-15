@@ -1,7 +1,7 @@
 {
   "name": "cedarloom-workspace",
   "private": true,
-  "description": "Workspace root of the CedarLoom packages; app/ and web/ are separate npm projects.",
+  "description": "Workspace root of the CedarLoom packages; web/ is a separate npm project.",
   "type": "module",
   "engines": {
     "node": ">=26"

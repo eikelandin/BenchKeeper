@@ -1,4 +1,4 @@
-// Every claim in web/src/data/facts.json (the source of the README blocks and the site) names its evidence: a repository file,
+// Every claim in web/src/data/facts.json (the source of the docs/stack.md blocks and the site) names its evidence: a repository file,
 // a Markdown file with `#<heading>` (as GitHub anchors it, outside a generated block),
 // or a list of these. Entries about another product may add its official https pages, next to a repository file for what BenchKeeper says.
 // Usage: node .github/scripts/claims.mjs   (exit 1 and one line per claim when evidence is missing or does not resolve)

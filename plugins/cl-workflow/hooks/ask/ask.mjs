@@ -36,6 +36,7 @@ if (input === null || typeof input !== 'object' || Array.isArray(input)) {
   say(event, { additionalContext: line(now) });
 } else if (event === 'UserPromptExpansion' && ['cl-workflow:ask', 'cl-workflow:questions'].includes(input.command_name)) {
   // Only a typed command expands; a scheduled or delivered prompt with the same text does not (trial, Claude Code 2.1.316).
+  // claude -p expands one (https://code.claude.com/docs/en/headless), so role-guard.mjs refuses such a launch.
   if (!file) throw new Error(`the plugin has no data folder (CLAUDE_PLUGIN_DATA), so /${input.command_name} cannot keep its window`);
   const args = String(input.command_args ?? '');
   // Running the question queue is the user allowing terminal questions for the rest of the session.

@@ -60,7 +60,7 @@ The hub is one GitHub repository, often private, that holds the work items of th
 
 - Public repositories never mention the hub (a check refuses such a merge); the coordinator closes a hub issue after the merge, linking the pull request.
 - A question goes to the tracker if private with issues on, else to the hub; without one (a value that is no plain `owner/name` is named as rejected), to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
-- Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or name it in a command; the coordinator files through `approval.mjs file`.
+- Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name; braces and variables are not read). A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
 
 ## Role guard
 
@@ -94,3 +94,15 @@ A long-running coordinator of `/cl-orchestration:orchestrating-projects` starts 
 - A `/clear` and resume prompt that have not finished after 15 minutes are given up: the plugin says so in the transcript, submits no resume prompt, and clears again at a later idle stop.
 
 The options are those of `cl-orchestration@cedarloom` (see the top of this page). The hooks read and write only the handoff file, run `git ls-files` in its project folder (and, with `rotateAfterTasks`, `orca orchestration task-list --json`), and send nothing.
+
+## Untrusted input
+
+Issue and pull request text can carry instructions. `/cl-orchestration:orchestrating-projects` passes workers and reviewers only text by trusted authors: the repository owner, the policy's `trustedAuthors`, and members or collaborators with `admin` or `write` on the [permission endpoint](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user). A failed lookup passes nothing.
+
+| Text | How it reaches an agent | Check |
+|---|---|---|
+| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it. With `issues.repository`, access counts in that tracker | `thread.test.mjs` |
+| Unresolved review threads | `thread.mjs --pull` writes each thread a trusted author opened, with its trusted comments, and counts the rest; the reviewer's brief and the worker's follow-up carry it. Access counts in the project's repository | `thread.test.mjs` |
+| Any other comment or review | not passed: the spec and `rules/worker.md` tell workers and reviewers to read none themselves | wording only |
+
+Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.

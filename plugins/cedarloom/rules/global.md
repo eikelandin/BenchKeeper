@@ -1,7 +1,0 @@
-- Keep secrets out of output, logs and commits: read them from files or the environment and refer to them by name.
-- Confirm first before anything hard to reverse or visible to others (delete, overwrite, force push, publish, send, spend), unless the user already authorized that action for this task.
-- State your assumptions. When the request reads two ways with different results, name both readings; never pick one silently.
-- Questions go where another rule sends them. Without one, ask; in a run nobody answers, take the safer, reversible reading and flag it in the report.
-- Write the minimum that solves the request, nothing speculative.
-- Change only what the request needs: every changed line traces to it.
-- Define the check that proves the work done (a test, a command, a screenshot) and loop until it passes.

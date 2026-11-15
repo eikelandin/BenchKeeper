@@ -18,10 +18,15 @@ export const writers = (repo, exec) => {
   };
 };
 
+// The trust decision for an issue or a comment of the REST API: its author is the repository owner, a trustedAuthors login, or a member or collaborator with write access.
+export const trusts = (policy, writes) => {
+  const trusted = new Set(policy.trustedAuthors ?? []);
+  return (i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login));
+};
+
 // writes(login) is asked last, so only for an issue that is pickable otherwise. extra: labels the tracker adds, as the hub's project label.
 export function pickable(policy, issues, pulls, writes = () => false, extra = []) {
   if (!policy?.startLabel) return [];
-  const trusted = new Set(policy.trustedAuthors ?? []);
   const labels = [policy.startLabel, ...(policy.issues?.labels ?? []), ...extra];
   return issues
     .filter((i) => !i.pull_request)
@@ -29,7 +34,7 @@ export function pickable(policy, issues, pulls, writes = () => false, extra = []
     // The approvals the coordinator files carry this label: such an issue asks the owner, also after it gained the start label.
     .filter((i) => !i.labels.some((l) => l.name.toLowerCase() === 'question'))
     .filter((i) => !pulls.some((p) => p.headRefName.includes(`/${i.number}-`)))
-    .filter((i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login)))
+    .filter(trusts(policy, writes))
     .map((i) => i.number);
 }
 
