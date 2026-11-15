@@ -43,7 +43,7 @@ test('content.json: content version is the plugin version, minApp is not above t
   let pins = 0;
   for (const dir of ['skills', 'library', 'automations']) {
     for (const f of readdirSync(new URL(`${dir}/`, root), { recursive: true }).filter((x) => x.endsWith('.md'))) {
-      for (const [, pin] of readFileSync(new URL(`${dir}/${f}`, root), 'utf8').matchAll(/npx (?:-y )?@cedarloom\/app@(\S+?)[\s`)]/g)) { pins++; assert.equal(pin, '0.1', `${dir}/${f}`); }
+      for (const [, pin] of readFileSync(new URL(`${dir}/${f}`, root), 'utf8').matchAll(/npx (?:-y )?@cedarloom\/app(?:@(\S+?))?(?=[\s`)])/g)) { pins++; assert.equal(pin, '0.1', `${dir}/${f}`); }
     }
   }
   assert.ok(pins > 0, 'no npx @cedarloom/app pins under plugins/');

@@ -25,4 +25,4 @@ Run every command below with the projects as arguments: the folders of {{project
 
 1. Run `npx -y @cedarloom/app@0.1 projects update --dry-run --unattended --json` with the projects. It changes nothing.
 2. Mode report: write the report and stop. Mode act: run `npx -y @cedarloom/app@0.1 projects update --unattended --yes --json` with the projects. It commits a shared setup on a local branch and pushes nothing.
-3. Report per project: ready, skipped or stopped with the reason from the command's JSON, and the planned or made changes, with the `push` command of each committed branch for the owner to run. A project skipped for git config that runs code is listed with the command the owner runs to confirm it (`cedarloom-app projects confirm-git <folder>`): never run it yourself.
+3. Report per project: ready, skipped or stopped with the reason from the command's JSON, and the planned or made changes, with the `push` command of each committed branch for the owner to run. A project skipped for git config that runs code is listed with the command the owner runs to confirm it (`npx -y @cedarloom/app@0.1 projects confirm-git <folder>`): never run it yourself.

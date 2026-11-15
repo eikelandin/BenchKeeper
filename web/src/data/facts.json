@@ -255,7 +255,7 @@
       {
         "id": "setup",
         "title": "Project setup",
-        "text": "`projects apply` writes the repository rules block, the packs' skills and `.benchkeeper/state.json`, whose answers later runs reuse. The `setting-up-projects` skill adds stack skills, the commands in `AGENTS.md` and the dev container as a recorded session that undo can reverse. `projects update` brings every registered project to the current setup.",
+        "text": "`projects apply` writes the repository rules block, the packs' skills and `.cedarloom-app/state.json`, whose answers later runs reuse. The `setting-up-projects` skill adds stack skills, the commands in `AGENTS.md` and the dev container as a recorded session that undo can reverse. `projects update` brings every registered project to the current setup.",
         "evidence": "docs/setup.md#per-repo"
       },
       {
