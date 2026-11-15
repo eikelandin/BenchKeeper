@@ -162,8 +162,8 @@ jobs:
           CONTENT: ${{ steps.v.outputs.content }}
         run: |
           # The section of version $2: the first one, and only when its heading names that version. A new package has
-          # no changelog until its first release.
-          notes() { [ -f "$1" ] || return 0; awk -v v="[$2]" '/^## /{if (f || !index($0, v)) exit; f=1; next} f' "$1"; }
+          # no changelog until its first release, and that release has no previous tag to link: `## x.y.z (date)`.
+          notes() { [ -f "$1" ] || return 0; awk -v v="$2" '/^## /{if (f || !(index($0, "[" v "]") || $0 == "## " v || index($0, "## " v " ") == 1)) exit; f=1; next} f' "$1"; }
           release() {
             gh release view "$1" --repo "$REPO" >/dev/null 2>&1 && return
             gh release create "$1" --repo "$REPO" --target "$SHA" --title "$2" --notes "$3" --latest

@@ -71,7 +71,7 @@ The coordinator (`orchestrating-projects`) starts and merges nothing in a projec
 - `closeIssue`: `true`, the coordinator closes an issue after its pull request merged; `false` leaves that to the user.
 - `trustedAuthors`: none, or the review bots the user names whose comments workers may follow.
 
-Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `orchestration:orchestrating-projects` (the orchestration plugin) lists each field and its default.
+Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `orchestration:orchestrating-projects` (the orchestration plugin, when installed) lists each field and its default.
 
 ## 6. Other configuration (ask)
 

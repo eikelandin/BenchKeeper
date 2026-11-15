@@ -147,12 +147,12 @@ test('release.yml tags every plugin component at its version and creates one Rel
   try {
     const packages = { app: { component: 'app' }, 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/workflow': { component: 'cedarloom-workflow' }, 'plugins/setup': { component: 'cedarloom-setup' }, 'plugins/orchestration': { component: 'cedarloom-orchestration' } };
     writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
-    // setup stays at its last release; orchestration has no changelog yet.
+    // setup stays at its last release; orchestration has no changelog yet; workflow's first release has no compare link.
     const manifest = { app: '6.27.0', 'plugins/cedarloom': '6.28.0', 'plugins/workflow': '6.28.0', 'plugins/setup': '6.27.0', 'plugins/orchestration': '6.28.0' };
     writeFileSync(join(dir, '.release-please-manifest.json'), JSON.stringify(manifest));
     const changelogs = {
       cedarloom: '# Changelog\n\n## [6.28.0](x) (2026-11-20)\n\n### Features\n\n* rules\n\n## [6.27.0](x)\n\n* old\n',
-      workflow: '# Changelog\n\n## [6.28.0](x) (2026-11-20)\n\n### Bug Fixes\n\n* review\n',
+      workflow: '# Changelog\n\n## 6.28.0 (2026-11-20)\n\n### Bug Fixes\n\n* review\n',
       setup: '# Changelog\n\n## [6.27.0](x)\n\n* older\n',
     };
     for (const [name, text] of Object.entries(changelogs)) {
