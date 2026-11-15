@@ -4,7 +4,7 @@
   "levels": [
     {
       "name": "Lite",
-      "contains": "the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app` and `reviewing-rules` skills",
+      "contains": "the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app`, `reviewing-rules`, `audit`, `improve` and `debloat` skills",
       "writes": "nothing outside the plugin install, besides the app's run record for undo",
       "command": "npx @cedarloom/app@6.27.0 apply --level lite",
       "evidence": "app/test/level.test.mjs"
