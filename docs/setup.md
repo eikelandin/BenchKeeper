@@ -312,6 +312,23 @@ By default a Claude Code session with the BenchKeeper plugin on never uses the q
 - `benchkeeper doctor` warns when `disableAllHooks` turns the hooks off.
 - Codex runs none of these hooks, so there `/benchkeeper:ask` changes nothing.
 
+## Role guard
+
+Only the coordinator merges, releases and changes shared repository state. In every other Claude Code session with the plugin on, the plugin's `PreToolUse` hook for Bash denies:
+
+- merging (`gh pr merge`, the merge endpoints and mutations of `gh api`) and releases (`gh release` except `list`, `view`, `download` and `verify`)
+- tag pushes (`git push --tags`, `--follow-tags`, `--mirror`, `tag <name>`, a `refs/tags/` or version refspec)
+- repository settings and security: `gh repo edit`, `rename`, `archive`, `delete` and `deploy-key`, `gh secret` and `gh variable` writes, `gh workflow enable` and `disable`, and `gh api` calls other than GET to settings, rulesets, branch protection, secrets and security alerts
+- `gh auth`, gh's own config, aliases and keys
+- `git config` except its `--get` and `--list` forms, `git -c`, and `git stash`
+
+Start the coordinator's session with `CEDARLOOM_ROLE=coordinator` in its environment, for example `CEDARLOOM_ROLE=coordinator claude`, and nowhere else: a variable in your shell profile or in the `env` of user settings reaches every session, workers included. A session without it, or with another value, is guarded, and so is a session started from a guarded one.
+
+- The hook reads the words of the command, quoted ones included, so `bash -c "gh pr merge 1"` is denied, and so is a commit message or comment text that names such a command: put that text in a file (`-F`, `--body-file`).
+- It stops a model that forgets its role, not one that works around it (a variable as the command, a git alias, a script, a tool other than Bash). The boundary is a GitHub token without those rights and rulesets on the default branch and release tags, which you set up yourself.
+- The hook needs `node` on the PATH; when it cannot start, every Bash call is refused ([`onFailure: "block"`](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails)). Whether it runs in `bypassPermissions` mode is unverified.
+- Codex runs no such hook.
+
 ## Coordinator context rotation
 
 A long-running coordinator of `/benchkeeper:orchestrating-projects` starts over with a fresh context when it is idle, instead of growing until auto-compaction garbles its state. It applies only to a coordinator in an Orca terminal: its project folder (where the agent started; a shell `cd` does not move it) holds the handoff file `.benchkeeper/runs/handoff.md`, which the skill writes when a run starts and deletes when it closes, and the file names that terminal (`Terminal: <ORCA_TERMINAL_HANDLE>`). The hooks act only in the session whose `ORCA_TERMINAL_HANDLE` matches, not in another session started in the same folder, and, in Claude Code, only in a session that draws on a surface: a `claude -p` child started from the coordinator's shell inherits the variable but never counts as the coordinator. The Codex hook cannot tell a `codex exec` child apart, so such a child gets the file when it compacts. Without the file or that line they do nothing, and they refuse a file that is a symbolic link or sits behind one, and a folder that is no readable git repository or where git tracks anything under `.benchkeeper/runs`, so a repository cannot plant the file. The coordinator's folder must therefore be a git repository.
