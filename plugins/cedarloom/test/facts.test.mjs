@@ -48,19 +48,19 @@ Medians per pull request: cost 3.75 USD, fix rounds 1.
   assert.throws(() => costs({ run: RUN, repos: ['octo/other'], since: '2026-11-12', until: '2026-11-13', exec: fake(COMMANDS) }), /unread/);
 });
 
-test('facts write: a gh that cannot start still writes facts.md, exit 0; a run folder that is a link or outside .cedarloom-app/runs is refused', () => {
+test('facts write: a gh that cannot start still writes facts.md, exit 0; a run folder that is a link or outside .cedarloom/runs is refused', () => {
   const home = mkdtempSync(join(tmpdir(), 'facts-'));
-  const runs = join(home, '.cedarloom-app', 'runs');
+  const runs = join(home, '.cedarloom', 'runs');
   mkdirSync(join(runs, 'real'), { recursive: true });
   symlinkSync(join(runs, 'real'), join(runs, 'link'), 'dir');
   mkdirSync(join(home, 'outside'));
   const empty = mkdtempSync(join(tmpdir(), 'no-gh-'));
   const run = (folder) => spawnSync(process.execPath, [SCRIPT, 'write', '--run', folder, '--repo', 'octo/app'], { cwd: home, encoding: 'utf8', env: { ...process.env, PATH: empty } });
 
-  const ok = run('.cedarloom-app/runs/real');
+  const ok = run('.cedarloom/runs/real');
   assert.equal(ok.status, 0, ok.stderr);
   assert.ok(readFileSync(join(runs, 'real', 'facts.md'), 'utf8').includes('### octo/app\n\nunread\n'));
-  for (const folder of ['.cedarloom-app/runs/link', '.cedarloom-app/runs/link/', 'outside', '.cedarloom-app/runs/../../outside']) {
+  for (const folder of ['.cedarloom/runs/link', '.cedarloom/runs/link/', 'outside', '.cedarloom/runs/../../outside']) {
     const refused = run(folder);
     assert.equal(refused.status, 2, folder);
     assert.match(refused.stderr, /^refused: /, folder);

@@ -15,8 +15,8 @@ const cli = fileURLToPath(new URL('../bin/benchkeeper.mjs', import.meta.url));
 // knowledge show on it and a fake gh that logs its arguments and prints the number of merged pull requests.
 function precheck(values, knowledge, merged = 0) {
   const bin = mkdtempSync(join(tmpdir(), 'bk-ms-bin-')), dir = join(bin, 'project');
-  mkdirSync(join(dir, '.cedarloom-app/knowledge'), { recursive: true });
-  for (const [name, entries] of Object.entries(knowledge ?? {})) writeFileSync(join(dir, '.cedarloom-app/knowledge', name), JSON.stringify({ entries }));
+  mkdirSync(join(dir, '.cedarloom/knowledge'), { recursive: true });
+  for (const [name, entries] of Object.entries(knowledge ?? {})) writeFileSync(join(dir, '.cedarloom/knowledge', name), JSON.stringify({ entries }));
   writeFileSync(join(bin, 'npx'), `#!/bin/sh\necho "$@" >> '${bin}/log'\nshift 2\nexec '${process.execPath}' '${cli}' "$@" '${dir}'\n`, { mode: 0o755 });
   writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> '${bin}/log'\necho ${merged}\n`, { mode: 0o755 });
   const env = { ...process.env, PATH: `${bin}:${process.env.PATH}`, CEDARLOOM_APP_HOME: join(bin, 'home') };
