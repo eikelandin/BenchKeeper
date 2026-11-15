@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
@@ -19,8 +19,8 @@ let feature;
 let fresh;
 let develop;
 let fork;
-const repo = (branch) => {
-  const dir = mkdtempSync(join(tmpdir(), 'role-guard-'));
+const repo = (branch, dir = mkdtempSync(join(tmpdir(), 'role-guard-'))) => {
+  mkdirSync(dir, { recursive: true });
   const git = (...args) => execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', '-c', 'tag.gpgsign=false', ...args], { env: ENV });
   git('init', '-q', '-b', branch);
   git('commit', '-q', '--allow-empty', '-m', 'x');
@@ -140,6 +140,8 @@ const DENIED = [
   "$'g\\U80000000h' pr merge 12",
   '$"gh" pr merge 12',
   'gh pr $"merge" 12',
+  "bash -c $'\\$\"gh\" pr merge 12'",
+  "bash -c $'gh pr \\$\"merge\" 12'",
   "gh pr $'merge\\0'x 12",
   "git push origin $'main\\0'-x",
   "bash -c $'echo \\c\\\\;\\x67h pr merge 12'",
@@ -208,6 +210,33 @@ test('role guard: known passes, a push of the current branch after a switch to t
 test('role guard: follows a cd to the folder git runs in', () => {
   for (const command of [`cd ${trunk} && git push`, `cd ${trunk} && git push origin release-candidate`]) assert.equal(decision(command, { cwd: feature }), 'deny', command);
   assert.equal(decision(`cd ${feature} && git push`), 'none');
+});
+
+test('role guard: reads a folder name as each shell does, each reading from the session folder', () => {
+  // The default branch of the remote is trunk in the session folder and in its folder work, release in its other folders.
+  const session = withRemoteHead(repo('feat/x')).dir;
+  withRemoteHead(repo('feat/x', join(session, 'work')));
+  for (const name of ['$work', 'café', 'x��']) {
+    const r = repo('feat/x', join(session, name));
+    r.git('update-ref', 'refs/remotes/origin/release', 'HEAD');
+    r.git('symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/release');
+  }
+  try {
+    const denied = [
+      // bash changes to work, zsh to $work.
+      'cd $"work" && git push origin release',
+      `bash -c 'cd $"work" && git push origin release'`,
+      // The two bytes of é, in octal and in hex.
+      "git -C $'caf\\303\\251' push origin release",
+      "cd $'caf\\xc3\\xa9' && git push origin release",
+      // Lone surrogates, which reach the shell as U+FFFD each.
+      'git -C x\udcc3\udca8 push origin release',
+    ];
+    for (const command of denied) assert.equal(decision(command, { cwd: session }), 'deny', command);
+    assert.equal(decision('cd work && git push origin release', { cwd: session }), 'none');
+  } finally {
+    rmSync(session, { recursive: true, force: true });
+  }
 });
 
 test('role guard: a push names its branch unless its folder is the session folder or one leading cd to an existing folder', () => {
@@ -318,6 +347,15 @@ test('role guard: input it cannot read exits 2, which blocks the call', () => {
     assert.equal(r.status, 2, input);
     assert.equal(r.stdout, '', input);
   }
+});
+
+test('role guard: quoted text nested deeper than it reads exits 2, which blocks the call', () => {
+  // Each level holds words bash and zsh read differently, so each level doubles the readings.
+  let command = 'git push origin feat/x';
+  for (let depth = 0; depth < 14; depth++) command = `echo $'\\m' $"x" && bash -c $'${command.replace(/[\\']/g, '\\$&')}'`;
+  const r = run(JSON.stringify({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command }, cwd: trunk }));
+  assert.equal(r.status, 2);
+  assert.equal(r.stdout, '');
 });
 
 // root reads a folder without permissions, so the lookup does not throw.

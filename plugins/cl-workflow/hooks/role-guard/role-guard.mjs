@@ -37,22 +37,34 @@ const CHANGE_DIR = new Set(['cd', 'pushd', 'popd', 'chdir', 'set-location', 'sl'
 const UNREAD_BRANCH = 'a push without a branch name from a folder the guard cannot read (name it: git push <remote> <branch>)';
 const GIT_DIR_PUSH = 'a push from the repository GIT_DIR or --git-dir names, which the guard does not read (push from its folder: git -C <dir> push <remote> <branch>)';
 const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot read (push to a remote by name whose refs/remotes/<remote>/HEAD is set: git remote set-head <remote> --auto)';
+// The characters the guard reads and the commands it checks at most: quoted text nested so deep that its readings multiply
+// past them is refused instead of read.
+const budget = { read: 1 << 26, checked: 100_000 };
+const spend = (kind, amount) => {
+  if ((budget[kind] -= amount) < 0) throw new Error('quoted text nested deeper than the guard reads');
+};
 
 // Inside double quotes bash drops a backslash only before these (https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html).
 const BASH_QUOTED_ESCAPES = '$`"\\';
 // Bash's ANSI-C quoting $'...' (https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html).
 const ANSI_C = /\$'((?:[^'\\]|\\[\s\S])*)'?/y;
 // bash 5.2 reads \c\\ as one escape.
-const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x\{([\da-fA-F]*)\}?|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c(\\\\|[\s\S]))/g;
+const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x\{([\da-fA-F]*)\}?|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c(\\\\|[\s\S]))/gu;
 // zsh's $'...': an unknown escape and \c drop the backslash, \x, \u and \U without digits are NUL, there is no \x{...},
 // and \x reads the two characters after it as a number, so it skips blanks and takes a sign. \C, \C-, \M and \M- make
 // a control or meta character of the next character or escape other than \u and \U, and of nothing at the end of the text.
-const ZSH_ANSI_C_ESCAPE = /\\(?:([CM])-?|([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\s\S]{0,2})|u([\da-fA-F]{0,4})|U([\da-fA-F]{0,8})|([\s\S]))|([\s\S])/g;
+const ZSH_ANSI_C_ESCAPE = /\\(?:([CM])-?|([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\s\S]{0,2})|u([\da-fA-F]{0,4})|U([\da-fA-F]{0,8})|([\s\S]))|([\s\S])/gu;
 const ZSH_HEX = /^[ \t]*([-+]?)([\da-fA-F]*)/;
 const ANSI_C_CHARS = { a: '\x07', b: '\b', e: '\x1b', E: '\x1b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
-// U+FFFD stands for text that is no ASCII: a \U value above U+10FFFF, which bash 5.2 and zsh write as bytes of no character,
-// and a zsh meta character.
+// U+FFFD stands for text that is no ASCII: a \U value above U+10FFFF, which bash 5.2 and zsh write as bytes of no character.
 const NOT_ASCII = String.fromCharCode(0xfffd);
+// The shells write an octal or hex escape and a zsh control or meta character as bytes. A byte from 0x80 stays a lone
+// surrogate (U+DC80 to U+DCFF) until its word ends, where each run of them is read as UTF-8, as the file system and the
+// programs read it: \303\251 is é.
+const byte = (code) => String.fromCharCode(code < 0x80 ? code : 0xdc00 + code);
+const isByte = (code) => code >= 0xdc80 && code <= 0xdcff;
+const UTF8 = new TextDecoder('utf-8', { ignoreBOM: true });
+const utf8 = (word) => word.replace(/[\udc80-\udcff]+/gu, (run) => UTF8.decode(Uint8Array.from(run, (char) => char.charCodeAt(0) & 0xff)));
 // bash 5.2 drops a \U value above 0x7FFFFFFF.
 const codePoint = (code, zsh) => (code <= 0x10ffff ? String.fromCodePoint(code) : code > 0x7fffffff && !zsh ? '' : NOT_ASCII);
 // The text of $'...' with its escapes decoded as zsh 5.9 reads them.
@@ -65,14 +77,18 @@ function zshAnsiC(body) {
     // zsh writes a \u or \U character without applying a prefix, which then waits for the next one.
     else if (u !== undefined || U !== undefined) out += codePoint(parseInt(u || U || '0', 16), true);
     else {
-      let text = char ? (ANSI_C_CHARS[char] ?? char) : octal ? String.fromCharCode(parseInt(octal, 8) & 0xff) : (unknown ?? plain);
+      let text = char ? (ANSI_C_CHARS[char] ?? char) : octal ? byte(parseInt(octal, 8) & 0xff) : (unknown ?? plain);
       if (hex !== undefined) {
         const [read, sign, digits] = ZSH_HEX.exec(hex);
         ZSH_ANSI_C_ESCAPE.lastIndex = m.index + 2 + read.length;
-        text = String.fromCharCode((sign === '-' ? -1 : 1) * parseInt(digits || '0', 16) & 0xff);
+        text = byte((sign === '-' ? -1 : 1) * parseInt(digits || '0', 16) & 0xff);
       }
-      const code = text.charCodeAt(0);
-      out += !control && !meta ? text : meta || code > 0x7f ? NOT_ASCII : String.fromCharCode(code === 0x3f ? 0x7f : code & 0x9f);
+      if (!control && !meta) out += text;
+      else {
+        // A prefix changes the first byte of the character: \C- clears two of its bits (\C-? is DEL), then \M- sets its high bit.
+        const [first, ...rest] = isByte(text.charCodeAt(0)) ? [text.charCodeAt(0) & 0xff] : Buffer.from(text);
+        out += [(control ? (first === 0x3f ? 0x7f : first & 0x9f) : first) | (meta ? 0x80 : 0), ...rest].map(byte).join('');
+      }
       control = meta = false;
     }
   }
@@ -85,10 +101,14 @@ const ansiC = (body, zsh) =>
     ? zshAnsiC(body)
     : body.replace(ANSI_C_ESCAPE, (_, char, octal, braced, hex, u, U, control) => {
         if (char) return ANSI_C_CHARS[char] ?? char;
-        if (octal) return String.fromCharCode(parseInt(octal, 8) & 0xff);
-        if (braced !== undefined) return String.fromCharCode(parseInt(braced.slice(-2) || '0', 16));
-        if (control) return String.fromCharCode(control === '?' ? 0x7f : control.charCodeAt(0) & 0x1f);
-        return codePoint(parseInt(hex ?? u ?? U, 16), false);
+        if (octal) return byte(parseInt(octal, 8) & 0xff);
+        if (braced !== undefined) return byte(parseInt(braced.slice(-2) || '0', 16));
+        if (control) {
+          // \c keeps five bits of the first byte of the character (\c? is DEL).
+          const [first, ...rest] = Buffer.from(control === '\\\\' ? '\\' : control);
+          return [control === '?' ? 0x7f : first & 0x1f, ...rest].map(byte).join('');
+        }
+        return hex ? byte(parseInt(hex, 16)) : codePoint(parseInt(u ?? U, 16), false);
       });
 
 // The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
@@ -100,20 +120,27 @@ const ansiC = (body, zsh) =>
 // (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_special_characters).
 // reading: 'bash' or 'zsh' reads $'...', $"..." and $$ as that shell does (zsh keeps the $ of $"..."), 'plain' reads $ as
 // a plain character, as a shell without these quotes does.
-function commands(source, powershell, nested = false, reading = 'bash') {
-  /** @type {{ words: string[], nested: boolean }[]} */
+// Text read again stands in the list as { text, readings }: another shell may run it (zsh passes it to bash -c), so it is
+// read as each shell does, whatever shell reads the text around it.
+function commands(source, powershell, nested, reading) {
+  /** @type {({ words: string[], nested: boolean } | { text: string, readings: object[][] })[]} */
   const out = [];
+  spend('read', source.length);
   const zsh = reading === 'zsh';
   const dollar = !powershell && reading !== 'plain';
   const escape = powershell ? '`' : '\\';
   const s = source.replace(powershell ? /`\r?\n/g : /\\\r?\n/g, '');
   let words = [], word = '', started = false, quoted = false, quote = null, redirect = false, depth = 0, backticks = false;
+  const again = (text) => {
+    if (!AGAIN.has(text)) AGAIN.set(text, readings(text, powershell, true));
+    out.push({ text, readings: AGAIN.get(text) });
+  };
   const endWord = () => {
     if (started) {
       if (redirect) redirect = false;
       // A program gets a zsh word up to its first NUL.
-      else words.push(zsh ? word.split('\0')[0] : word);
-      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell, true, reading));
+      else words.push(utf8(zsh ? word.split('\0')[0] : word));
+      if (quoted && /[\s;&|()`<>]/.test(word)) again(word);
     }
     word = '';
     started = quoted = false;
@@ -143,8 +170,8 @@ function commands(source, powershell, nested = false, reading = 'bash') {
       word += zsh ? decoded : text;
       // In a comment or here-document $' is no quote, so the text as written is read as well; bash drops the text after a NUL,
       // zsh keeps it.
-      if (/[\s;&|()`<>]/.test(body)) out.push(...commands(body, powershell, true, reading));
-      if (rest.length) out.push(...commands(rest.join('\n'), powershell, true, reading));
+      if (/[\s;&|()`<>]/.test(body)) again(body);
+      if (rest.length) again(rest.join('\n'));
       i += whole.length - 1;
       started = quoted = true;
     } else if (dollar && !zsh && c === '$' && s[i + 1] === '"') {
@@ -182,11 +209,31 @@ function commands(source, powershell, nested = false, reading = 'bash') {
   return out;
 }
 
+// The readings of each text read again, so that a text is read once however many readings hold it.
+const AGAIN = new Map();
+// The command lists a text gives as bash, as zsh and with $ as a plain character, each distinct list once: the hook cannot
+// tell which shell runs the text. Only the bash reading of the command itself has commands that are not nested.
+function readings(source, powershell, nested) {
+  const lists = new Map();
+  for (const [extra, reading] of (powershell ? ['plain'] : ['bash', 'zsh', 'plain']).entries()) {
+    const list = commands(source, powershell, nested || extra > 0, reading);
+    const key = JSON.stringify(list.map((item) => item.words ?? item.text));
+    if (!lists.has(key)) lists.set(key, list);
+  }
+  return [...lists.values()];
+}
+
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
 
 const GIT = gitProgram();
 // Without git every query fails: no tag, no branch and no remote's default branch is known, so every push is denied.
-const gitIn = (dir, args) => (GIT ? spawnSync(GIT, ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }) : { status: 1 });
+// The readings of a command ask the same questions, so each is asked once.
+const answers = new Map();
+const gitIn = (dir, args) => {
+  const key = JSON.stringify([dir, args]);
+  if (!answers.has(key)) answers.set(key, GIT ? spawnSync(GIT, ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }) : { status: 1 });
+  return answers.get(key);
+};
 const hasRef = (dir, ref) => gitIn(dir, ['show-ref', '--verify', '--quiet', ref]).status === 0;
 const gitLine = (dir, args) => {
   const r = gitIn(dir, args);
@@ -355,47 +402,62 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   if (tool === 'Monitor' && cmd === undefined && toolInput?.ws) return null;
   if (typeof cmd !== 'string') return 'a command the guard cannot read';
   const powershell = tool === 'PowerShell';
-  const parsed = commands(cmd, powershell);
-  // The hook cannot tell which shell runs the command: where zsh or the plain reading gives other words, it checks those too,
-  // as nested commands.
-  if (!powershell) {
-    const readings = new Set([JSON.stringify(parsed.map((c) => c.words))]);
-    for (const reading of ['zsh', 'plain']) {
-      const other = commands(cmd, false, true, reading);
-      const key = JSON.stringify(other.map((c) => c.words));
-      if (!readings.has(key)) parsed.push(...other);
-      readings.add(key);
-    }
-  }
-  const source = [cmd, ...parsed.flatMap((c) => c.words)].join('\n');
+  // A lone surrogate reaches the shell as U+FFFD; in the guard it stands for a byte of an escape.
+  const lists = readings(cmd.replace(/[\ud800-\udfff]/gu, NOT_ASCII), powershell, false);
+  const words = [lists, ...AGAIN.values()].flat(2).flatMap((item) => item.words ?? []);
+  const source = [cmd, ...words].join('\n');
   // A guarded session must not start another one as the coordinator; Windows reads the name in any case.
   if (source.replace(/["'\\`]/g, '').toUpperCase().includes(ROLE)) return `a command that names ${ROLE}`;
   const changesDir = (w) => CHANGE_DIR.has(powershell ? w.toLowerCase() : w);
-  // The folder git runs in is known in the session's folder and after a cd to an existing folder that the command starts with.
-  // Any other folder change (later, conditional, nested, undone, unresolved, or in a comment or a here-document) may or may
-  // not hold where git runs: from then on git is read in every folder seen, and a push has to name its branch.
-  let dir = cwd, known = true, first = changesDir(/\S*/.exec(cmd.trimStart())[0]);
-  const seen = [cwd];
+  const leadingCd = changesDir(/\S*/.exec(cmd.trimStart())[0]);
   // Before the command, through env or export in bash, or $env:GIT_DIR in PowerShell.
   const gitDir = /\bGIT_DIR\s*=/i.test(source);
-  for (const { words, nested } of parsed) {
-    const at = words.findIndex(changesDir);
+  // Each reading is checked on its own from the session's folder: a folder one reading moves to is no folder of another.
+  for (const list of lists) {
+    // The folder git runs in is known in the session's folder and after a cd to an existing folder that the command starts with.
+    // Any other folder change (later, conditional, nested, undone, unresolved, or in a comment or a here-document) may or may
+    // not hold where git runs: from then on git is read in every folder seen, and a push has to name its branch.
+    // dirs: the folders a cd starts from, one while the folder is known.
+    const state = { dirs: [cwd], known: true, first: leadingCd, seen: new Set([cwd]) };
+    const why = denied(list, state, { changesDir, gitDir, source });
+    if (why) return why;
+  }
+  return null;
+}
+
+// The first step of a command list that is denied, or null.
+function denied(list, state, command) {
+  for (const { words, nested, readings: again } of list) {
+    spend('checked', 1);
+    if (again) {
+      // Each reading of the text starts in the folders the text is read in, and the commands after it start where any
+      // of the readings ends.
+      const from = state.dirs;
+      const ends = new Set();
+      for (const reading of again) {
+        state.dirs = from;
+        const why = denied(reading, state, command);
+        if (why) return why;
+        for (const dir of state.dirs) ends.add(dir);
+      }
+      state.dirs = [...ends];
+      continue;
+    }
+    const at = words.findIndex(command.changesDir);
     if (at >= 0) {
       // popd and Pop-Location name no folder.
-      const to = /^pop/i.test(words[at]) ? null : folder(dir, words.slice(at + 1));
-      if (!to || nested || !first) known = false;
-      if (to) {
-        dir = to;
-        seen.push(to);
-      }
+      const to = /^pop/i.test(words[at]) ? [null] : state.dirs.map((dir) => folder(dir, words.slice(at + 1)));
+      if (to.includes(null) || nested || !state.first) state.known = false;
+      state.dirs = [...new Set(state.dirs.map((dir, k) => to[k] ?? dir))];
+      for (const dir of to) if (dir) state.seen.add(dir);
     }
-    if (!nested) first = false;
+    if (!nested) state.first = false;
     for (let j = 0; j < words.length; j++) {
       const name = program(words[j]);
       const rest = words.slice(j + 1);
       const why =
-        name === 'git' ? (known ? [dir] : seen).reduce((found, d) => found ?? git(rest, d, known, gitDir), null)
-        : name === 'gh' ? gh(rest, source)
+        name === 'git' ? [...(state.known ? state.dirs : state.seen)].reduce((found, d) => found ?? git(rest, d, state.known, command.gitDir), null)
+        : name === 'gh' ? gh(rest, command.source)
         : name === 'claude' && rest.includes(BARE) ? 'a launch in bare mode, which runs no hooks'
         : null;
       if (why) return why;
