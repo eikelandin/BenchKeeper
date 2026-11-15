@@ -4,7 +4,7 @@
 
 A coordinator run needs rules for models, reviews, merges, owner-only changes, batches and worker conduct. This note gives each rule one home (a policy field, skill text, the worker rule file or an agent default), so that a project gets the same run by installing the plugin and committing its policy, its worker rules and its Claude Code settings.
 
-This is the design. The State column says what exists and which change adds the rest ([Changes](#changes)); each change updates that column and the line references it moves. The rules come from a coordinator run over several repositories from 2026-11-04 to 2026-11-11, called "the source run" below. File names are relative to the plugin folder that holds them: `plugins/cl-workflow/` for `skills/workflow/` and `agents/`, `plugins/cl-orchestration/` for `skills/orchestrating-projects/` and `rules/worker.md`, `plugins/cl-setup/` for `rules/project.md`; except those that start with `app/`, `packages/` or `docs/` and `release-please-config.json`, which are from the repository root; `SKILL.md` without a folder is `skills/orchestrating-projects/SKILL.md`, and `spec-template.md`, `orca.md`, `review-and-merge.md` and `approvals.md` are in the same folder.
+This is the design. The State column says what exists and which change adds the rest ([Changes](#changes)); each change updates that column and the line references it moves. The rules come from a coordinator run over several repositories from 2026-11-04 to 2026-11-11, called "the source run" below. File names are relative to the plugin folder that holds them: `plugins/cl-workflow/` for `skills/workflow/` and `agents/`, `plugins/cl-orchestration/` for `skills/orchestrating-projects/` and `rules/worker.md`, `plugins/cl-setup/` for `rules/project.md`; except those that start with `app/`, `packages/` or `docs/` and `release-please-config.json`, which are from the repository root (those that start with `app/`, and `docs/setup.md` and `docs/security.md`, are on the branch `archive/pre-cedarloom-0.1`); `SKILL.md` without a folder is `skills/orchestrating-projects/SKILL.md`, and `spec-template.md`, `orca.md`, `review-and-merge.md` and `approvals.md` are in the same folder.
 
 ## What a project commits
 
@@ -193,7 +193,7 @@ All sessions of a run may share one GitHub login, so each role's limit holds by 
 
 These make the limits technical. Each is a setting of your accounts that the plugin documents and never performs:
 
-- Give agent sessions a GitHub credential without administration or workflow permission, such as a fine-grained token or a machine account ([setup guide](setup.md#agent-sessions-as-your-github-machine-account)), and keep owner actions in the browser behind two-factor authentication.
+- Give agent sessions a GitHub credential without administration or workflow permission, such as a fine-grained token or a machine account, and keep owner actions in the browser behind two-factor authentication.
 - Put the default branch and the release tags under a ruleset with an empty bypass list ([rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets)).
 - Give headless jobs that run on an API key a key of their own with a spend limit in the Claude Console.
 - Create the label `follow-up` in the tracker, so workers can file follow-up issues.
@@ -205,7 +205,7 @@ These rules of the source run are a project's, a machine's or a runner's own:
 - A project's `AGENTS.md` and docs hold where issues, follow-up issues and doc changes go, how issues are written, what text may land in a public repository, spelling, which checks the project leaves out and how slow its CI runner is.
 - A machine's session settings hold auto memory, the advisor, the account switching and what its emulator can run.
 - The runner's guide holds how a message reaches a worker that is in the middle of a turn, and how a task is started.
-- The local setup of a new worktree is project setup's job already ([setup guide](setup.md#per-repo)).
+- The local setup of a new worktree is project setup's job already.
 - A branch stacked on another pull request's head, and a push to a Dependabot branch, have no rule: the loop starts every branch from the default branch for an issue.
 
 ## Reconciliations

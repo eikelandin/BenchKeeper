@@ -9,7 +9,7 @@ An automation template describes one scheduled agent run in a single Markdown fi
 | Tier | Folder | Holds |
 |---|---|---|
 | generic | `automations/` in the BenchKeeper content (`plugins/cedarloom/automations/` in a clone) | templates for every project: no project names, no private paths, no private tool names |
-| user | `automations/` in the BenchKeeper config folder ([Configuration](../app/README.md#configuration)) | your own variants, never committed |
+| user | `automations/` in the BenchKeeper config folder | your own variants, never committed |
 
 A template is `<id>.md`. Helper files sit in a folder `<id>/` beside it. The `id` equals the file name without `.md` and is unique across both tiers.
 
@@ -40,7 +40,7 @@ Unknown keys are an error.
 
 ## Lint
 
-Each rule has a failing and a passing fixture in `app/test/automations.test.mjs`.
+Each rule has a failing and a passing fixture in `app/test/automations.test.mjs` on the branch `archive/pre-cedarloom-0.1`.
 
 | Rule | Requires |
 |---|---|
@@ -144,7 +144,7 @@ Limits:
 
 ## Catalogue
 
-The generic templates, ranked by what the projects need. Every row is shipped as a template file; its issue holds the details, and the section of the template below the table says what it does. Each template in `plugins/cedarloom/automations/` has a row that names its id (checked by `app/test/automations.test.mjs`).
+The generic templates, ranked by what the projects need. Every row is shipped as a template file; its issue holds the details, and the section of the template below the table says what it does. Each template in `plugins/cedarloom/automations/` has a row that names its id.
 
 | Template | Schedule | Precheck reads | May change | Status |
 |---|---|---|---|---|

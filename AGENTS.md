@@ -2,17 +2,12 @@
 
 ## Commands
 
-Every command runs in the dev container: start it with `devcontainer up --docker-path podman --workspace-folder .`, then run `devcontainer exec --docker-path podman --workspace-folder . <command>`, compound commands as `... sh -lc '<commands>'`. `devcontainer exec` starts in the repository root and has no working-folder option: run the commands of `app/` and `web/` as `... sh -lc 'cd app && <commands>'`. Git (fetch, commit, push) runs on the host: the container mounts the git metadata read-only.
+Every command runs in the dev container: start it with `devcontainer up --docker-path podman --workspace-folder .`, then run `devcontainer exec --docker-path podman --workspace-folder . <command>`, compound commands as `... sh -lc '<commands>'`. `devcontainer exec` starts in the repository root and has no working-folder option: run the commands of `web/` as `... sh -lc 'cd web && <commands>'`. Git (fetch, commit, push) runs on the host: the container mounts the git metadata read-only.
 
 CedarLoom (the pnpm workspace in `packages/`, from the repository root; details in [packages/README.md](packages/README.md)):
 - Install: `pnpm install --frozen-lockfile`
 - Types, lint, format, unused code, duplicates: `pnpm run typecheck`, `pnpm run lint`, `pnpm run format` (`pnpm run format:check` only reports), `pnpm run knip`, `pnpm run jscpd`
 - Tests: `pnpm test` (every package, then `scripts/*.test.ts`); one package: `pnpm --filter @cedarloom/<package> run test`; the UI in browsers: `pnpm --filter @cedarloom/ui run test:ui`
-
-The legacy BenchKeeper app (in `app/`):
-- Install: `npm ci --ignore-scripts`
-- Checks and tests: `npm run check:imports`, `npm run check:baselines`, `npm test`, `npm run test:coverage` (prints the coverage), `npm run smoke`; the UI in a browser: `npm run build && npm run test:ui`
-- In the dev container 3 app tests fail because of the container ([development](docs/development.md#app-quality-gates)); any other failure is real.
 
 The site (in `web/`): `npm ci`, `npm run build`, `npm test`.
 
@@ -20,7 +15,6 @@ The plugins (in `plugins/*/`, Node.js alone, no install), in `sh -lc`: `for dir 
 
 The changed-files check, for each area the change touches:
 - `packages/`: `git fetch origin main` on the host, then `pnpm --filter "...[origin/main]" --filter "!{.}" run typecheck && pnpm run lint && pnpm run format:check && pnpm run knip && pnpm run jscpd && pnpm --filter "...[origin/main]" --filter "!{.}" run test`. A change to the root configuration or `scripts/` runs `pnpm run typecheck` and `pnpm test` in full, as CI does. A change to `packages/ui` also runs `pnpm --filter @cedarloom/ui run catalog` (then `git diff --exit-code -- packages/ui/locales packages/ui/schema` on the host) and `pnpm --filter @cedarloom/ui run test:ui`.
-- `app/`: `npm run check:imports && npm run check:baselines && npm test`
 - `web/`: `npm run build && npm test`
 - `plugins/`: the plugin tests above.
 - `plugins/` and `.github/`: the scripts of the `checks-core` job in [checks.yml](.github/workflows/checks.yml) that cover the changed files.
@@ -47,17 +41,16 @@ The changed-files check, for each area the change touches:
 
 - Do not add tests by default. Add one only when it fails if your change is reverted, hardcodes its expected values (never computed by production code, locale files or mocks), and runs at the single layer that owns the behavior.
 - Never test copy or translations, CSS classes, constants, third-party libraries, private state, timing or call counts. When you touch such a test, delete it instead of updating it.
-- There are no coverage thresholds. The legacy app's weekly Stryker runs ([mutation.yml](.github/workflows/mutation.yml)) and their floors stay: they measure test strength, not amount.
+- There are no coverage thresholds.
 
 ## Every change considers
 
 - CedarLoom: macOS, Linux and Windows (its test job runs on all three); the CLI (`packages/cli`), the server (`packages/server`) and the UI (`packages/ui`).
-- The legacy app: Linux and macOS, Node.js 22 or newer; Windows untested ([app README](app/README.md)). CI runs no app job: its checks run in the dev container.
 - Footguns, read before changing that area: [git and child processes](docs/agents/git-and-processes.md).
 
 ## Pointers
 
 - [docs/agents/](docs/agents/): [domain docs](docs/agents/domain.md), the [issue policy](docs/agents/issue-tracker.md) (this repository takes no issues), [triage labels](docs/agents/triage-labels.md).
-- [Development](docs/development.md): workflows, checks and the dev container. [Security model](docs/security.md) of the legacy app. [Releasing](docs/releasing.md).
-- Styleguide and tokens: the Mantine theme of each surface, [packages/ui/src/main.tsx](packages/ui/src/main.tsx) (CedarLoom), [app/ui/App.jsx](app/ui/App.jsx) (the legacy app) and [web/src/components/SiteShell.tsx](web/src/components/SiteShell.tsx) (the site).
+- [Development](docs/development.md): workflows, checks and the dev container. [Releasing](docs/releasing.md).
+- Styleguide and tokens: the Mantine theme of each surface, [packages/ui/src/main.tsx](packages/ui/src/main.tsx) (CedarLoom) and [web/src/components/SiteShell.tsx](web/src/components/SiteShell.tsx) (the site).
 - Licenses a dependency may have: the `allow-licenses` list of the dependency review in [cedarloom.yml](.github/workflows/cedarloom.yml).

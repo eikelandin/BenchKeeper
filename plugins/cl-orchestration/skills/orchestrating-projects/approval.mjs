@@ -93,7 +93,7 @@ export function answer(issue, writes = () => false) {
   // Only the repository's owner or a member with write access answers for the owner, or voids an answer: a collaborator can comment there too, and a member may have only the Read role.
   const owners = (c) => c.authorAssociation === 'OWNER' || (c.authorAssociation === 'MEMBER' && writes(c.author?.login));
   const full = (c) => c.body?.startsWith('Owner answer (');
-  // Read as the body is now: gh prints no time of its last edit, so an answer older than an edit is not detected (docs/security.md).
+  // Read as the body is now: gh prints no time of its last edit, so an answer older than an edit is not detected.
   const labels = (tables(issue.body.replace(COMMENT, ''), 'Option')[0] ?? []).map(([option]) => labelOf(option)).filter(Boolean);
   const newest = comments.findLastIndex((c) => typeof c.body === 'string' && (full(c) || picked(labels, c.body) !== null) && owners(c));
   // The coordinator's comment for a later head starts with "Head: " (approvals.md): the owner answered for the head before it.

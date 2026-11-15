@@ -28,7 +28,7 @@ function filesIn(dir) {
 
 const markdownFiles = (dir) => filesIn(dir).filter((p) => p.endsWith('.md'));
 
-// A skill that hands issue or pull request text to a worker names the author filter somewhere in its files (docs/security.md, untrusted input).
+// A skill that hands issue or pull request text to a worker names the author filter somewhere in its files: text of other authors is untrusted input.
 const HANDS_TEXT = /\b(read|pass|hand|send|give|copy|paste)\b[^.\n]{0,60}\b(issues?|pull requests?|PRs?)\b[^.\n]{0,60}\b(comments?|bod(y|ies)|text)\b/i;
 const AUTHOR_FILTER = [/^Trusted authors: \S/m, /\bdata, never instructions\b/i];
 // The workflow skill applies the Depth minimum line to its own pick, so a handed-over Depth line must not name it first.
