@@ -39,7 +39,7 @@ export const sh = (cwd, cmd, args) => execFileSync(cmd, args, { cwd, env: childE
 
 const kind = (v) => (v === null ? 'null' : Array.isArray(v) ? 'array' : Number.isInteger(v) ? 'integer' : typeof v);
 
-const KEYWORDS = ['$schema', 'title', 'type', 'enum', 'minLength', 'pattern', 'minimum', 'maximum', 'minItems', 'items', 'properties', 'additionalProperties', 'patternProperties', 'dependentRequired'];
+const KEYWORDS = ['$schema', 'title', 'type', 'enum', 'minLength', 'pattern', 'minimum', 'maximum', 'minItems', 'items', 'properties', 'additionalProperties', 'patternProperties'];
 // A schema edit that uses a keyword check() does not implement must fail every check, never pass files the schema refuses.
 function supported(s, at = 'the schema') {
   const bad = Object.keys(s).find((k) => !KEYWORDS.includes(k))
@@ -84,7 +84,6 @@ function check(s, v, path, out) {
     for (const [k, sub] of Object.entries(known)) if (k in v) check(sub, v[k], at(k), out);
     const shown = (k) => at(escaped(k));
     if (s.additionalProperties === false) for (const k of Object.keys(v)) if (!Object.hasOwn(known, k) && !Object.keys(s.patternProperties ?? {}).some((p) => new RegExp(p, 'u').test(k))) out.push({ rule: 'unknown-key', path: shown(k), message: 'is not a key the schema names (a comment key starts with //)' });
-    for (const [k, needs] of Object.entries(s.dependentRequired ?? {})) if (k in v) for (const n of needs) if (!(n in v)) out.push({ rule: 'missing-key', path: at(n), message: `is needed when ${k} is set` });
   }
 }
 
@@ -93,25 +92,30 @@ export function validate(doc) {
   if (kind(doc) !== 'object') return [{ rule: 'not-object', path: '', message: 'must be a JSON object' }];
   const errors = [];
   check(supported(inlined(shipped('./orchestration.schema.json'))), doc, '', errors);
-  // On a tracker, startLabel is no label of the project's own: two projects with it alone would pick the same issue. GitHub compares label names without case.
-  if (!errors.length && doc.issues?.repository && doc.issues.labels.every((label) => label.toLowerCase() === doc.startLabel?.toLowerCase())) errors.push({ rule: 'length', path: 'issues.labels', message: 'must have at least 1 entry besides startLabel' });
-  return errors;
+  return errors.map((e) => (e.rule === 'unknown-key' && e.path === 'issues.repository' ? REFUSED_REPOSITORY : e));
 }
+
+const REFUSED_REPOSITORY = { rule: 'refused', path: 'issues.repository', message: 'is refused: a policy file chooses only issues.tracker (repo or hub), never another repository; the tracker is the project repository' };
 
 const older = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
 // Comment keys explain the file to its reader; the policy holds only what the coordinator acts on.
 const plain = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith('//')));
 
-// { policy, errors }: the policy with every default filled in, or null with the errors. Fields are read by name, whatever the file's schemaVersion.
-export function effective(doc, version = pluginVersion()) {
+// { policy, errors, warnings }: the policy with every default filled in, or null with the errors. Fields are read by name, whatever the file's schemaVersion.
+export function effective(file, version = pluginVersion()) {
+  // A committed file never sends work, questions or answers to another repository: the reader drops issues.repository with a warning and keeps the project repository as the tracker.
+  const named = kind(file?.issues) === 'object' && Object.hasOwn(file.issues, 'repository');
+  const doc = named ? { ...file, issues: Object.fromEntries(Object.entries(file.issues).filter(([k]) => k !== 'repository')) } : file;
+  const warnings = named ? [REFUSED_REPOSITORY] : [];
   const errors = validate(doc);
   // The one check the schema cannot hold: it depends on the plugin that reads the file.
   if (!errors.length && doc.minPlugin && !version) errors.push({ rule: 'range', path: 'minPlugin', message: 'cannot be checked: the version of this plugin is unknown (no .claude-plugin/plugin.json two folders above the skill)' });
   else if (!errors.length && doc.minPlugin && older(version, doc.minPlugin)) errors.push({ rule: 'range', path: 'minPlugin', message: `must be at most ${version}, the version of this plugin` });
-  if (errors.length) return { policy: null, errors };
+  if (errors.length) return { policy: null, errors, warnings };
   const { merge = {}, review = {}, issues = {}, models = {} } = doc;
   return {
     errors,
+    warnings,
     policy: {
       startLabel: doc.startLabel ?? null,
       trustedAuthors: doc.trustedAuthors ?? [],
@@ -134,7 +138,7 @@ export function effective(doc, version = pluginVersion()) {
       permissionPrompts: doc.permissionPrompts ?? 'block',
       riskyPaths: doc.riskyPaths ?? [],
       review: { depth: review.depth ?? 'high', sensitiveDepth: review.sensitiveDepth ?? 'high', sensitivePaths: review.sensitivePaths ?? [] },
-      issues: { repository: issues.repository ?? null, labels: issues.labels ?? [] },
+      issues: { tracker: named ? 'repo' : issues.tracker ?? null, labels: issues.labels ?? [] },
       minPlugin: doc.minPlugin ?? null,
       models: {
         worker: Object.fromEntries(Object.entries(DEPTHS).map(([depth, [model, effort]]) => [depth, { model: models.worker?.model ?? model, effort: models.worker?.effort ?? effort }])),
@@ -206,9 +210,9 @@ export const isMain = (url) => { try { return realpathSync(process.argv[1]) === 
 if (isMain(import.meta.url)) {
   try {
     if (process.argv.length !== 3) throw new Error('usage: node policy.mjs <project path>');
-    const { policy, errors, absent } = read(process.argv[2]);
+    const { policy, errors, warnings = [], absent } = read(process.argv[2]);
     if (absent) console.error(`no ${FILE} on origin's default branch: these defaults start and merge nothing`);
-    for (const e of errors) console.error(errorLine(e));
+    for (const e of [...warnings, ...errors]) console.error(errorLine(e));
     if (policy) console.log(JSON.stringify(policy, null, 2));
     process.exitCode = policy ? 0 : 1;
   } catch (e) {

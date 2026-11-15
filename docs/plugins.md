@@ -5,7 +5,7 @@ What the CedarLoom plugins add to a Claude Code session besides their skills, an
 | Plugin | Hooks | Settings |
 |---|---|---|
 | `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand`, [`hub`](#hub-repository) |
-| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`](#hub-repository) |
+| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, `rotateAfterTasks`, [`hub`, `issuesIn`](#hub-repository) |
 | `cl-setup` | none | none |
 
 Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options with `/plugin` (Installed tab, Configure options) or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session.
@@ -47,11 +47,19 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 
 ## Hub repository
 
-The hub is one GitHub repository, often private, that collects the owner questions of all your projects. The coordinator of `/cl-orchestration:orchestrating-projects` files each there as an issue in the approval layout (labels `question`, `ready-for-human`, `project:<name>`), and `/cl-workflow:questions` asks them in any session.
+The hub is one GitHub repository, often private, that holds the work items of the projects whose `issuesIn` option or `issues.tracker` policy selects it, and the owner questions of those projects and of projects whose tracker is public. The coordinator of `/cl-orchestration:orchestrating-projects` files such a question there as an issue in the approval layout (labels `question`, `ready-for-human`, `project:<name>`), and `/cl-workflow:questions` asks them in any session.
 
 - Set it: the option `hub`, as `owner/name`, of both `cl-workflow@cedarloom` and `cl-orchestration@cedarloom`, to the same value. Run `/plugin configure cl-workflow@cedarloom` and `/plugin configure cl-orchestration@cedarloom` ([configuration dialog](https://code.claude.com/docs/en/plugins/components#when-the-configuration-dialog-appears)), or the plugins' rows in `/config` (Claude Code v2.1.269 or later, [user configuration](https://code.claude.com/docs/en/plugins-reference#user-configuration)), then start a new session. The plugins reference does not say a skill can read another plugin's options, so each has its own.
-- Claude Code keeps the value in your user settings (`pluginConfigs`) and ignores that key in project settings ([settings reference](https://code.claude.com/docs/en/settings-reference#pluginconfigs)). The skills read the hub nowhere else, so no repository can redirect questions.
-- A question goes to the hub; without one (the default; a value that is no plain `owner/name` is named as rejected), to the project's tracker if private with issues on; else to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
+- Claude Code keeps the value in your user settings (`pluginConfigs`) and ignores that key in project settings ([settings reference](https://code.claude.com/docs/en/settings-reference#pluginconfigs)). The skills read it nowhere else but, after a clear, the coordinator's own handoff file that the plugin's checks pass, so no repository can redirect work or questions.
+
+| Setting | Where | Default |
+| --- | --- | --- |
+| `hub` | option of both plugins | none |
+| `issuesIn`: `repo` or `hub` holds work items, follow-up issues and questions | option of `cl-orchestration` (Claude Code v2.1.271 or later) | `repo` |
+| `issues.tracker`: the same, per project; never another repository | the project's `docs/agents/orchestration.json` | `issuesIn` |
+
+- Public repositories never mention the hub (a check refuses such a merge); the coordinator closes a hub issue after the merge, linking the pull request.
+- A question goes to the tracker if private with issues on, else to the hub; without one (a value that is no plain `owner/name` is named as rejected), to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
 - Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name, but two such segments in a row, as in `*/*`, match no folder). Like the rest of the guard it does not try to catch a command written to get around it (`.c*/q*`, braces, variables, bracket classes, look-alike letters, a tool's own folder option such as `git -C`), nor one that acts on `.cedarloom` itself, such as `rm -rf .cedarloom`. A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
 
 ## Role guard
@@ -102,7 +110,7 @@ Issue and pull request text can carry instructions. `/cl-orchestration:orchestra
 
 | Text | How it reaches an agent | Check |
 |---|---|---|
-| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it. With `issues.repository`, access counts in that tracker | `thread.test.mjs` |
+| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it. With the hub as tracker (`issues.tracker`, else `--issues-in`, is `hub`, with `--hub`), the issue and access come from the hub | `thread.test.mjs` |
 | Unresolved review threads | `thread.mjs --pull` writes each thread a trusted author opened, with its trusted comments, and counts the rest; the reviewer's brief and the worker's follow-up carry it. Access counts in the project's repository | `thread.test.mjs` |
 | Any other comment or review | not passed: the spec and `rules/worker.md` tell workers and reviewers to read none themselves | wording only |
 

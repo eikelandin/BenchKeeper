@@ -15,10 +15,9 @@ Run `node <skill folder>/approval.mjs <file>` from your working directory until 
 
 ## Where it goes
 
-1. **The hub.** `<hub>` is the hub repository as [SKILL.md](SKILL.md#names) reads it, and nothing else.
-2. **No hub set**: the project's tracker, `issues.repository`, else `<owner/repo>`.
-3. **Never a public repository.** An approval names the plan, the models, the cost and the owner-only paths. For the repository of step 1 or 2, `gh repo view <repository> --json visibility,hasIssuesEnabled` must show `PRIVATE` or `INTERNAL` with issues on. Else, or when it fails, file no issue: from step 1 the text goes into the report, with the reason; from step 2 into the local queue.
-4. **The local queue**: `node <skill folder>/approval.mjs file <file> <name of <owner/repo>>` checks the text, writes a new `.cedarloom/questions/<project>-<n>.md`, kept out of git, and prints `{ file }`. The role guard refuses any other access to that folder.
+1. **The tracker**: `<tracker>` as [SKILL.md](SKILL.md#names) reads it, the hub or `<owner/repo>`, and nothing else.
+2. **Never a public repository.** An approval names the plan, the models, the cost and the owner-only paths. `gh repo view <repository> --json visibility,hasIssuesEnabled` must show `PRIVATE` or `INTERNAL` with issues on. Else, or when it fails, file no issue there: from the hub the text goes into the report, with the reason; from `<owner/repo>` to `<hub>` if set, checked the same way, else into the local queue.
+3. **The local queue**: `node <skill folder>/approval.mjs file <file> <name of <owner/repo>>` checks the text, writes a new `.cedarloom/questions/<project>-<n>.md`, kept out of git, and prints `{ file }`. The role guard refuses any other access to that folder.
 
 ## Labels and title
 

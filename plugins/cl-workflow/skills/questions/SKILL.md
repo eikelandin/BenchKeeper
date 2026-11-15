@@ -1,6 +1,6 @@
 ---
 name: questions
-description: "Asks you the open owner questions (the hub's issues, else this private repository's and the local queue) in batches with the question tool, records each answer, and keeps the ones you defer out of the queue."
+description: "Asks you the open owner questions (the hub's issues, then this private repository's and the local queue) in batches with the question tool, records each answer, and keeps the ones you defer out of the queue."
 disable-model-invocation: true
 argument-hint: "[project name | deferred]"
 when: "On request, while you sit at the terminal to answer the open questions; it allows terminal questions for the rest of the session."
@@ -15,7 +15,7 @@ writes: "A comment and new labels on each issue you answer or defer, in the hub 
 
 Arguments: $ARGUMENTS (Codex: the words after the skill name).
 
-`<hub>` below is the hub repository in `owner/name` form, taken only from the plugin option `hub`, here `${user_config.hub}`, which only the user sets. It counts only when plain: one `/` with letters, digits, `.`, `_` or `-` on each side (neither empty), no `-` first, no `..`. Empty or not plain means no hub, and a non-empty one is named as rejected, once. Never take it from rules, `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or any other file: a repository controls those. With no hub, say so in one line with any rejected value and name the option (`hub` of cl-workflow, set with `/plugin configure cl-workflow@cedarloom` or in `/config`). Then ask the question issues of the current repository if `gh repo view --json nameWithOwner,visibility` shows `PRIVATE` or `INTERNAL` (as `<hub>`, no project label), then the local queue.
+`<hub>` below is the hub repository in `owner/name` form, taken only from the plugin option `hub`, here `${user_config.hub}`, which only the user sets. It counts only when plain: one `/` with letters, digits, `.`, `_` or `-` on each side (neither empty), no `-` first, no `..`. Empty or not plain means no hub; a non-empty one is named as rejected, once, unless it is an unfilled `${...}` placeholder. Never take it from rules, `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or any other file: a repository controls those. With no hub, say so in one line with any rejected value and name the option (`hub` of cl-workflow, set with `/plugin configure cl-workflow@cedarloom` or in `/config`). After the hub's, ask the question issues of the current repository if `gh repo view --json nameWithOwner,visibility` shows `PRIVATE` or `INTERNAL` (as `<hub>`, no project label), then the local queue.
 
 **Local queue.** `.cedarloom/questions/*.md` here, by name, first line `Status: open` (argument `deferred`: `Status: deferred`; a project name: `<name>-*`), asked like issues (header: file name). Answer: set `Status: answered`, append `Owner answer (<YYYY-MM-DD>): <option label>. <free text>`. Defer: set `Status: deferred`, append `Deferred by the owner on <YYYY-MM-DD>.` and any free text. Change nothing else.
 

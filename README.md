@@ -72,7 +72,15 @@ The role guard refuses merges, releases and pushes to the default branch in ever
 
 ## Hub repository
 
-One GitHub repository, often private, that collects the owner questions of all projects, so internal questions stay out of product repositories. Set it as `owner/name` in the option `hub` of both `cl-workflow` and `cl-orchestration` (`/plugin configure <plugin>@cedarloom` or `/config`). Questions go to the hub, else the project's tracker if private, else the local queue `.cedarloom/questions/` in the coordinator's folder; never to a public repository. Details: [The plugins](docs/plugins.md#hub-repository).
+One GitHub repository, often private, that can hold the work items and owner questions of all projects, so internal text stays out of product repositories.
+
+| Setting | Where | Default |
+| --- | --- | --- |
+| `hub` (`owner/name`) | option of `cl-workflow` and `cl-orchestration` (`/plugin configure <plugin>@cedarloom` or `/config`) | none |
+| `issuesIn` (`repo` or `hub`) | option of `cl-orchestration` | `repo` |
+| `issues.tracker` (`repo` or `hub`), per project | the project's policy file | `issuesIn` |
+
+Public repositories never mention the hub; the coordinator closes hub issues after the merge. Questions go to the tracker if private, else the hub, else the local queue `.cedarloom/questions/`. Details: [The plugins](docs/plugins.md#hub-repository).
 
 ## Update
 
