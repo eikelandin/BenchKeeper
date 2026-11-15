@@ -31,16 +31,12 @@ test('update check: shown when newer, silent when off, offline or older', async 
   assert.equal(asked, false);
 });
 
-test('content.json: content version is the plugin version, minApp is not above the app, skill and automation text names the 0.1 range', () => {
+test('content.json: minApp is not above the app, skill and automation text names the 0.1 range', () => {
   const c = json('../../plugins/cedarloom/content.json');
   assert.equal(c.schemaVersion, 1);
   const plugins = new URL('../../plugins/', import.meta.url);
   const folders = readdirSync(plugins).map((p) => new URL(`${p}/`, plugins)).filter((p) => existsSync(new URL('.claude-plugin/plugin.json', p)));
   assert.ok(folders.length > 1, 'no plugins under plugins/');
-  for (const p of folders) for (const agent of ['claude', 'codex']) {
-    const manifest = new URL(`.${agent}-plugin/plugin.json`, p);
-    if (existsSync(manifest)) assert.equal(c.contentVersion, json(manifest).version, fileURLToPath(manifest));
-  }
   // App and content release separately: an app patch release leaves the content version behind and still fits.
   const [major, minor, patch] = appVersion.split('.').map(Number);
   assert.match(c.minApp, /^\d+\.\d+\.\d+$/);

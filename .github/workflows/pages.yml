@@ -55,7 +55,7 @@ jobs:
         env:
           SITE_EDITION: next
 
-  # The site root shows the latest GitHub Release, built from its tag; /next/ shows main. A Pages deployment replaces the
+  # The site root shows the newest Release cedarloom-v<x.y.z>, built from its tag; /next/ shows main. A Pages deployment replaces the
   # whole site, so this job builds both into one artifact. The Release workflow starts this workflow after it creates a
   # release (a release made with GITHUB_TOKEN starts no `release` run). A failing build or check job keeps the previous
   # deployment.
@@ -90,7 +90,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag=$(gh release view --repo "$REPO" --json tagName --jq .tagName 2>/dev/null || true)
+          tag=$(gh release list --repo "$REPO" --exclude-drafts --exclude-pre-releases --limit 100 --json tagName,publishedAt \
+            --jq '[.[] | select(.tagName | startswith("cedarloom-v"))] | sort_by(.publishedAt) | last | .tagName // empty')
           if [ -z "$tag" ]; then
             mkdir site
             printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=next/"><title>BenchKeeper</title><a href="next/">BenchKeeper</a>\n' > site/index.html

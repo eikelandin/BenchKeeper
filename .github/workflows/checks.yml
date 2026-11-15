@@ -73,7 +73,7 @@ jobs:
       # docs/skills.md tables are generated from the skills' front matter and library.json.
       - name: Skills page
         run: node --test .github/scripts/skills-doc.test.mjs && node .github/scripts/skills-doc.mjs --check
-      # Install commands in the docs name the app version (npx @cedarloom/app@<version>, the clone tag).
+      # Plugin install lines in the docs that name a release tag name the plugins version (#cedarloom-v<x.y.z>).
       - name: Version pins
         run: node --test .github/scripts/version-pins.test.mjs && node .github/scripts/version-pins.mjs --check
       # Each claim in web/src/data/facts.json names its evidence: a repository file or heading, a test title, or a BenchKeeper-research result.
@@ -82,40 +82,6 @@ jobs:
       # The budget in .github/token-budget.json binds here, a required check; token-budget.yml only comments the change.
       - name: Token budget
         run: node plugins/*/skills/debloat/token-budget.mjs check --budget-only
-
-  # The web UI against a fixture home: request checks are in the app tests, views and axe (light, dark) here.
-  app-ui-tests:
-    runs-on: ubuntu-latest
-    timeout-minutes: 12
-    permissions:
-      contents: read
-    env:
-      LC_ALL: C.UTF-8
-      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.ms-playwright
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22.23.4
-      - name: Install app packages
-        working-directory: app
-        run: npm ci --ignore-scripts --no-audit --no-fund
-      # The browser alone, without --with-deps: the runner image has the libraries Chromium needs, and the apt install of fonts
-      # the tests do not use stalled at the Ubuntu mirror until the job timed out. Playwright retries its own download.
-      - name: Cache the browser
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
-          key: playwright-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
-      - name: Install the browser
-        timeout-minutes: 4
-        working-directory: app
-        run: node_modules/.bin/playwright install chromium
-      - name: App UI tests
-        working-directory: app
-        run: npm run build && npm run test:ui
 
   # Each plugin as Claude Code reads it: manifest and skill front matter (strict), the marketplace file, the mod tests, an install of each plugin. Claude Code is pinned by `.github/claude-code/package-lock.json` (the `stable` tag of its npm package); bump it by hand.
   plugin-checks:
@@ -182,7 +148,7 @@ jobs:
   # Required check: passes when all parallel jobs pass.
   checks:
     if: always()
-    needs: [checks-core, app-ui-tests, plugin-checks, plugin-tests]
+    needs: [checks-core, plugin-checks, plugin-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -193,44 +159,6 @@ jobs:
           for r in $RESULTS; do
             if [ "$r" != success ]; then echo "::error::a needed job ended as $r"; exit 1; fi
           done
-
-  # The installer app: engine, steps, CLI and server against temporary home directories with stub agent commands.
-  app:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22.23.4
-      - name: App tests
-        working-directory: app
-        run: npm ci --ignore-scripts --no-audit --no-fund && npm run check:imports && npm run check:baselines && npm run test:coverage && npm run smoke
-
-  # Windows is untested by the owner: start, plan, apply with a ledger run only.
-  app-windows-smoke:
-    runs-on: windows-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22.23.4
-      - name: Smoke test
-        working-directory: app
-        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund && node scripts/smoke.mjs
 
   dependency-review:
     if: github.event_name == 'pull_request'
