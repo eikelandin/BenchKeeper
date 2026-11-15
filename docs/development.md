@@ -36,10 +36,7 @@ Set `dev.containers.copyGitConfig` to `false` and `dev.containers.gitCredentialH
 
 ## Agent config
 
-`.mcp.json` is committed: Claude Code's project MCP server `playwright`, a browser in the dev container. In an interactive session Claude Code asks before it starts it ([project scope](https://code.claude.com/docs/en/mcp#project-scope)); a `claude -p` run starts it without asking, unless it passes `--strict-mcp-config`. The project skills (`.claude/skills/`, `.agents/skills/`), `skills-lock.json` and `.codex/config.toml` are local to each checkout and not tracked. In a new clone:
+The project skills (`.claude/skills/`, `.agents/skills/`), `skills-lock.json` and `.codex/config.toml` are local to each checkout and not tracked. In a new clone:
 
-1. Run the project setup of the legacy app: `npx benchkeeper@6.27.0 projects apply --agents claude,codex`. It installs the skills and the lock file and lists them in `.git/info/exclude`.
-2. For Codex, write the server into `.codex/config.toml` (`[mcp_servers.playwright]` with the `command` and `args` of its `.mcp.json` entry).
-3. Add `/.codex/config.toml`, `/.claude/skills` and `/.agents/skills` to `.git/info/exclude`.
-
-A new worktree (Orca, Claude Code `--worktree`) gets a copy of the paths that `.worktreeinclude` in the primary checkout lists, when Git ignores them there. The project setup of step 1 writes that file with its own list between `# cedarloom-app:worktrees` markers and adds `/.worktreeinclude` to `.git/info/exclude`. Add `.codex/config.toml`, `.claude/skills` and `.agents/skills` below the block, one path per line; the setup keeps lines outside it.
+1. Run the project setup of the legacy app: `npx benchkeeper@6.27.0 projects apply --agents claude,codex`. It installs the skills and the lock file and lists them in `.git/info/exclude`. It also writes `.worktreeinclude` with its own list between `# cedarloom-app:worktrees` markers, which a new worktree (Orca, Claude Code `--worktree`) uses to copy the paths Git ignores in the primary checkout: add `.codex/config.toml`, `.claude/skills` and `.agents/skills` below the block, one path per line; the setup keeps lines outside it.
+2. Add `/.codex/config.toml`, `/.claude/skills` and `/.agents/skills` to `.git/info/exclude`.

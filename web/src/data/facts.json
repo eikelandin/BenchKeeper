@@ -54,11 +54,11 @@
     "url": "https://github.com/OpenHands/OpenHands",
     "summary": "A self-hosted agent server with a web UI that runs work without you at the terminal.",
     "points": [
-      "Each conversation can run in its own Docker container (`OH_CONVERSATION_RUNTIME=docker`), an isolation option BenchKeeper does not provide.",
+      "Each conversation can run in its own Docker container (`OH_CONVERSATION_RUNTIME=docker`), an isolation option the CedarLoom plugins do not provide.",
       "Runs its own agent or hosts Claude Code, Codex and Gemini CLI.",
       "Automations on a schedule or on webhook events (GitHub, Slack, Linear), for example splitting GitHub issues into tasks.",
       "Without a sandbox, the local agent has full access to your filesystem.",
-      "Unverified: whether agents inside its containers load the BenchKeeper rules and skills, which are installed on the host."
+      "Unverified: whether agents inside its containers load the CedarLoom plugins, which are installed on the host."
     ],
     "evidence": [
       "https://github.com/OpenHands/OpenHands",

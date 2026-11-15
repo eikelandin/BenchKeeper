@@ -33,7 +33,7 @@ CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/
 | [plugins/cl-setup/skills/audit](../plugins/cl-setup/skills/audit/SKILL.md) | reports findings in agent instructions, docs or code with `file:line`, the exact quote, a pattern and a confidence; changes nothing | plugin skill `/cl-setup:audit`, user-invoked |
 | [plugins/cl-setup/skills/improve](../plugins/cl-setup/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-setup:improve`, user-invoked |
 | [plugins/cl-setup/skills/debloat](../plugins/cl-setup/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-setup/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-setup:debloat`, user-invoked; the script also runs the `token-budget` CI job |
-| [CHANGELOG.md](../CHANGELOG.md) | the changelog up to 6.27; each plugin keeps its own in `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`), see [Releasing](releasing.md) | not linked |
+| [CHANGELOG.md](../CHANGELOG.md) | the changelog up to 6.25 and the tags `setup-v*` and `app-v*` up to 6.27; each plugin keeps its own in `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`), see [Releasing](releasing.md) | not linked |
 | [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 
 ## How this stack was selected
@@ -63,9 +63,9 @@ Not installed by CedarLoom.
 <!-- generated:openhands -->
 **Unattended or isolated runs: [OpenHands](https://github.com/OpenHands/OpenHands).** A self-hosted agent server with a web UI that runs work without you at the terminal.
 
-- Each conversation can run in its own Docker container (`OH_CONVERSATION_RUNTIME=docker`), an isolation option BenchKeeper does not provide.
+- Each conversation can run in its own Docker container (`OH_CONVERSATION_RUNTIME=docker`), an isolation option the CedarLoom plugins do not provide.
 - Runs its own agent or hosts Claude Code, Codex and Gemini CLI.
 - Automations on a schedule or on webhook events (GitHub, Slack, Linear), for example splitting GitHub issues into tasks.
 - Without a sandbox, the local agent has full access to your filesystem.
-- Unverified: whether agents inside its containers load the BenchKeeper rules and skills, which are installed on the host.
+- Unverified: whether agents inside its containers load the CedarLoom plugins, which are installed on the host.
 <!-- /generated:openhands -->

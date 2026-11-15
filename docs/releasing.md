@@ -12,7 +12,7 @@ A release ships the plugins only, and no release publishes to npm.
 
 The first release is 0.1.0, set with `release-as` on each plugin in `release-please-config.json`. Remove those four lines after that release: while they stay, every release pull request proposes 0.1.0 again.
 
-`CHANGELOG.md` at the repository root and the tags `setup-v*` and `app-v*` belong to the legacy app, up to 6.27.
+`CHANGELOG.md` at the repository root (up to 6.25) and the tags `setup-v*` and `app-v*` (up to 6.27) belong to the legacy app.
 
 ## Steps
 

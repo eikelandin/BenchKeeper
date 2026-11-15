@@ -1,12 +1,12 @@
 # Git and child processes
 
-Read this before changing code that runs git or another program. Each item names what goes wrong. The plugins run programs through `sh` in [policy.mjs](../../plugins/cl-orchestration/skills/orchestrating-projects/policy.mjs), with an argv and a cleaned git environment; reuse it instead of writing a new runner.
+Read this before changing code that runs git or another program. Each item names what goes wrong. `sh` in [policy.mjs](../../plugins/cl-orchestration/skills/orchestrating-projects/policy.mjs) passes an argv and a cleaned git environment; reuse those instead of writing a new runner.
 
 ## Child processes
 
 - **No shell.** Pass an argv to `spawn` or `execFile`, never a command string: through a shell, a branch name or a path becomes a command.
 - **Windows console windows.** Every spawn that opens a console sets `windowsHide: true`.
-- **Program lookup.** Spawn a program by its file, never by its bare name: Windows looks for a bare name in the child's working folder, often a project, before PATH. Look it up in the absolute folders of PATH only.
+- **Program lookup.** Spawn a program by its file, never by its bare name: Windows looks for a bare name in the child's working folder, often a project, before PATH. Look it up in the absolute folders of PATH only (`gitProgram` in `plugins/*/hooks/git-program.mjs`).
 - **Stopping a process tree.** Windows has no POSIX signals: `kill()` ends the program at once and leaves its children running. End the tree with `taskkill /T /F` from System32, and only while the child has not exited, since Windows may give its process ID to another process.
 - **A child that ignores SIGTERM** keeps its caller waiting: a timeout kills with `SIGKILL`.
 - **Environment.** Pass the child only the variables it needs. Windows names ignore case (`PATH` is `Path` there); elsewhere `path` is another variable. On Windows a child also needs the system, profile and temp folders: without `SystemRoot` it can fail to load system components (https://docs.python.org/3/library/subprocess.html#popen-constructor).
