@@ -26,7 +26,7 @@ Target: $ARGUMENTS (Codex: the text after the skill name). A path audits that fi
    - [instructions](instructions.md): CLAUDE.md, AGENTS.md, rule files, skills, agents, commands, prompts, hook configuration.
    - [docs](docs.md): READMEs, `docs/`, guides, templates.
    - [code](code.md): source and tests.
-2. Measure (instructions and docs). Run `node <skill folder>/../debloat/token-budget.mjs measure` and the same script with `check` (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`). Its token counts and dead references are inputs for step 4, not findings yet.
+2. Measure (instructions and docs). From the repository root (`git rev-parse --show-toplevel`), run `node <skill folder>/../debloat/token-budget.mjs measure` and the same script with `check` (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`). Its token counts and dead references are inputs for step 4, not findings yet.
 3. Read every file in scope in full, with line numbers. Do not audit from a summary or from an earlier read.
 4. Collect candidates with the patterns of the lens.
 5. Verify each candidate before it becomes a finding. Drop what fails.

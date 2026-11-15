@@ -3,7 +3,7 @@
 // Usage: node token-budget.mjs <measure|protect|cut|baseline|check> [options]   (USAGE below; exit 0 ok, 1 check failed, 2 usage error)
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -239,8 +239,8 @@ export function planCuts(root, cfg, plan) {
   for (const [file, cuts] of byFile) {
     // The config holds the protect list: a cut there could remove the guard that checks this plan.
     if (!inScope.has(file) || file === CONFIG) { errors.push(`${file}: not an instruction file or doc in scope`); continue; }
-    // A write follows a symlink to its target, which can lie outside the repository or outside the scope.
-    if (lstatSync(join(root, file)).isSymbolicLink()) { errors.push(`${file}: a symlink: cut the file it points to`); continue; }
+    // A write follows a symlink, of the file or of a folder above it, to a target that can lie outside the repository or the scope.
+    if (realpathSync(join(root, file)) !== join(realpathSync(root), file)) { errors.push(`${file}: a symlink or in a symlinked folder: cut the file it points to`); continue; }
     const text = readFileSync(join(root, file), 'utf8');
     const lines = linesOf(text);
     // Each line with its own line break, so that the kept lines stay byte for byte (CRLF, a missing last break).
@@ -266,7 +266,12 @@ export function planCuts(root, cfg, plan) {
   const before = measure(root, cfg);
   const after = { ...Object.fromEntries(Object.entries(before.files).map(([p, f]) => [p, f.tokens])), ...Object.fromEntries(Object.entries(contents).filter(([p]) => before.files[p]).map(([p, t]) => [p, tokensOf(t)])) };
   // The floor: what stays when everything but the protected text is cut. A budget below it cannot be reached.
-  const floor = sum(cfg.protect.filter((p) => before.files[p.file]).map((p) => tokensOf(p.text)));
+  // Per file the lines its spans cover, so overlapping spans count once.
+  const floor = sum([...Map.groupBy(cfg.protect.filter((p) => before.files[p.file]), (p) => p.file)].map(([file, spans]) => {
+    const lines = linesOf(readFileSync(join(root, file), 'utf8'));
+    const keep = new Set(spans.map((p) => locate(lines, p.text)).filter(Boolean).flatMap((r) => Array.from({ length: r.end - r.start + 1 }, (_, k) => r.start + k)));
+    return tokensOf(lines.filter((_, i) => keep.has(i + 1)).map((l) => `${l}\n`).join(''));
+  }));
   return { errors, contents, rows, before: before.total, after: sum(Object.values(after)), floor, budget: cfg.budget.total ?? null };
 }
 
@@ -322,7 +327,9 @@ export function deadRefs(root, cfg, paths = scope(root, cfg)) {
     for (const [line, raw] of prose(linesOf(readFileSync(abs, 'utf8')))) {
       const plain = raw.replace(/`[^`]*`/g, (m) => ' '.repeat(m.length));
       const dead = (kind, target, level = 'error') => { if (!ignored(target)) out.push({ file, line, kind, target, level }); };
-      for (const [, target] of plain.matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)) {
+      // Inline links, and the definition of a reference link (`[s]: #setup`); a footnote (`[^1]:`) is no link.
+      const definition = /^ {0,3}\[(?!\^)[^\]]+\]:\s*<?([^\s>]+)>?/.exec(plain)?.[1];
+      for (const target of [...[...plain.matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)].map((m) => m[1]), ...(definition ? [definition] : [])]) {
         if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(target)) continue;
         const [path, fragment] = target.split('#');
         const clean = decode(path.split('?')[0]);

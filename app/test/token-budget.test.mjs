@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { test } from 'node:test';
@@ -96,6 +97,11 @@ test('dead references: a missing file, a missing anchor, an import and a backtic
   ]);
 });
 
+test('dead references: the definition of a reference link, not a footnote', () => {
+  const root = repo({ 'AGENTS.md': 'See [setup][s] and [guide][g].[^1]\n\n[s]: #setup\n[g]: docs/guide.md#start\n[^1]: Some note.\n', 'docs/guide.md': '# Guide\n\n## Start\n' });
+  assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:3 anchor #setup']);
+});
+
 test('check reports the change against the baseline and fails on a lost span, a dead link or a budget', () => {
   const root = repo({ 'AGENTS.md': AGENTS, 'docs/guide.md': '# Guide\n\n## Setup\n' });
   addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);
@@ -181,8 +187,31 @@ test('a cut through a symlink in scope is refused and writes nothing', (t) => {
   writeFileSync(plan, JSON.stringify({ cuts: [{ file: 'docs/link.md', start: 2, end: 2, reason: 'r', sha256: hash }] }));
   const out = [];
   assert.equal(run(['cut', '--root', root, '--plan', plan, '--apply'], (l) => out.push(l)), 1);
-  assert.ok(out.includes('error: docs/link.md: a symlink: cut the file it points to'));
+  assert.ok(out.includes('error: docs/link.md: a symlink or in a symlinked folder: cut the file it points to'));
   assert.equal(readFileSync(outside, 'utf8'), 'a\nb\n');
+});
+
+test('a cut through a symlinked folder that git still indexes is refused and writes nothing', (t) => {
+  const root = repo({ 'docs/guide.md': 'a\nb\n' });
+  execFileSync('git', ['-C', root, 'init', '-q']);
+  execFileSync('git', ['-C', root, 'add', 'docs/guide.md']);
+  const outside = join(root, '..', `${basename(root)}-docs`);
+  renameSync(join(root, 'docs'), outside);
+  try {
+    symlinkSync(outside, join(root, 'docs'), 'dir');
+  } catch {
+    t.skip('symlinks need a privilege here');
+    return;
+  }
+  const hash = measure(root, loadConfig(root)).files['docs/guide.md'].sha256;
+  const p = planCuts(root, loadConfig(root), { cuts: [{ file: 'docs/guide.md', start: 2, end: 2, reason: 'r', sha256: hash }] });
+  assert.deepEqual(p.errors, ['docs/guide.md: a symlink or in a symlinked folder: cut the file it points to']);
+});
+
+test('the protected floor counts overlapping spans once', () => {
+  const root = repo({ 'AGENTS.md': 'Never push.\nHistory.\nExtra.\n' });
+  addProtected(root, loadConfig(root), ['AGENTS.md:1-1', 'AGENTS.md:1-2']);
+  assert.equal(planCuts(root, loadConfig(root), { cuts: [] }).floor, 6);
 });
 
 test('a cut without the sha256 of the file is refused', () => {
