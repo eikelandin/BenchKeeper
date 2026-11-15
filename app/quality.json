@@ -5,7 +5,10 @@
       "app": 0,
       "tests": 386,
       "web": 6,
-      "plugins": 18
+      "plugins/cedarloom": 18,
+      "plugins/orchestration": 0,
+      "plugins/setup": 0,
+      "plugins/workflow": 0
     }
   },
   "mutation": {

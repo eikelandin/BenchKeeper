@@ -2,7 +2,7 @@
 // and so does a fixed one still listed.
 // Usage: node scripts/quality.mjs baselines [--write]. --write drops fixed findings, never adds one.
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,11 +12,13 @@ const QUALITY = join(here, 'quality.json');
 // jscpd arguments per area of baselines.duplicatedLines, paths relative to app/. `tests` counts tests with the source they repeat,
 // .jsx included.
 const JS = ['--format', 'javascript,jsx'];
+// One area per plugin: a plugin installs as its own folder and cannot import from another, so only a copy within one counts.
+const PLUGINS = readdirSync(join(here, '..', 'plugins'), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => `plugins/${d.name}`);
 const AREAS = {
   app: [...JS, 'src', 'ui', 'scripts', 'bin'],
   tests: [...JS, '--cross-formats', 'javascript,jsx', 'src', 'ui', 'scripts', 'bin', 'test'],
   web: ['../web/src', '../web/scripts', '../web/tests'],
-  plugins: ['../plugins'],
+  ...Object.fromEntries(PLUGINS.map((p) => [p, [`../${p}`]])),
 };
 
 // One line per knip finding: kind, file and name, without positions, so moving code does not change it.
