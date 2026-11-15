@@ -52,6 +52,12 @@
       "expected": "the skill loads"
     },
     {
+      "id": "d1",
+      "query": "The CSV export in src/report.js sometimes writes an empty file and nobody knows why. Find the cause and fix it.",
+      "should": true,
+      "expected": "the skill loads and follows diagnose.md, with or without a diagnosis skill installed: a command that reproduces the empty file and fails before the first code change, the cause named with file and line, a regression test only where the test rule calls for one, no debug output left in the diff, and no question in the session while terminal questions are off"
+    },
+    {
       "id": "n1",
       "query": "What does the git command `git rebase --onto` do?",
       "should": false,

@@ -11,6 +11,7 @@ Every depth:
 - Neighboring code, comments and formatting stay as they are, unrelated dead code is named in the report, and what your own change left unused is removed.
 - Keep validation at trust boundaries, error handling that prevents data loss, and security checks.
 - A step here or in the playbooks that asks or waits on the user does so in the session only while the user allows terminal questions. Otherwise its questions go with your recommendations into one issue per task in the issue tracker the project names, else the report; take each recommendation that is safe and reversible (an item without one waits), and go on.
+- An installed skill may run a step of this skill or its playbooks in more detail (diagnosis, a test first, prototypes, interface design): these texts set its floor and gates and win where the two differ. Reviews, research notes and pull request text follow these playbooks.
 
 1. **Classify.** Kind: software change, docs pass (several documents or product copy checked against the code; a one-file rewrite with no claim about code is a quick software change), research, or a mix (one item per kind). Each item gets one depth, whatever its kind:
 
@@ -42,8 +43,8 @@ Every depth:
    | Depth | Software change | Review before pushing | Research |
    |---|---|---|---|
    | quick | edit, fast checks after each edit; verify; commit | none | read the code |
-   | standard | settle; existing tests of the touched code; implement, a new test only where the [test rule](#verify) calls for one, written first; verify, review before pushing | one correctness pass (`/code-review high`) | one pass |
-   | deep | settle, spec with acceptance table; existing tests; ticket by ticket, a new test first only where the [test rule](#verify) calls for one; verify and run it; review in rounds ([deep.md](deep.md)) | review rounds (`/code-review xhigh`) | one subagent per item |
+   | standard | settle; plan check; existing tests of the touched code; implement, a new test only where the [test rule](#verify) calls for one, written first; verify, review before pushing | one correctness pass (`/code-review high`) | one pass, checked |
+   | deep | settle, spec with acceptance table; plan check; existing tests; ticket by ticket, a new test first only where the [test rule](#verify) calls for one; verify and run it; review in rounds ([deep.md](deep.md)) | review rounds (`/code-review xhigh`) | one subagent per item, checked |
 
 4. **Batch** when the user asks for it or names several tasks for one branch: the tasks run one after another, each at quick depth with no per-task review. Give each task its depth first (step 1): a task that is risky or above quick is not batched and runs at its own depth. Step 5 and the reviews then run once for the whole branch.
 5. **Long checks last.**
@@ -76,7 +77,7 @@ The check before done, per change type; the change type names the depth line. Ne
 | Dependency patch or minor | full suite, package audit |
 | UI tweak | browser check, screenshot baselines updated only for intended changes |
 | UI behavior in an existing flow | end-to-end and accessibility tests |
-| Bug | known cause: a failing test first, where the [test rule](#verify) allows one. Unknown: diagnose the cause first (a diagnosis skill, when installed) |
+| Bug | known cause: a failing test first, where the [test rule](#verify) allows one. Unknown: diagnose the cause first ([diagnose.md](diagnose.md)) |
 | Refactor | suite unchanged and passing |
 | Dependency major or security advisory | changelog read, full suite, package audit |
 | CI workflow | `actionlint` |
@@ -100,7 +101,8 @@ A follow-up commit on an open pull request keeps its depth and needs no workflow
   - it fails if the change is reverted;
   - it hardcodes its expected values (never computed by production code, locale files or mocks);
   - it runs at the single layer that owns the behavior.
-- A `tdd` skill, too, writes a test only where the test rule asks for one.
+- A new test is written before the code it covers and seen failing for the reason the change addresses; a test that passes at once proves nothing.
+- One slice at a time: one test, the code that makes it pass, then the next. The slices are the rows of the plan's acceptance table, where there is one.
 - Leave untested: copy or translations, CSS classes, constants, third-party libraries, private state, timing and call counts. A test like that is deleted when touched, not updated. Coverage is no target.
 - The project's own test rules in `AGENTS.md` win.
 - Browser and build output (`test-results/`, screenshots) is git-ignored or deleted.
