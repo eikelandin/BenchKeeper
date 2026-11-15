@@ -1,4 +1,4 @@
-// Usage: node approval.mjs <file>, the file in .cedarloom-app/runs/ of the working directory (the run folder, approvals.md); any other path exits 2. Checks an approval or owner question against approval-template.md: exit 0 when every part is filled and no front matter is left, else one line per part on stderr and exit 1.
+// Usage: node approval.mjs <file>, the file in .cedarloom/runs/ of the working directory (the run folder, approvals.md); any other path exits 2. Checks an approval or owner question against approval-template.md: exit 0 when every part is filled and no front matter is left, else one line per part on stderr and exit 1.
 // Usage: node approval.mjs answer <file>, the file in the run folder as above. Reads the owner's answer from a filed approval, the file holding what `gh issue view <n> -R <repository> --json labels,comments,author,body,url` printed: the answer as JSON and exit 0, exit 1 while there is none, or exit 2 with one line when the file cannot be read as that output.
 import { readFileSync, realpathSync } from 'node:fs';
 import { join, sep } from 'node:path';
@@ -106,7 +106,7 @@ export function answer(issue, writes = () => false) {
 
 // The path comes from a session's command line: a file that resolves outside the run folder, through .. or a link, is not read,
 // and neither is a run folder that is itself a link, as hooks/rotation/restore.mjs refuses one.
-const inRuns = (file) => { try { const real = realpathSync(file); return real.startsWith(join(realpathSync('.'), '.cedarloom-app', 'runs') + sep) ? real : null; } catch { return null; } };
+const inRuns = (file) => { try { const real = realpathSync(file); return real.startsWith(join(realpathSync('.'), '.cedarloom', 'runs') + sep) ? real : null; } catch { return null; } };
 
 if (isMain(import.meta.url)) {
   const say = (message) => console.error(escaped(message.split('\n')[0]));
@@ -116,7 +116,7 @@ if (isMain(import.meta.url)) {
   try {
     if (!file || process.argv.length > 4 || !['check', 'answer'].includes(mode)) throw new Error('usage: node approval.mjs <file>, or node approval.mjs answer <file>');
     const real = inRuns(file);
-    if (!real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom-app/runs/ of the working directory`); }
+    if (!real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
     const text = readFileSync(real, 'utf8');
     const issue = mode === 'answer' ? JSON.parse(text) : null;
     // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.

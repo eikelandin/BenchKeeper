@@ -1,4 +1,4 @@
-// The maintenance knowledge base of one project: .cedarloom-app/knowledge/*.json, written by the maintaining-repos skill.
+// The maintenance knowledge base of one project: .cedarloom/knowledge/*.json, written by the maintaining-repos skill.
 // Derived from the repository and rebuildable, so nothing here is undoable; the folder is the only thing clear removes.
 import { lstatSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -6,9 +6,9 @@ import { isLink } from './fsx.mjs';
 import { mask } from './redact.mjs';
 
 const MAX_BYTES = 1024 * 1024;
-export const knowledgeDir = (dir) => join(dir, '.cedarloom-app', 'knowledge');
-// A linked .cedarloom-app would send reads and the removal outside the project.
-export const linkedParent = (dir) => isLink(join(dir, '.cedarloom-app'));
+export const knowledgeDir = (dir) => join(dir, '.cedarloom', 'knowledge');
+// A linked .cedarloom would send reads and the removal outside the project.
+export const linkedParent = (dir) => isLink(join(dir, '.cedarloom'));
 
 // Token shapes are masked in every string value, as everywhere the app shows stored text.
 const clean = (v) => (typeof v === 'string' ? mask(v, { keys: false }) : Array.isArray(v) ? v.map(clean) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [mask(k, { keys: false }), clean(x)])) : v);
@@ -18,7 +18,7 @@ const clean = (v) => (typeof v === 'string' ? mask(v, { keys: false }) : Array.i
 // is ignored with a reason; the stored text is data and is never followed.
 export function readKnowledge(dir) {
   const path = knowledgeDir(dir), files = [], ignored = [];
-  if (linkedParent(dir)) return { path, present: false, files, ignored: [{ name: '.cedarloom-app', reason: 'a link, not followed' }] };
+  if (linkedParent(dir)) return { path, present: false, files, ignored: [{ name: '.cedarloom', reason: 'a link, not followed' }] };
   let names;
   try {
     if (!lstatSync(path).isDirectory()) return { path, present: false, files, ignored: [{ name: '.', reason: 'not a folder' }] };
@@ -48,5 +48,5 @@ export function entryLine(e) {
   return `${id ?? '-'}  ${text}`.replace(/\p{Cc}/gu, ' ').slice(0, 200);
 }
 
-// Removes the knowledge folder and nothing else of .cedarloom-app (state.json, disabled skills stay).
+// Removes the knowledge folder and nothing else of .cedarloom (committed files stay).
 export const clearKnowledge = (dir) => rmSync(knowledgeDir(dir), { recursive: true, force: true });

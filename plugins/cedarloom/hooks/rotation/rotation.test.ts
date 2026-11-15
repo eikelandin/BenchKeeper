@@ -8,14 +8,14 @@ import { withStatus } from './register'
 // The session's folder sits below the repository's top level, where git's status paths start.
 const TOP = '/work'
 const ROOT = `${TOP}/coord`
-const PATH = `${ROOT}/.cedarloom-app/runs/handoff.md`
+const PATH = `${ROOT}/.cedarloom/runs/handoff.md`
 const HANDOFF = '# Handoff\nrun r1\nTerminal: term-a\n\n## Next\nwatch #12\n'
 const IDLE = { stop_hook_active: false, background_tasks: [] }
 // Each test loads the plugin afresh, so its module state (running, lastEnd, noted) starts empty.
 
-type Setup = { file?: string | null; tokens?: number | null; terminal?: string; stop?: { block?: string; preventContinuation?: true }; hold?: Promise<void>; tracked?: boolean; link?: true; git?: number; slow?: Promise<void>; drop?: string; surfaces?: string[]; changed?: { log: string; status: string } }
+type Setup = { file?: string | null; tokens?: number | null; terminal?: string; stop?: { block?: string; preventContinuation?: true }; hold?: Promise<void>; tracked?: boolean; link?: true; git?: number; slow?: Promise<void>; drop?: string; surfaces?: string[]; changed?: { log: string; status: string }; orca?: { run: string; completed: number; failed: number } }
 
-function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', stop = {}, hold, tracked = false, link, git = 0, slow, drop, surfaces = ['terminal'], changed = { log: '', status: '' } }: Setup = {}) {
+function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', stop = {}, hold, tracked = false, link, git = 0, slow, drop, surfaces = ['terminal'], changed = { log: '', status: '' }, orca }: Setup = {}) {
   const clock = mock.clock(on, { now: 3_600_000 })
   const session = mock.session(on)
   const files: Record<string, string> = file === null ? {} : { [PATH]: file }
@@ -34,10 +34,15 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
   })
   on('process.run', async (_, e) => {
     await slow
+    // Orca's task list holds one task still waiting besides the settled ones.
+    if (e.argv[0] === 'orca') {
+      const tasks = orca === undefined ? [] : [{ status: 'ready' }, ...Array.from({ length: orca.completed }, () => ({ status: 'completed' })), ...Array.from({ length: orca.failed }, () => ({ status: 'failed' }))]
+      return { value: { exitCode: orca === undefined ? 1 : 0, stdout: JSON.stringify({ ok: true, result: { runId: orca?.run, tasks } }), stderr: '' } } as never
+    }
     // The log call lists the commits after its --since; the time is the second field of a line.
     const since = e.argv.find((arg) => arg.startsWith('--since-as-filter='))?.slice('--since-as-filter='.length)
     const log = () => changed.log.split('\n').filter((line) => line !== '' && Date.parse(line.split(' ')[1] ?? '') > Date.parse(since ?? '')).map((line) => `${line}\n`).join('')
-    const stdout = since !== undefined ? log() : e.argv.includes('status') ? changed.status : e.argv.includes('rev-parse') ? `${TOP}\n` : tracked ? '.cedarloom-app/runs/handoff.md\n' : ''
+    const stdout = since !== undefined ? log() : e.argv.includes('status') ? changed.status : e.argv.includes('rev-parse') ? `${TOP}\n` : tracked ? '.cedarloom/runs/handoff.md\n' : ''
     return { value: { exitCode: git, stdout, stderr: '' } } as never
   })
   on('fs.read', (_, e) => {
@@ -76,7 +81,7 @@ async function clears($: Engine, e: ReturnType<typeof engine>, size: string) {
 }
 
 test('withStatus replaces the status block or appends one', () => {
-  const block = (line: string) => `<!-- cedarloom-app:status -->\n${line}\n<!-- /cedarloom-app:status -->`
+  const block = (line: string) => `<!-- cedarloom:status -->\n${line}\n<!-- /cedarloom:status -->`
   expect(withStatus('# Handoff\n\n## Next\nx\n', 'one')).toBe(`# Handoff\n\n## Next\nx\n\n${block('one')}\n`)
   expect(withStatus(`# Handoff\n\n${block('one')}\n`, 'two')).toBe(`# Handoff\n\n${block('two')}\n`)
 })
@@ -93,11 +98,13 @@ test('a clear or compaction hands the file back after the other hooks, and nothi
 })
 
 test('the restored file is followed by the commits and the files changed since it was written', async ($, on) => {
-  engine(on, { changed: { log: 'abc1234 2026-01-01T00:00:00+00:00 add a\n', status: ' M src/a.ts\0?? .cedarloom-app/\0 M coord/.cedarloom-app/runs/state.json\0' } })
+  engine(on, { changed: { log: 'abc1234 2026-01-01T00:00:00+00:00 add a\n', status: ' M src/a.ts\0?? .cedarloom/runs/\0?? .cedarloom/\0 M .cedarloom/profile-files.json\0 M coord/.cedarloom/runs/state.json\0' } })
   const restored = (await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1] ?? ''
   expect(restored).toContain('\nabc1234 2026-01-01T00:00:00+00:00 add a\n')
   expect(restored).toContain('\n- `src/a.ts`')
-  expect(restored).not.toContain('- `.cedarloom-app/`')
+  expect(restored).toContain('\n- `.cedarloom/profile-files.json`')
+  expect(restored).not.toContain('- `.cedarloom/runs/`')
+  expect(restored).not.toContain('- `.cedarloom/`')
   expect(restored).not.toContain('state.json')
 })
 
@@ -159,7 +166,7 @@ const lax: [string, string][] = [
 ]
 for (const [name, line] of lax) {
   test(`an edited stamp ${name} falls back to the mtime`, async ($, on) => {
-    engine(on, { file: `${HANDOFF}\n<!-- cedarloom-app:status -->\n1970-01-01T00:00:00.700Z compacting; context: 1 tokens; last clear: none; ${line}\n<!-- /cedarloom-app:status -->\n`, changed: { log: 'abc1234 1970-01-01T00:30:00+00:00 add a\n', status: '' } })
+    engine(on, { file: `${HANDOFF}\n<!-- cedarloom:status -->\n1970-01-01T00:00:00.700Z compacting; context: 1 tokens; last clear: none; ${line}\n<!-- /cedarloom:status -->\n`, changed: { log: 'abc1234 1970-01-01T00:30:00+00:00 add a\n', status: '' } })
     expect((await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1]).toContain('\n## Drift since this file was written (1970-01-01T00:00:01.000Z,')
   })
 }
@@ -175,7 +182,7 @@ test('a file name cannot start a heading or a line of its own, or hide text', as
 test('an idle Stop above 200000 tokens clears, then submits the resume prompt, once in 10 minutes', async ($, on) => {
   const e = engine(on)
   await clears($, e, '250000 tokens')
-  expect(e.files[PATH]).toMatch(/clearing at 250000 tokens; context: 250000 tokens; last clear: none; edited: 1970-01-01T00:00:01\.000Z; text: [0-9a-f]{8}\n<!-- \/cedarloom-app:status -->\n$/)
+  expect(e.files[PATH]).toMatch(/clearing at 250000 tokens; context: 250000 tokens; last clear: none; edited: 1970-01-01T00:00:01\.000Z; text: [0-9a-f]{8}\n<!-- \/cedarloom:status -->\n$/)
   await e.clock.advance(9 * 60_000)
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)
@@ -208,11 +215,17 @@ for (const stop of [{ block: 'keep going' }, { preventContinuation: true } as co
   })
 }
 
-test('a Stop while the clear still runs does not clear again, also past the 10-minute gap', async ($, on) => {
+// One idle Stop whose /clear runs until release is called.
+async function held($: Engine, on: On) {
   let release = () => {}
   const e = engine(on, { hold: new Promise<void>((done) => (release = done)) })
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)
+  return { e, release: () => release() }
+}
+
+test('a Stop while the clear still runs does not clear again, also past the 10-minute gap', async ($, on) => {
+  const { e, release } = await held($, on)
   await e.clock.advance(11 * 60_000)
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)
@@ -220,6 +233,69 @@ test('a Stop while the clear still runs does not clear again, also past the 10-m
   release()
   await e.clock.advance(1000)
   expect(e.ran.length).toBe(2)
+})
+
+test('a clear that never settles is given up after 15 minutes with a note and no resume prompt, and the next idle Stop after the gap clears', async ($, on) => {
+  const { e, release } = await held($, on)
+  await e.clock.advance(15 * 60_000)
+  expect(e.session.appended().map((row) => row.message.type)).toEqual(['system'])
+  release()
+  await e.clock.advance(1000)
+  expect(e.ran).toEqual(['/clear'])
+  await e.clock.advance(10 * 60_000)
+  await $.classic.Stop(IDLE)
+  await e.clock.advance(1000)
+  expect(e.ran.length).toBe(3)
+  expect(e.ran[1]).toBe('/clear')
+  expect(e.ran[2]).toContain('250000 tokens')
+})
+
+test('a clear by settled tasks that never settles keeps the count, so the next idle Stop after the gap clears again', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
+  const orca = { run: 'run-1', completed: 3, failed: 0 }
+  const e = engine(on, { tokens: 150000, orca, hold: new Promise<void>(() => {}) })
+  const stop = async () => {
+    await $.classic.Stop(IDLE)
+    await e.clock.advance(1000)
+  }
+  await stop()
+  orca.completed = 5
+  await stop()
+  expect(e.ran).toEqual(['/clear'])
+  await e.clock.advance(15 * 60_000)
+  expect(e.session.appended().map((row) => row.message.type)).toEqual(['system'])
+  await e.clock.advance(10 * 60_000)
+  await stop()
+  expect(e.ran).toEqual(['/clear', '/clear'])
+})
+
+test('the set number of tasks settled since the last clear clears an idle coordinator below the threshold; a new run counts afresh', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
+  const orca = { run: 'run-1', completed: 3, failed: 0 }
+  const e = engine(on, { tokens: 150000, orca })
+  const stop = async () => {
+    await $.classic.Stop(IDLE)
+    await e.clock.advance(1000)
+  }
+  // The first read starts the count; one settled task is not enough.
+  await stop()
+  orca.completed = 4
+  await stop()
+  expect(e.ran).toEqual([])
+  orca.failed = 1
+  await clears($, e, 'after 2 settled tasks')
+  // The count starts again at the clear.
+  await e.clock.advance(11 * 60_000)
+  orca.completed = 5
+  await stop()
+  expect(e.ran.length).toBe(2)
+  // The tasks a new run settled before its first read do not count.
+  Object.assign(orca, { run: 'run-2', completed: 9 })
+  await stop()
+  expect(e.ran.length).toBe(2)
+  orca.completed = 11
+  await stop()
+  expect(e.ran.length).toBe(4)
+  expect(e.ran[2]).toBe('/clear')
+  expect(e.ran[3]).toContain('after 2 settled tasks')
 })
 
 test('a turn that starts before the clear makes it give up, and the next idle Stop clears', async ($, on) => {
