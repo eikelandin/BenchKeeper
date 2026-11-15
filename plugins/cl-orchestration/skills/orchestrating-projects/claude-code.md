@@ -16,9 +16,9 @@ Preconditions, checked before the first worker; when one fails, start nothing an
 
 Per worker:
 
-1. `git -C <project path> fetch origin`, then `git -C <project path> worktree add --detach <run folder>/worktrees/<repo>-<number>-<slug> origin/<default branch>`, `<repo>` being the name part of `<owner/repo>` and `<number>-<slug>` the first issue of a batch. A retry, replan or resume of the same issue reuses that worktree when it is still there and adds none. The worker creates or checks out its branches there, as the spec's Branch line says.
+1. `git -C <project path> fetch origin`, then `git -C <project path> worktree add --detach <run folder>/worktrees/<owner>-<repo>-<number>-<slug> origin/<default branch>`, from `<owner/repo>` and the first issue of a batch. A retry, replan or resume of the same issue reuses that worktree when it is still there and adds none. The worker creates or checks out its branches there, as the spec's Branch line says.
 2. Fill the spec with that worktree's path and without its Acknowledge line ([spec-template.md](spec-template.md)), and write it to a file in the run folder.
-3. Start the worker: `Agent` with `run_in_background: true`, `model` the alias of the spec's model (the tool takes no full model id) and `effort` the spec's effort, the description `<repo>-<number>-<slug>`, and the prompt "Your task is the spec in <spec file>. Read it whole before anything else." Issue text stays in the file.
+3. Start the worker: `Agent` with `run_in_background: true`, `model` the alias of the spec's model (the tool takes no full model id) and `effort` the spec's effort, the description `<owner>-<repo>-<number>-<slug>`, and the prompt "Your task is the spec in <spec file>. Read it whole before anything else." Issue text stays in the file.
 4. Keep the returned agent id per worker with its project, issues, worktree path and branch names.
 
 `CEDARLOOM_ROLE` cannot be unset for a worker, since it shares the coordinator's environment; the role guard treats every subagent as a non-coordinator anyway.
@@ -59,9 +59,9 @@ Supervised only: every worker runs in this session's default permission mode, an
 The worker may write only its worktree. Nothing enforces that: the role guard is advisory. So the coordinator checks after the fact:
 
 - At Start, per project main checkout, record in the run folder `git -C <project path> status --porcelain --ignored`, `git -C <project path> config --local --list | grep -v '^branch\.'` (making and deleting branches writes the `branch.` lines) and `shasum -a 256` of each file under `.git/hooks`.
-- After each report, compare each main checkout with that record (not with a clean state, so the owner's own uncommitted work blocks nothing); check that the worktree of every other worker that is not running shows the `git status --porcelain` and `HEAD` it had at that worker's report; and check that `find <run folder>/.. -path '*/worktrees' -prune -o -type f -newer <the file you wrote last there> -print` prints nothing, so no file of the run files (specs, threads, handoff file, merge log, config listings) changed after your last write.
+- After each report, compare each main checkout with that record (not with a clean state, so the owner's own uncommitted work blocks nothing); check that the worktree of every other worker that is not running shows the `git status --porcelain` and `HEAD` it had at that worker's report; and check the run files (specs, threads, handoff file, merge log, config listings: every file under `.cedarloom/runs` outside the `worktrees` folders): each holds the `shasum -a 256` you recorded at your own last write of it, and none appeared that you did not write.
 - A difference ends the reporting worker's issue as BLOCKED for the owner, whatever its report said: name the paths and the workers still running, any of whom may have made it, change nothing back, and start no new worker in that project until the owner answers.
-- The check sees paths that appear, vanish or change status and changed modification times, not a new edit to a file that was already changed or ignored, and not a worker that resets a time: it catches mistakes, not a worker set on hiding a write.
+- In the main checkouts the check sees paths that appear, vanish or change status, not a new edit to a file that was already changed or ignored: it catches mistakes, not a worker set on hiding a write.
 
 ## Resume
 
@@ -69,7 +69,7 @@ Background agents end with the coordinator's process (unverified: whether they s
 
 ## Clean up
 
-Stop a worker that still runs (`TaskStop` with its id). A worker that reported needs no release; it is done once no follow-up can come. Remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch, as [Clean up](SKILL.md#clean-up) step 2 allows. When the run closes, a worktree that stays (a blocked worker's, or one with unpushed work) keeps the run folder's `worktrees` folder: delete the other run files only, and name each kept worktree in the report.
+Stop a worker that still runs (`TaskStop` with its id), a batch's worker only after its report ([Batches](spec-template.md#batches)). A worker that reported needs no release; it is done once no follow-up can come. Remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch, as [Clean up](SKILL.md#clean-up) step 2 allows. When the run closes, a worktree that stays (a blocked worker's, or one with unpushed work) keeps the run folder's `worktrees` folder: delete the other run files only, and name each kept worktree in the report.
 
 ## Host limit
 

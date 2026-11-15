@@ -108,7 +108,7 @@ With the hub as `<tracker>` of a public `<owner/repo>`, the spec names no hub, h
 A spec with several issues is a batch: the issues one Pick gives one worker.
 
 - It counts as one worker for `workersPerProject` and `hostWorkerLimit`.
-- The worker sends one status message with the handoff block per issue, and one report at the end. React to each issue's outcome when its message arrives: review and merge do not wait for the batch.
+- The worker sends one status message with the handoff block per issue, and one report at the end. React to each issue's outcome when its message arrives: review and merge do not wait for the batch. A runner without a message command (claude-code) gives the outcomes only in the report at the batch's end.
 - An issue reported blocked or in need of a replan waits until the batch has ended. Start no replan, retry or other worker for it before the batch's report, and keep the worktree.
 - An issue that ended BLOCKED on an earlier issue of its batch is the exception to "once per run" ([SKILL.md](SKILL.md#loop)): once that issue's pull request is merged, whoever merged it, it counts as an issue with no outcome, and Pick takes it again, once. In a `keepRunning` run that can be long after the batch.
 - A batch that ends BLOCKED (a cause that stops every issue) is blocked for each issue it did not finish.

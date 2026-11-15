@@ -14,7 +14,7 @@ export const requirements: [string, string][] = [
   ['Claude Code', '2.1.295 or later'],
   ['Node.js on the PATH', 'the hooks of the plugins run node'],
   ['Git and the GitHub CLI (gh)', 'for setting up repositories and for coordinating issue work'],
-  ['Orca', 'optional, with its orchestration skill, for cl-orchestration only: without it, workers run as background agents of the coordinator'],
+  ['Orca', 'optional, with its orchestration skill, for cl-orchestration only: without it, and with no other runner set or detected, workers run as background agents of the coordinator'],
 ];
 
 export type Skill = { name: string; args?: string; text: string };
