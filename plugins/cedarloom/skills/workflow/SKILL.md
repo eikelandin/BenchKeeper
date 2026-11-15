@@ -18,7 +18,7 @@ Every depth:
    |---|---|
    | quick | the diff fits in one sentence; a question the code answers |
    | standard | one behavior, or a refactor that keeps behavior, approach clear; at least standard: a bug, a dependency major or security advisory, a review-thread follow-up, a log line that logs user data |
-   | deep | several behaviors, a new capability, an uncertain approach, or a risky change; always deep: a schema migration, infrastructure as code, a refactor across modules or with a changed interface |
+   | deep | several behaviors, a new capability, an uncertain approach, or a risky change; always deep: a schema migration, infrastructure as code, a performance change, a refactor across modules or with a changed interface |
 
    - Risky: authentication, permissions, secrets, input validation, production data, deploy or production configuration, an irreversible action.
    - Which depth, first match: the user's depth for the task; the `Depth:` line of a coordinator's spec; your pick from the table above. A `Depth minimum:` line in `AGENTS.md` raises your pick to that depth, and a risky change raises it to deep.
