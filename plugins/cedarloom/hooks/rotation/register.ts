@@ -113,12 +113,13 @@ async function rotate($: EngineInterface, why: string, now: number, seen: number
     return
   }
   running = true
-  if (tasks !== null) counted = tasks
   let expired = false
   let watchdog: Timer | undefined
   try {
     const clearing = async () => {
       await $.command.run({ command: 'clear' })
+      // Only a clear that happened restarts the task count, so a failed or abandoned one is retried after the gap.
+      if (tasks !== null) counted = tasks
       if (expired) return
       const submitted = await $.prompt.submit({ text: resume(why) })
       if (submitted.drop !== undefined) throw new Error(`the resume prompt was dropped: ${submitted.drop}`)

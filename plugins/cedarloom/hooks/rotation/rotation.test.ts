@@ -248,6 +248,24 @@ test('a clear that never settles is given up after 15 minutes with a note and no
   expect(e.ran[2]).toContain('250000 tokens')
 })
 
+test('a clear by settled tasks that never settles keeps the count, so the next idle Stop after the gap clears again', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
+  const orca = { run: 'run-1', completed: 3, failed: 0 }
+  const e = engine(on, { tokens: 150000, orca, hold: new Promise<void>(() => {}) })
+  const stop = async () => {
+    await $.classic.Stop(IDLE)
+    await e.clock.advance(1000)
+  }
+  await stop()
+  orca.completed = 5
+  await stop()
+  expect(e.ran).toEqual(['/clear'])
+  await e.clock.advance(15 * 60_000)
+  expect(e.session.appended().map((row) => row.message.type)).toEqual(['system'])
+  await e.clock.advance(10 * 60_000)
+  await stop()
+  expect(e.ran).toEqual(['/clear', '/clear'])
+})
+
 test('the set number of tasks settled since the last clear clears an idle coordinator below the threshold; a new run counts afresh', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
   const orca = { run: 'run-1', completed: 3, failed: 0 }
   const e = engine(on, { tokens: 150000, orca })
