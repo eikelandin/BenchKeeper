@@ -592,6 +592,19 @@ test('projects update --unattended skips and lists a project whose own hooks or 
   assert.match(plain, /1 projects would be updated/, 'without --unattended nothing is skipped');
 });
 
+test('projects update --unattended does not reach origin of a project whose git config is not confirmed', async () => {
+  const h = home();
+  const ctx = context({ home: h });
+  const p = project(h);
+  addProject(ctx, p.dir);
+  const marker = join(h, 'upload-pack-ran');
+  p.git('config', 'remote.origin.uploadpack', `touch '${marker}'; git-upload-pack`);
+  let text = '';
+  await main(['projects', 'update', '--dry-run', '--unattended', '--json'], { out: new Writable({ write(c, _, done) { text += c; done(); } }), err: new Writable({ write(_c, _e, done) { done(); } }), ctx });
+  assert.match(JSON.parse(text).projects[0].reason, /not confirmed \(remote\.origin\.uploadpack, remote\.origin\.url\)/);
+  assert.ok(!existsSync(marker), 'the unconfirmed upload-pack command did not run');
+});
+
 test('a hook that links to a removed script is skipped; the other hooks are still listed', () => {
   const h = home();
   const p = project(h);

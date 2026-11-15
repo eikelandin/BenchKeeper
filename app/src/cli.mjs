@@ -796,7 +796,11 @@ async function command(argv, { out, err, ask, ctx }) {
     const asked = positionals.slice(2).map(canon), registered = listProjects(ctx);
     const unknown = positionals.slice(2).filter((_, i) => !registered.some((p) => p.path === asked[i]));
     if (unknown.length) { out.write(`${unknown.join(', ')}: not a registered project (benchkeeper projects add <dir>)\n`); return 2; }
-    const projects = registered.filter((p) => !asked.length || asked.includes(p.path)).map((p) => ({ ...status(ctx, p.path), unconfirmed: o.unattended ? unconfirmedGit(ctx, p.path) : [] }));
+    const projects = registered.filter((p) => !asked.length || asked.includes(p.path)).map((p) => {
+      const unconfirmed = o.unattended ? unconfirmedGit(ctx, p.path) : [];
+      // status fetches origin with the repository's config: a project the gate stops is not read past its checkout.
+      return { ...(unconfirmed.length ? { path: p.path, setupVersion: tryState(p.path)?.contentVersion ?? null } : status(ctx, p.path)), unconfirmed };
+    });
     if (!projects.length) { out.write('no projects: benchkeeper projects add <dir>\n'); return 1; }
     // A checkout behind origin's setup gets its changes from there: Update all starts at origin's default branch.
     const isReady = (p) => !p.unconfirmed.length && p.repo && (p.clean || !(p.share || p.committed)) && !p.error && (p.changes?.length || (p.checkout !== p.setupVersion && !p.current));
