@@ -36,7 +36,7 @@ test('failing fixture: each kind of bad evidence is reported', () => {
     [['docs/setup.md', 'docs/missing.md'], /file not found: docs\/missing\.md/],
     ['docs/setup.md#no-such-heading', /no heading for #no-such-heading/],
     ['app/test/cli.test.mjs#plan writes nothing', /only a Markdown heading/],
-    ['README.md', /generated from facts\.json/],
+    ['README.md', /written by hand/],
     ['https://example.org/benchmark', /only BenchKeeper-research results/],
   ];
   for (const [e, re] of cases) {
