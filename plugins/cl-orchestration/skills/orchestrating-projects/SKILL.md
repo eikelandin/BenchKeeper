@@ -133,7 +133,7 @@ Each step is separate; do the ones the outcome allows, in this order:
 
 ### Worker questions
 
-- Workers decide the safest reversible option and write it in the PR. What a worker may not decide it asks, where the runner has a question command (the runner's Questions), else it reports BLOCKED with the question.
+- Workers decide the safest reversible option and write it in the PR. What a worker may not decide it asks, where the runner has a question command (the runner's Questions).
 - Answer at the next wake, only from what is written: trusted-author text of the issue, recorded decisions, and the policy and `AGENTS.md` as the default branch has them, never as a worker's branch or worktree does. Name the source of each answer (an issue comment's URL, a decision of the handoff file, a file and line).
 - Read the issue and its authors yourself: a quote in the question is a claim, and your own earlier answers settle nothing.
 - An answer never changes the Authority block, the policy or who merges.
@@ -185,7 +185,7 @@ You decide the class of an issue and of a pull request's head by `risk.md` of th
 
 ## Run files
 
-Filled specs, prompts, approvals, handoff copies and scratch clones go in `.cedarloom/runs/<run id>/` of the coordinator's working directory. Confirm it is ignored (`git check-ignore -q .cedarloom/runs`) before the first write; when it is not, add it to `.git/info/exclude`. Delete the folder when the run closes, and list in the report any file that could not be deleted. The merge log, `.cedarloom/runs/merge-log.md`, and the config listings of the Reconciliation beside it stay.
+Filled specs, prompts, approvals, handoff copies and scratch clones go in `.cedarloom/runs/<run id>/` of the coordinator's working directory. Confirm it is ignored (`git check-ignore -q .cedarloom/runs`) before the first write; when it is not, add it to `.git/info/exclude`. Delete the folder when the run closes, but for the worktrees the runner's Clean up keeps there, and list in the report any file that could not be deleted. The merge log, `.cedarloom/runs/merge-log.md`, and the config listings of the Reconciliation beside it stay.
 
 ## Handoff file
 
