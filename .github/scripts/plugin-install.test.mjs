@@ -36,7 +36,8 @@ for (const { name } of marketplace.plugins) {
       claude('install', `${name}@${marketplace.name}`);
       // The array starts on its own line; a notice a fresh config prints first stays out of the parse.
       const out = claude('list', '--json');
-      const list = JSON.parse(out.slice(out.search(/^\[/m)));
+      // A plugin the calling session loads inline shows up too; only this marketplace's plugins are under test.
+      const list = JSON.parse(out.slice(out.search(/^\[/m))).filter((p) => p.id.endsWith(`@${marketplace.name}`));
       assert.deepEqual(list.map((p) => p.id).sort(), installed);
       for (const p of list) assert.equal(p.enabled, true, p.id);
     } finally {
