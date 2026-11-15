@@ -156,16 +156,22 @@ test('daily-digest hook: denies every git or gh call that is neither an exact fo
     'git status && git push origin HEAD:main',
     'git log; gh pr merge 3',
     'git log -1 --output=AGENTS.md',
+    "git log -1 '--output=AGENTS.md'",
+    "git log -1 --out''put=AGENTS.md", // the shell joins the pieces of a word
+    `git log "'" ; touch x ; "'"`, // a single quote inside double quotes opens nothing
+    `git log "'" "$(touch x)" "'"`,
     'git fetch --upload-pack=touch origin main',
+    'git fetch',
     'gh pr list --search "$(gh pr merge 3)"',
   ]) assert.equal(guard(c), 'deny', c);
   for (const c of [
-    'git fetch origin main', 'git rev-list --left-right --count origin/main...HEAD', 'git remote get-url origin', 'git status --porcelain -- digests/2026-11-12.md',
+    'git fetch origin main', 'git rev-list --left-right --count origin/main...HEAD', 'git remote get-url origin', 'git status --porcelain -- digests/2026-11-12.md', "git log -1 --format='%h %s; done'",
     'gh repo view Owner/Repo --json visibility,defaultBranchRef', 'gh pr list --repo Owner/Repo --state merged --search "merged:>=2026-11-11"',
   ]) assert.equal(guard(c), null, c);
   assert.equal(guard('git push origin HEAD:main', {}, { head: 'main' }), 'allow', 'the push of step 5 to the default branch');
   assert.equal(guard('git push origin HEAD:release', {}, { head: 'main' }), 'deny', 'a branch other than the default');
   assert.equal(guard('git push origin HEAD:main', { commit: 'false' }, { head: 'main' }), 'deny');
+  assert.equal(guard('git push origin HEAD:main', {}, { head: 'main', nested: 'someorg/public' }), 'deny', 'a push from a nested checkout');
 });
 
 test('daily-digest export: the run\'s settings hold the hook on Bash calls, and it decides there', { skip: process.platform === 'win32' && 'sh export' }, () => {

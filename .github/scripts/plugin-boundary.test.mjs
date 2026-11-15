@@ -69,7 +69,8 @@ test('imports must stay inside the plugin or name a Node built-in or the Claude 
 test('a package runner call of @cedarloom/app is found in any form, a call of its installed command is not', () => {
   assert.deepEqual(names('a.md', 'Run `npx @cedarloom/app@0.1 <command>`.'), ['app-npx', 'app-package']);
   assert.deepEqual(names('a.toml', 'precheck = "k=$(npx --yes @cedarloom/app knowledge show --json)"'), ['app-npx', 'app-package']);
-  assert.deepEqual(names('a.sh', 'bunx @cedarloom/app plan\npnpm dlx @cedarloom/app plan\nnpm exec -- @cedarloom/app plan'), ['app-npx', 'app-package']);
+  for (const runner of ['bunx', 'bun x', 'pnpx', 'pnpm dlx', 'npm exec --', 'yarn dlx']) assert.deepEqual(names('a.sh', `${runner} @cedarloom/app plan`), ['app-npx', 'app-package'], runner);
+  assert.deepEqual(names('a.md', 'Run `npx @cedarloom/app-ui`.'), ['app-package']);
   assert.deepEqual(names('a.md', 'When `command -v cedarloom-app` finds it, run `cedarloom-app plan`.'), ['app-state']);
 });
 

@@ -15,7 +15,7 @@ export const REFERENCES = {
   'app-package': [/\bbenchkeeper\b|@cedarloom\//i, /\b(?:npx|bunx|pnpm[ \t]+(?:dlx|exec))[ \t]+(?:-y[ \t]+)?cedarloom\b|(?:^|[`'"(]|\$[ \t])cedarloom[ \t]+[a-z]/m],
   'app-state': /cedarloom-app|CEDARLOOM_APP|\bminApp\b/i,
   // A package runner call of the app, which fetches and runs whatever the registry serves under that name.
-  'app-npx': /\b(?:npx|bunx|pnpm[ \t]+(?:dlx|exec)|npm[ \t]+(?:exec|x)|yarn[ \t]+dlx)\b[^\n]*?@cedarloom\/app\b/,
+  'app-npx': /\b(?:npx|bunx|pnpx|bun[ \t]+x|pnpm[ \t]+(?:dlx|exec)|npm[ \t]+(?:exec|x)|yarn[ \t]+dlx)\b[^\n`]*?@cedarloom\/app(?![\w-])/,
 };
 // Rules that the allow list cannot exempt.
 const UNLISTABLE = new Set(['app-npx']);

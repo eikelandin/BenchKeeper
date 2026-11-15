@@ -35,8 +35,9 @@ if [ "$mode $commit" = "act true" ]; then
     "$add"*) digest "${c#"$add"}" && say allow 'the digest file alone' ;;
     "$msg"*) digest "${c#"$msg"}" && say allow 'the digest file alone' ;;
     "$push"*)
-      d=$(git -C "$CLAUDE_PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
-      [ -n "$d" ] && [ "${c#"$push"}" = "${d#origin/}" ] && say allow 'the digest commit to the default branch' ;;
+      # The push runs in the current folder, so it must be the project's own checkout, not one nested in it.
+      t=$(git rev-parse --show-toplevel 2>/dev/null) d=$(git -C "$CLAUDE_PROJECT_DIR" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
+      [ -n "$t" ] && [ "$t" = "$(git -C "$CLAUDE_PROJECT_DIR" rev-parse --show-toplevel 2>/dev/null)" ] && [ -n "$d" ] && [ "${c#"$push"}" = "${d#origin/}" ] && say allow 'the digest commit to the default branch' ;;
   esac
 fi
 case $mode/$issue in act/0*|act/*[!0-9]*|*/) ;; act/*)
@@ -48,12 +49,21 @@ esac
 # A read-only command alone: no JSON escape but \", and outside quotes no character that chains, redirects or expands.
 r=$(printf '%s\n' "$c" | sed 's/\\"/"/g')
 case $r in *\\*) ;; *)
-  if printf '%s\n' "$r" | sed -E "s/'[^']*'/_/g; s/\"[^\"\$\`]*\"/_/g" | LC_ALL=C grep -q '^[A-Za-z0-9 _./:=,@%+*-]*$'; then
-    case " $r " in *" --output"*) ;; *)
-      case "$r " in "gh issue list "*|"gh issue view "*|"gh pr list "*|"gh pr view "*|"gh pr checks "*|"gh repo view "*|"git rev-list "*|"git remote get-url "*|"git log "*|"git status "*) exit 0 ;; esac
+  # One pass over the quotes as the shell reads them, printing the text with the quotes removed, so --out''put reads as --output.
+  if q=$(printf '%s\n' "$r" | LC_ALL=C awk '{
+    for (i = 1; i <= length($0); i++) {
+      ch = substr($0, i, 1)
+      if (m == "") { if (ch == "\047" || ch == "\"") { m = ch; continue }; if (ch !~ /[A-Za-z0-9 _.\/:=,@%+*-]/) exit 1 }
+      else if (ch == m) { m = ""; continue }
+      else if (m == "\"" && (ch == "$" || ch == "`")) exit 1
+      o = o ch
+    }
+    if (m != "") exit 1; print o }'); then
+    case $q in *--output*) ;; *)
+      case "$q " in "gh issue list "*|"gh issue view "*|"gh pr list "*|"gh pr view "*|"gh pr checks "*|"gh repo view "*|"git rev-list "*|"git remote get-url "*|"git log "*|"git status "*) exit 0 ;; esac
       # The fetch takes no option, since --upload-pack runs a command.
-      b=${r#"$fetch origin "}
-      case $r in "$fetch"|"$fetch origin") exit 0 ;; "$fetch origin "*) case $b in -*|*[!A-Za-z0-9._/-]*) ;; *) exit 0 ;; esac ;; esac ;;
+      b=${q#"$fetch origin "}
+      case $q in "$fetch origin") exit 0 ;; "$fetch origin "*) case $b in -*|*[!A-Za-z0-9._/-]*) ;; *) exit 0 ;; esac ;; esac ;;
     esac
   fi ;;
 esac
