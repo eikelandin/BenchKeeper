@@ -1,20 +1,14 @@
-// Optional tier band (userConfig tierBand, off by default): a row with the project, its branch and Ponytail's level (when that
-// plugin is on), a row with the last test run, the last lint or type check and whether the tier's checks passed since the
-// last edit, a row with the tier line of the last answer and buttons for /benchkeeper:tier, the sessions board and the
-// doctor, and the session's override kept in the system prompt and the plugin's store, so it outlasts compaction and resume.
-// It also shows ASK while /benchkeeper:ask or /benchkeeper:questions allows terminal questions.
-// It reads the working folder, git, one flag file of Ponytail and the commands and edits of the main loop; it writes only
-// that override to the plugin's store and sends nothing.
+// Optional status band (userConfig tierBand, off by default): a row with the project, its branch and Ponytail's level (when
+// that plugin is on), and a row with the last test run and the last lint or type check, ASK while /benchkeeper:ask or
+// /benchkeeper:questions allows terminal questions, and buttons for the sessions board and the doctor.
+// It reads the working folder, git, one flag file of Ponytail and the commands and edits of the main loop; it writes and
+// sends nothing.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Check, TierLine, Where } from '../../types'
+import type { Check, Where } from '../../types'
 import { askUntil, lasting } from '../ask/window.mjs'
 
-export const TIER = /^Tier: (quick|standard|full|research)(?: \(([^)]+)\))?/gm
-const CHOICES = ['quick', 'standard', 'full', 'research']
-const tier = atom({ plugin: 'cedarloom', key: 'tier' } as const, null)
-const override = atom({ plugin: 'cedarloom', key: 'override' } as const, null)
 const where = atom({ plugin: 'cedarloom', key: 'where' } as const, null)
 const tests = atom({ plugin: 'cedarloom', key: 'tests' } as const, null)
 const lint = atom({ plugin: 'cedarloom', key: 'lint' } as const, null)
@@ -58,41 +52,6 @@ function outcome(check: typeof TEST, command: string, ran: { isError?: boolean; 
 
 const state = (check: Check | null) => (!check ? 'not run' : check.edits ? `stale (${check.edits} edit${check.edits > 1 ? 's' : ''} since)` : check.result === 'pass' ? 'passed' : 'failed')
 
-// What the tier asks for before pushing (the playbook table of the workflow skill): quick the fast checks, standard and full
-// the tests and a review, which no hook sees. Only results after the last edit count. Research and no tier: no verdict.
-function verdict(tier: string | null, testRun: Check | null, lintRun: Check | null): string | null {
-  if (tier !== 'quick' && tier !== 'standard' && tier !== 'full') return null
-  const t = testRun?.edits === 0 ? testRun.result : null
-  const l = lintRun?.edits === 0 ? lintRun.result : null
-  const missing = [t === 'fail' && 'tests', l === 'fail' && 'lint/types'].filter(Boolean)
-  if (tier === 'quick' ? !t && !l : !t) missing.push(tier === 'quick' ? 'tests or lint/types' : 'tests')
-  if (missing.length) return `checks needed: ${missing.join(', ')}`
-  return tier === 'quick' ? 'ready' : 'ready, review is yours'
-}
-
-// The last tier line in a text, or null.
-export function lastTier(text: string): TierLine | null {
-  const m = [...text.matchAll(TIER)].at(-1)
-  return m ? { tier: m[1] ?? '', changeType: m[2] ?? null } : null
-}
-
-// Per session in the plugin's store, so a resumed session finds its override again.
-const key = async ($: EngineInterface) => `override:${await $.session.id()}`
-// A tier sets the override, auto ends it; anything else leaves it, as the skill then asks which tier was meant.
-async function setOverride($: EngineInterface, value: string) {
-  const v = value.trim().toLowerCase()
-  if (CHOICES.includes(v)) await $.store.set(await key($), v)
-  else if (v === 'auto') await $.store.delete(await key($))
-  else return
-  await update($, override, () => (v === 'auto' ? null : v))
-}
-async function current($: EngineInterface): Promise<string | null> {
-  const v = await read($, override)
-  if (v) return v
-  const stored = await $.store.get(await key($))
-  return typeof stored === 'string' && CHOICES.includes(stored) ? stored : null
-}
-
 // Project folder, git branch and Ponytail's level (the flag file its own hooks write; absent when it is not installed).
 // Read after each answer, never while drawing.
 async function refresh($: EngineInterface) {
@@ -116,16 +75,13 @@ async function openBoard($: EngineInterface) {
   await $.process.run(windows ? ['explorer.exe', file.replaceAll('/', '\\')] : [mac ? 'open' : 'xdg-open', file])
 }
 
-const HELP = 'BenchKeeper band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit, and ready when the checks the tier asks for passed since the last edit. quick, standard, full set the tier of this session, auto lets each task choose. board opens the sessions board. doctor asks the agent to run benchkeeper doctor. ASK until a time or for this session: terminal questions are allowed until then (/benchkeeper:ask, /benchkeeper:questions). Nothing leaves this machine. Turn off: set Tier band to false in the plugin options.'
+const HELP = 'BenchKeeper band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/benchkeeper:ask, /benchkeeper:questions). board opens the sessions board. doctor asks the agent to run benchkeeper doctor. Nothing leaves this machine. Turn off: set the status band option to false in the plugin options.'
 
 export const register: Register = (on, options) => {
   const on_ = options.tierBand === true
 
-  // Each step's visible text: the tier line comes before the first edit, not only in the final answer.
   on('turn.step', async function* ($, e, next) {
     const result = yield* next(e)
-    const line = on_ && !e.agentId ? lastTier(result.answer) : null
-    if (line) await update($, tier, () => line)
     if (on_ && !e.agentId) await refresh($).catch(() => undefined)
     return result
   })
@@ -167,7 +123,6 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
-    if (on_ && e.command?.name === 'benchkeeper:tier') await setOverride($, e.command.args)
     if (on_ && e.command?.name === 'benchkeeper:ask') {
       const end = askUntil(e.command.args, await $.clock.now())
       if (end !== undefined) asking = end
@@ -176,30 +131,15 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('prompt.compose', async ($, e, next) => {
-    const result = await next(e)
-    const v = on_ ? await current($) : null
-    if (!v) return result
-    const text = `Tier override for this session (set with /benchkeeper:tier): ${v}. Run each task at this tier and write its tier line as \`Tier: ${v} (override)\`, unless the user names a tier for the task or the change is risky.`
-    return { sections: [...result.sections, { id: 'benchkeeper:tier', text, scope: 'session' }] }
-  }).catch(($, e, next) => next(e))
-
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (!on_ || e.props.hasSurvey) return next(e)
     // Other mods share this slot: theirs draw below. next(e) rejects only when nothing answers beneath (a test).
     const below = await next(e).catch(() => undefined)
-    const line = await read($, tier)
-    const v = await current($)
     const at = await read($, where)
     const testRun = await read($, tests)
     const lintRun = await read($, lint)
-    const ready = verdict(v ?? line?.tier ?? null, testRun, lintRun)
     const now = asking === null ? null : await $.clock.now()
     const ask = asking !== null && now !== null && asking > now ? `ASK ${lasting(asking, now)}` : null
-    const pick = async (level: string) => {
-      await $.command.run({ command: 'benchkeeper:tier', args: level })
-      await setOverride($, level)
-    }
     const { Box, Text, Button } = $.ui.resolve(e)
     const info = [
       at?.project ? `${at.project}${at.branch ? ` (${at.branch})` : ''}` : null,
@@ -208,15 +148,10 @@ export const register: Register = (on, options) => {
     const mine = (
       <Box flexDirection="column" width={e.props.bodyColumns}>
       {info ? <Text dimColor>{info}</Text> : null}
-      <Text>tests: {state(testRun)}  lint/types: {state(lintRun)}{ready ? `  ${ready}` : ''}</Text>
       <Box flexDirection="row" alignItems="center" gap={2} width={e.props.bodyColumns}>
-        <Text>Tier: {line ? `${line.tier}${line.changeType ? ` (${line.changeType})` : ''}` : 'none yet'}</Text>
-        <Text dimColor>override: {v ?? 'none'}</Text>
+        <Text>tests: {state(testRun)}  lint/types: {state(lintRun)}</Text>
         {ask ? <Text>{ask}</Text> : null}
         <Box flexGrow={1} />
-        {['quick', 'standard', 'full', 'auto'].map(level => (
-          <Button key={level} plain label={level} onPress={() => pick(level)} />
-        ))}
         <Button key="board" plain label="board" onPress={() => openBoard($).catch(() => $.ui.toast('Could not open the sessions board'))} />
         <Button key="doctor" plain label="doctor" onPress={() => $.command.run({ command: 'benchkeeper:operating-benchkeeper', args: 'run benchkeeper doctor for this project and list the findings' }).catch(() => $.ui.toast('Could not start the doctor'))} />
         <Button key="help" plain label="?" onPress={() => $.ui.toast(HELP)} />
