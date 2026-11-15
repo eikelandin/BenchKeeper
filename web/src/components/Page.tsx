@@ -4,6 +4,7 @@ import {
 } from '@mantine/core';
 import { IconCheck, IconCopy, IconListCheck, IconRoute, IconSettings, IconStack2 } from '@tabler/icons-react';
 import type { ReactNode } from 'react';
+import { SLUG } from '../lib/repo-facts';
 import { sdlcSvg } from '../lib/sdlc';
 import facts from '../data/facts.json';
 import { commands, install, installOne, plugins, planned, requirements } from '../data/plugins';
@@ -134,6 +135,7 @@ export default function Page({ base, updated, commit }: { base: string; updated?
             <List size="sm" spacing={4}>
               {requirements.map(([name, why]) => <List.Item key={name}><Text span fw={700}>{name}:</Text> {why}.</List.Item>)}
             </List>
+            <Text size="sm">Codex reads the same marketplace: its install commands are in the <Anchor href={`https://github.com/${SLUG}#install`}>README</Anchor>.</Text>
             <VisuallyHidden aria-live="polite" data-copy-status></VisuallyHidden>
           </Stack>
         </Section>

@@ -1,21 +1,20 @@
-import { SLUG } from '../lib/repo-facts';
-
 // What the plugins in plugins/ ship, written from their manifests, SKILL.md front matter and hooks.
 export const tagline = 'Plugins for Claude Code that size each task and run its checks and reviews, set up and maintain repositories, and coordinate the issues of several projects.';
 
 export const MARKETPLACE = 'cedarloom';
+// The marketplace source the README names; SLUG stays the repository of the header link and the GitHub facts.
+const MARKETPLACE_SOURCE = 'CedarLoom/cedarloom';
 export const install: { command: string; text: string }[] = [
-  { command: `claude plugin marketplace add ${SLUG}#stable --sparse .claude-plugin plugins`, text: 'Adds the CedarLoom marketplace at its stable branch.' },
-  { command: `claude plugin install cedarloom@${MARKETPLACE}`, text: 'Installs the bundle: cl-workflow, cl-setup and cl-orchestration. Start a new Claude Code session afterwards.' },
+  { command: `claude plugin marketplace add ${MARKETPLACE_SOURCE}#stable`, text: 'Adds the CedarLoom marketplace at its stable branch.' },
+  { command: `claude plugin install cedarloom@${MARKETPLACE}`, text: 'Installs the bundle: cl-workflow, cl-setup and cl-orchestration. Run /reload-plugins, or start a new session, and type /cl-workflow: to see the commands.' },
 ];
 export const installOne = `claude plugin install cl-workflow@${MARKETPLACE}`;
 
 export const requirements: [string, string][] = [
-  ['Claude Code', 'the agent the plugins run in'],
-  ['Node.js on the PATH', 'the hooks run node'],
-  ['Git', 'branches and commits'],
-  ['GitHub CLI (gh)', 'issues and pull requests in orchestration; optional otherwise'],
-  ['Orca', 'optional, the runner that orchestrating-projects drives'],
+  ['Claude Code', '2.1.295 or later'],
+  ['Node.js on the PATH', 'the hooks of the plugins run node'],
+  ['Git and the GitHub CLI (gh)', 'for setting up repositories and for coordinating issue work'],
+  ['Orca', 'with its orchestration skill, for cl-orchestration only: the coordinator starts nothing without it'],
 ];
 
 export type Skill = { name: string; args?: string; text: string };
