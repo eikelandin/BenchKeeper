@@ -25,8 +25,8 @@ function decoded(text) {
 function namer(hub) {
   if (!HUB.test(hub)) throw new Error('the hub takes a plain owner/name');
   const [owner, name] = hub.split('/').map((part) => part.replaceAll('.', '\\.'));
-  // No owner name goes on before it; after the name and an optional .wiki and .git, a ., _ or - is more name only when a letter or digit follows.
-  const slug = `(?<![a-z0-9-])${owner}/${name}(?:\\.wiki)?(?:\\.git)?(?![._-]*[a-z0-9])`;
+  // No owner name goes on before it; after the name and an optional .wiki and .git, a ., _ or - is more name only when a letter or digit follows, and a dot before a dot (an ellipsis) ends it.
+  const slug = `(?<![a-z0-9-])${owner}/${name}(?:\\.wiki)?(?:\\.git)?(?!(?:[_-]|\\.(?!\\.))*[a-z0-9])`;
   const pattern = new RegExp(`${slug}|(?<![a-z0-9._/-])${name}#\\d`, 'i');
   return (text) => pattern.test(decoded(text ?? ''));
 }

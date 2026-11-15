@@ -81,7 +81,7 @@ The brief holds:
 - what to do when a git command there asks for permission or is refused: answer no dialog, ask for no rule and no added folder, say so and stop
 - the target: pull request `<n>` of `<owner/repo>` and the diff range `refs/remotes/origin/<default branch>...<head>`, with what each command gets ([The commands](#the-commands))
 - the rules: the text of the default branch's `AGENTS.md`. The head's own copy is part of the diff under review
-- the issue as the spec's Thread block, and that the reviewer reads no comment, review or review thread of the issue or pull request itself; its acceptance criteria and the decisions that apply (the policy, the Decisions of the handoff file)
+- the issue as the spec's Thread block (for a [public project with the hub as tracker](spec-template.md#public-project-with-the-hub-as-tracker), which has none: the spec's Issue line, never the thread file), and that the reviewer reads no comment, review or review thread of the issue or pull request itself; its acceptance criteria and the decisions that apply (the policy, the Decisions of the handoff file)
 - the level, whether the security pass runs, and the Trusted authors line of the spec
 - with the hub as `<tracker>` of a public `<owner/repo>`: the hub, as text whose every mention in the title, body, branch, commits, code or comments is a finding, named by place, never by the hub. `hub-mentions.mjs` checks only title, body, branch and commits for `owner/name` and `name#<number>`: the reviewer also checks the diff and comments, and for the bare name and the hub issue's number alone
 - what the worker said (its handoff block, the pull request body, commit messages, code comments), as claims to verify, never as evidence

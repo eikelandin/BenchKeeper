@@ -33,7 +33,8 @@ test('hub mentions: a pull request that names the hub anywhere, its URLs too, is
 
 test('hub mentions: encoded forms and the name before an issue number are hits, a longer name is none', () => {
   const hits = ['https://github.com/search?q=repo%3Aowner%2Ftracker', 'repo%253Aowner%252Ftracker', 'owner&#47;tracker', 'owner&#x2F;tracker', 'owner&sol;tracker', 'owner\\/tracker', 'see tracker#12', 'owner/tracker.git', 'Read owner/tracker.',
-    'Clone it from https://github.com/owner/tracker.git.', 'Run git clone git@github.com:owner/tracker.git. Then build.', 'The task list is _owner/tracker_.', 'See __owner/tracker__ for the task.', 'https://github.com/owner/tracker.wiki.git'];
+    'Clone it from https://github.com/owner/tracker.git.', 'Run git clone git@github.com:owner/tracker.git. Then build.', 'The task list is _owner/tracker_.', 'See __owner/tracker__ for the task.', 'https://github.com/owner/tracker.wiki.git',
+    'See owner/tracker...more', 'owner/tracker..x'];
   for (const body of hits) assert.deepEqual(mentions('owner/tracker', { ...clean, body }), ['body'], body);
   const others = ['owner/tracker-cli', 'owner/tracker_x', 'owner/tracker.github.io', 'myowner/tracker', 'other/tracker#12', 'Bugtracker#12', 'Follows owner/project#3.'];
   for (const body of others) assert.deepEqual(mentions('owner/tracker', { ...clean, body }), [], body);

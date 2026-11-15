@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -156,4 +156,31 @@ test('thread: the command line writes only into the run folder, never through ..
   assert.ok(!existsSync(join(dir, 'out.md')) && !existsSync(join(dir, 'elsewhere/out.md')));
   // A file in the run folder passes the check: what fails next is the policy read of a folder that is no project.
   assert.equal(run('.cedarloom/runs/r1/thread-owner.project-7.md').status, 1);
+});
+
+test('thread: the command line reads the issue from the tracker its --hub and --issues-in options pick', () => {
+  const script = fileURLToPath(new URL('../skills/orchestrating-projects/thread.mjs', import.meta.url));
+  const dir = mkdtempSync(join(tmpdir(), 'bk-thread-cli-'));
+  const bin = join(dir, 'bin');
+  mkdirSync(bin);
+  mkdirSync(join(dir, 'project'));
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  writeFileSync(join(bin, 'policy.json'), JSON.stringify(POLICY));
+  writeFileSync(join(bin, 'hub.json'), JSON.stringify({ ...ISSUE, title: 'Hub task' }));
+  writeFileSync(join(bin, 'project.json'), JSON.stringify({ ...ISSUE, title: 'Project issue' }));
+  // Stand-ins for git (the policy read and the origin) and gh (both repositories hold an issue 7, without comments).
+  writeFileSync(join(bin, 'git'), `#!/bin/sh\ncase "$*" in\n  *'config --show-scope'*) ;;\n  *ls-remote*) printf 'c0ffee0000000000000000000000000000000001\\tHEAD\\n' ;;\n  *fetch*) ;;\n  *ls-tree*) echo docs/agents/orchestration.json ;;\n  *'show '*) cat '${bin}/policy.json' ;;\n  *'remote get-url origin'*) echo git@github.com:owner/project.git ;;\n  *) exit 1 ;;\nesac\n`, { mode: 0o755 });
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *issues/7/comments*) echo '[[]]' ;;\n  *repos/owner/tracker/issues/7) cat '${bin}/hub.json' ;;\n  *repos/owner/project/issues/7) cat '${bin}/project.json' ;;\n  *) exit 1 ;;\nesac\n`, { mode: 0o755 });
+  const run = (options, file) => spawnSync(process.execPath, [script, ...options, join(dir, 'project'), '7', file], { cwd: dir, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GH_HOST: '' } });
+  const first = (options, file) => {
+    const done = run(options, file);
+    assert.equal(done.status, 0, done.stderr);
+    return readFileSync(join(dir, file), 'utf8').split('\n')[0];
+  };
+  assert.equal(first(['--hub=owner/tracker', '--issues-in=hub'], '.cedarloom/runs/r1/hub.md'), '# owner/tracker#7: Hub task');
+  assert.equal(first(['--hub=owner/tracker', '--issues-in=repo'], '.cedarloom/runs/r1/repo.md'), '# owner/project#7: Project issue');
+  // An empty --hub= is a mistake of the caller, not "no hub": nothing is read or written.
+  const empty = run(['--hub=', '--issues-in=hub'], '.cedarloom/runs/r1/empty.md');
+  assert.deepEqual([empty.status, empty.stderr], [2, '--hub takes a plain owner/name\n']);
+  assert.ok(!existsSync(join(dir, '.cedarloom/runs/r1/empty.md')));
 });
