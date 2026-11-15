@@ -1,4 +1,4 @@
-// Writes the README blocks generated from src/data/facts.json and app/src/agents.json. `--check` fails when the README is out of date.
+// Writes the generated blocks of docs/ and app/README.md from src/data/facts.json and app/src/agents.json. `--check` fails when one is out of date.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { supportTables } from './support.mjs';
 
@@ -29,8 +29,6 @@ const quickstart = (setup) => {
 
 const blocks = {
   support: supportTables(agents),
-  quickstart: quickstart('docs/setup.md'),
-  description: [facts.description, '', `[${facts.overview.title}](https://eikelandin.github.io/BenchKeeper/overview/): the workflow, what each part brings and the defaults it sets.`],
   core: [`**Optional: [${facts.core.name}](${facts.core.url}) by ${facts.core.by}:** ${facts.core.role}.`],
   levels: [
     '| Level | Contains | Writes | Command |',
@@ -55,10 +53,9 @@ const blocks = {
   ],
 };
 
-// Each block lives in one file. The README and app/README.md hold the description and quickstart, docs/ the reference blocks (links in them are relative to docs/).
+// Each block lives in one file. The root README is written by hand (it describes the plugins); app/README.md holds the quickstart, docs/ the reference blocks (links in them are relative to docs/).
 const pick = (names) => Object.fromEntries(names.map((n) => [n, blocks[n]]));
 const targets = [
-  ['README.md', pick(['description', 'quickstart'])],
   ['docs/setup.md', pick(['prerequisites', 'levels', 'support'])],
   ['docs/stack.md', pick(['core', 'reasons', 'tools', 'openhands'])],
   ['app/README.md', { quickstart: quickstart('../docs/setup.md') }],
