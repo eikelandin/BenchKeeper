@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Verifier under the BenchKeeper workflow: of review findings on a risky change before the first fix, or of a plan, research answer or docs decision list before it is used; started by its phase orchestrator or the coordinator, not for direct use."
+description: "Verifier under the CedarLoom workflow: of review findings on a risky change before the first fix, or of a plan, research answer or docs decision list before it is used; started by its phase orchestrator or the coordinator, not for direct use."
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
 effort: high

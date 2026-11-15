@@ -53,7 +53,7 @@ export function triggered(output, name) {
     let e;
     try { e = JSON.parse(line); } catch { continue; }
     const uses = e.message?.content?.filter?.((c) => c.type === 'tool_use') ?? [];
-    if (uses.some((u) => u.name === 'Skill' && [name, `benchkeeper:${name}`].includes(u.input?.skill ?? u.input?.command))) return true;
+    if (uses.some((u) => u.name === 'Skill' && [name, `cedarloom:${name}`].includes(u.input?.skill ?? u.input?.command))) return true;
     if (uses.some((u) => u.name === 'Read' && new RegExp(`${path.source}$`).test(u.input?.file_path ?? ''))) return true;
     if (e.item?.type === 'command_execution' && e.item.exit_code === 0 && read.test([e.item.command ?? []].flat().join(' '))) return true;
   }

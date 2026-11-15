@@ -263,7 +263,7 @@ function StopApp({ version, opened, close }) {
         <Stack gap="sm">
           <Title order={2} size="h4">{title}</Title>
           <Text size="sm">{state.stopped ? 'The server has stopped; you can close this tab.' : 'The local server stops and this page stops working. Scans and agent suggestions still running are cancelled.'}</Text>
-          <Text size="sm">Start it again: <Code>npx benchkeeper{version ? `@${version}` : ''}</Code></Text>
+          <Text size="sm">Start it again: <Code>npx @cedarloom/app{version ? `@${version}` : ''}</Code></Text>
           {state.error && <Alert color="red" role="alert" title="Not stopped">{state.error}</Alert>}
           {!state.stopped && (
             <Group justify="flex-end">

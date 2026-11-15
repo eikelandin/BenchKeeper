@@ -1018,10 +1018,10 @@ test.describe('views', () => {
     await expect(drawer).toContainText(/\d+ changes in this checkout, in files git ignores/);
     // The plan shows the line to start in a terminal, as the server built it, with Copy.
     const { prompts } = await (await planned).json();
-    expect(prompts[0].command).toMatch(/^benchkeeper sessions record --project '.+' -- claude '\/benchkeeper:setting-up-projects'$/);
+    expect(prompts[0].command).toMatch(/^benchkeeper sessions record --project '.+' -- claude '\/cedarloom:setting-up-projects'$/);
     await expect(drawer.getByText(prompts[0].command)).toBeVisible();
     // Copy says whether the clipboard took the command.
-    const copy = drawer.getByRole('button', { name: 'Copy the command for /benchkeeper:setting-up-projects' });
+    const copy = drawer.getByRole('button', { name: 'Copy the command for /cedarloom:setting-up-projects' });
     for (const [ok, text] of [[false, /^Copy failed/], [true, /^Copied$/]]) {
       await page.evaluate((ok) => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => (ok ? Promise.resolve() : Promise.reject(new Error('denied'))) } }), ok);
       await copy.click();

@@ -52,7 +52,7 @@
       "source": "https://code.claude.com/docs/en/settings-reference#attribution-commit", "quote": ["unset, so Claude Code adds `Co-Authored-By: <name> <noreply@anthropic.com>`", "Set it to `false` to omit the link."] },
     { "id": "hooks-off-question-switch", "agent": "claude", "level": "warning", "kind": "conflict", "doctor": true, "keys": ["disableAllHooks", "enabledPlugins"],
       "when": { "all": [{ "key": "disableAllHooks", "eq": true, "effective": true }, { "key": "enabledPlugins.cedarloom@cedarloom", "eq": true, "effective": true }, { "any": [{ "not": { "key": "enabledPlugins.cedarloom@cedarloom", "eq": true, "layer": ["managed"] } }, { "key": "disableAllHooks", "eq": true, "layer": ["managed"] }] }] },
-      "message": "disableAllHooks also stops the BenchKeeper plugin's hooks: the question tool is no longer refused by default, and /benchkeeper:ask sets nothing.", "fix": "remove disableAllHooks, or set it to false",
+      "message": "disableAllHooks also stops the BenchKeeper plugin's hooks: the question tool is no longer refused by default, and /cedarloom:ask sets nothing.", "fix": "remove disableAllHooks, or set it to false",
       "default": "By default hooks run, the BenchKeeper plugin's among them.", "risk": "A session asks its questions in the terminal and waits, where it would put them into the issue tracker and go on.", "fixChanges": "Every hook you configured runs again, yours and the plugins'.",
       "source": "https://code.claude.com/docs/en/settings-reference#disableallhooks", "quote": "Claude Code disables user, project, local, and plugin hooks" },
     { "id": "default-mode-ignored", "agent": "claude", "level": "warning", "kind": "ignored", "doctor": true, "refuse": true, "keys": ["permissions.defaultMode"],
