@@ -242,7 +242,7 @@ export function planCuts(root, cfg, plan) {
     const text = readFileSync(join(root, file), 'utf8');
     const lines = linesOf(text);
     // Each line with its own line break, so that the kept lines stay byte for byte (CRLF, a missing last break).
-    const raw = text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+    const raw = text.split(/(?<=\n)/).filter(Boolean);
     cuts.sort((a, b) => a.start - b.start);
     const head = frontMatter(lines).end;
     for (const [i, c] of cuts.entries()) {
