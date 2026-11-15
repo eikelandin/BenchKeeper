@@ -1,3 +1,0 @@
-name = "reviewer"
-description = "Reviews diffs: correctness only."
-developer_instructions = "Read the diff.\nReport gaps."

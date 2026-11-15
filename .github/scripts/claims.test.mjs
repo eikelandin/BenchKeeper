@@ -13,12 +13,12 @@ test('every claim in facts.json has evidence that resolves', () => {
   assert.deepEqual(check(facts), []);
 });
 test('evidence kinds that pass', () => {
-  for (const e of ['docs/setup.md#accounts', 'docs/automations.md', 'app/test/cli.test.mjs', ['docs/setup.md', 'app/package.json']]) {
+  for (const e of ['docs/plugins.md#role-guard', 'docs/releasing.md', 'plugins/cl-workflow/test/role-guard.test.mjs', ['docs/plugins.md', 'web/package.json']]) {
     assert.deepEqual(check(part(e)), [], String(e));
   }
   assert.deepEqual(check(tool(['https://example.org/tool/docs', 'docs/stack.md#recommended-tools-optional'])), []);
-  assert.deepEqual(check({ tagline: 'Does a thing.', evidence: { tagline: 'docs/setup.md' } }), []);
-  assert.deepEqual(check({ quickstart: { paths: [{ steps: [{ text: 'Runs.', evidence: 'app/test/cli.test.mjs' }] }] } }), []);
+  assert.deepEqual(check({ tagline: 'Does a thing.', evidence: { tagline: 'docs/plugins.md' } }), []);
+  assert.deepEqual(check({ quickstart: { paths: [{ steps: [{ text: 'Runs.', evidence: 'plugins/cl-workflow/test/role-guard.test.mjs' }] }] } }), []);
 });
 test('headings are anchored as GitHub does', () => {
   const dir = mkdtempSync(join(tmpdir(), 'claims-'));
@@ -33,9 +33,9 @@ test('failing fixture: each kind of bad evidence is reported', () => {
     [[], /no evidence/],
     ['unverified', /file not found: unverified/],
     ['docs/missing.md', /file not found: docs\/missing\.md/],
-    [['docs/setup.md', 'docs/missing.md'], /file not found: docs\/missing\.md/],
-    ['docs/setup.md#no-such-heading', /no heading for #no-such-heading/],
-    ['app/test/cli.test.mjs#plan writes nothing', /only a Markdown heading/],
+    [['docs/plugins.md', 'docs/missing.md'], /file not found: docs\/missing\.md/],
+    ['docs/plugins.md#no-such-heading', /no heading for #no-such-heading/],
+    ['plugins/cl-workflow/test/role-guard.test.mjs#denies a merge', /only a Markdown heading/],
     ['README.md', /written by hand/],
     ['https://example.org/benchmark', /only a repository file may be cited here/],
   ];
@@ -54,7 +54,7 @@ test('failing fixture: each kind of bad evidence is reported', () => {
   assert.match(check(tool('https://example.org/tool'))[0], /"Tool": what BenchKeeper says needs a repository file/);
   assert.match(check({ tagline: 'Does a thing.' })[0], /facts\.tagline: no evidence/);
   assert.match(check({ quickstart: { paths: [{ steps: [{ text: 'Runs.' }] }] } })[0], /facts\.quickstart\.paths\[0\]\.steps\[0\]: no evidence/);
-  assert.match(check({ evidence: { tagline: 'docs/setup.md' } })[0], /facts\.evidence\["tagline"\]: no such string claim/);
+  assert.match(check({ evidence: { tagline: 'docs/plugins.md' } })[0], /facts\.evidence\["tagline"\]: no such string claim/);
   assert.match(check({ pricing: 'Costs less.' })[0], /facts\.pricing: not a known claim/);
   assert.match(check({ parts: [{ title: 'Demo', text: 'Installs a thing.' }] })[0], /facts\.parts\[0\] "Demo": no evidence/);
 });

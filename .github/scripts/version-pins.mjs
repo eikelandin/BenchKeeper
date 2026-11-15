@@ -1,7 +1,7 @@
 // Writes the plugins' version (the bundle's .claude-plugin/plugin.json) into the plugin install lines of the docs that name a release tag:
 // the marketplace ref `#cedarloom-v<version>` (Claude Code) or `@cedarloom-v<version>` (Codex). Other version mentions stay as written.
 // Usage: node .github/scripts/version-pins.mjs [--check]   (--check: changes nothing; exit 1 when a file differs, or when
-// the dev container's Playwright, pnpm or Node differs from web/, app/ and packages/ui, .github/pnpm, or NODE_VERSION of cedarloom.yml)
+// the dev container's Playwright, pnpm or Node differs from web/ and packages/ui, .github/pnpm, or NODE_VERSION of cedarloom.yml)
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -10,7 +10,7 @@ import { isMain } from './main.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 // Recorded history and benchmark arms keep the versions they name; text under plugins/ ships inside the release it would name.
-export const SKIP = /^(bench\/|evaluations\/|CHANGELOG\.md|app\/test\/|plugins\/)|package-lock\.json$/;
+export const SKIP = /^(bench\/|evaluations\/|CHANGELOG\.md|plugins\/)|package-lock\.json$/;
 
 export function pins(text, version) {
   return text.replace(/([#@])cedarloom-v\d+\.\d+\.\d+/g, `$1cedarloom-v${version}`);
@@ -61,7 +61,7 @@ if (isMain(import.meta.url)) {
     process.exit(1);
   }
   if (process.argv[2] === '--check') {
-    const manifests = ['web/package.json', 'app/package.json', 'packages/ui/package.json'];
+    const manifests = ['web/package.json', 'packages/ui/package.json'];
     const packages = Object.fromEntries(manifests.map((f) => [f, JSON.parse(readFileSync(`${root}/${f}`, 'utf8'))]));
     const { image, drift } = playwrightDrift(readFileSync(`${root}/.devcontainer/Dockerfile`, 'utf8'), packages);
     if (!image) {

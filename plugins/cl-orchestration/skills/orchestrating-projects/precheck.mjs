@@ -23,10 +23,15 @@ const refers = (body, tracker, number) => {
   return new RegExp(`(?:(?<![\\w/.-])${repo}#|https?://(?:www\\.)?github\\.com/${repo}/issues/)${number}(?!\\d)`, 'i').test(body ?? '');
 };
 
+// The trust decision for an issue or a comment of the REST API: its author is the repository owner, a trustedAuthors login, or a member or collaborator with write access.
+export const trusts = (policy, writes) => {
+  const trusted = new Set(policy.trustedAuthors ?? []);
+  return (i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login));
+};
+
 // writes(login) is asked last, so only for an issue that is pickable otherwise.
 export function pickable(policy, issues, pulls, writes = () => false) {
   if (!policy?.startLabel) return [];
-  const trusted = new Set(policy.trustedAuthors ?? []);
   const labels = [policy.startLabel, ...(policy.issues?.labels ?? [])];
   const tracker = policy.issues?.repository;
   return issues
@@ -35,7 +40,7 @@ export function pickable(policy, issues, pulls, writes = () => false) {
     // The approvals the coordinator files carry this label: such an issue asks the owner, also after it gained the start label.
     .filter((i) => !i.labels.some((l) => l.name.toLowerCase() === 'question'))
     .filter((i) => !pulls.some((p) => p.headRefName.includes(`/${i.number}-`) && (!tracker || refers(p.body, tracker, i.number))))
-    .filter((i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login)))
+    .filter(trusts(policy, writes))
     .map((i) => i.number);
 }
 

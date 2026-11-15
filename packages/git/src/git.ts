@@ -28,7 +28,7 @@ const refuse = (finding: Finding): Result<never> => ({ ok: false, finding });
 
 export const flags = (settings: string[][]): string[] => settings.flatMap(([key, value]) => ["-c", `${key}=${value}`]);
 
-// Hardened as the app's clone (app/src/origin.mjs): docs/agents/git-and-processes.md#git
+// Hardened as docs/agents/git-and-processes.md#git describes
 const config = (protocols: readonly string[]): string[] => [
   ...flags([
     ["core.hooksPath", devNull],

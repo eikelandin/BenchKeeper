@@ -1,44 +1,14 @@
-// Writes the generated blocks of docs/ and app/README.md from src/data/facts.json and app/src/agents.json. `--check` fails when one is out of date.
+// Writes the generated blocks of docs/stack.md from src/data/facts.json. `--check` fails when one is out of date.
 import { readFileSync, writeFileSync } from 'node:fs';
-import { supportTables } from './support.mjs';
 
 const root = new URL('../../', import.meta.url);
 const facts = JSON.parse(readFileSync(new URL('web/src/data/facts.json', root), 'utf8'));
-const agents = JSON.parse(readFileSync(new URL('app/src/agents.json', root), 'utf8')).agents;
 
 // `|` would end a table cell, and a backslash in the text would escape the one added before it.
 const cell = (s) => s.replace(/[\\|]/g, '\\$&');
 const link = (name, url) => `[${cell(name)}](${url.replace(/\|/g, '%7C')})`;
 
-// Install paths as headed blocks (GitHub Markdown has no tabs). `setup` is the link to docs/setup.md from the file that holds the block.
-const quickstart = (setup) => {
-  const q = facts.quickstart;
-  return [
-    `${q.needs.replace(/\.$/, '')} ([full list](${setup}#prerequisites)). ${q.choose}`,
-    '',
-    ...q.paths.flatMap((p) => [
-      `### ${p.name}`,
-      '',
-      ...p.steps.flatMap((s) => ['```sh', s.command, '```', '', s.text, '']),
-    ]),
-    `${q.next} ${q.changes}`,
-    '',
-    q.links.map((l) => `[${l.label}](${setup}#${l.anchor})`).join('. ') + '.',
-  ];
-};
-
 const blocks = {
-  support: supportTables(agents),
-  levels: [
-    '| Level | Contains | Writes | Command |',
-    '|---|---|---|---|',
-    ...facts.levels.map((l) => `| ${l.name} | ${cell(l.contains)} | ${cell(l.writes)} | \`${cell(l.command)}\` |`),
-  ],
-  prerequisites: [
-    '| Tool | Needed for |',
-    '|---|---|',
-    ...facts.prerequisites.map((p) => `| ${link(p.name, p.url)} | ${cell(p.for)} |`),
-  ],
   tools: [
     '| Tool | Platforms | Gives you | Choose it when |',
     '|---|---|---|---|',
@@ -52,13 +22,8 @@ const blocks = {
   ],
 };
 
-// Each block lives in one file. The root README is written by hand (it describes the plugins); app/README.md holds the quickstart, docs/ the reference blocks (links in them are relative to docs/).
-const pick = (names) => Object.fromEntries(names.map((n) => [n, blocks[n]]));
-const targets = [
-  ['docs/setup.md', pick(['prerequisites', 'levels', 'support'])],
-  ['docs/stack.md', pick(['reasons', 'tools', 'openhands'])],
-  ['app/README.md', { quickstart: quickstart('../docs/setup.md') }],
-];
+// The root README is written by hand (it describes the plugins); docs/stack.md holds the reference blocks.
+const targets = [['docs/stack.md', blocks]];
 let stale = false;
 for (const [file, wanted] of targets) {
   const url = new URL(file, root);
