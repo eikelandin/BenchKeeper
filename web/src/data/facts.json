@@ -4,7 +4,7 @@
   "levels": [
     {
       "name": "Lite",
-      "contains": "the BenchKeeper plugin: the `workflow`, `tier`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-benchkeeper` and `reviewing-rules` skills",
+      "contains": "the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-benchkeeper` and `reviewing-rules` skills",
       "writes": "nothing outside the plugin install, besides the app's run record for undo",
       "command": "npx benchkeeper@6.27.0 apply --level lite",
       "evidence": "app/test/level.test.mjs"
@@ -34,7 +34,7 @@
     "name": "mattpocock/skills",
     "by": "Matt Pocock",
     "url": "https://github.com/mattpocock/skills",
-    "role": "the workflow owner: his skills run the phases of standard and full work when installed (grilling, spec and tickets, tdd, code review, pull request)",
+    "role": "the workflow owner: his skills run the phases of standard and deep work when installed (grilling, spec and tickets, tdd, code review, pull request)",
     "evidence": [
       "plugins/cedarloom/library/library.json",
       "plugins/cedarloom/skills/workflow/software.md#steps"
@@ -336,7 +336,7 @@
       "title": "`workflow`",
       "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/skills/workflow/SKILL.md",
       "scope": "Global, before repository work",
-      "text": "The task kind and tier, the playbooks for software changes, docs passes and research, the check per change type, batch mode with long checks at the end.",
+      "text": "The task kind and depth, the playbooks for software changes, docs passes and research, the check per change type, batch mode with long checks at the end.",
       "evidence": ["plugins/cedarloom/skills/workflow/SKILL.md", "docs/stack.md#contents"]
     },
     {
@@ -401,8 +401,8 @@
         "name": "Understand",
         "phase": "define",
         "sub": "request, questions, on-ramps",
-        "tip": "Reads the request, AGENTS.md and the code it touches, and picks the kind (software change, docs pass, research) and the tier. With Matt Pocock's skills: triage, diagnosing-bugs, wayfinder. Standard and full: open questions go with recommendations into one issue, and the agent goes on (in rounds, then plan mode, while you allow terminal questions).",
-        "text": "Read the request, `AGENTS.md` and the code the change touches, and pick the kind (software change, docs pass, research) and the tier. With Matt Pocock's skills installed, his on-ramps start here: `/triage` for issues you did not write, `diagnosing-bugs` for a broken behavior, `/wayfinder` for work too big to see the way yet. Standard and full tiers: the agent writes the open questions, each with a recommendation, into one issue in the tracker the project names, takes the safe and reversible ones and goes on. Only while you allow terminal questions does it ask them in rounds and explore in plan mode.",
+        "tip": "Reads the request, AGENTS.md and the code it touches, and picks the kind (software change, docs pass, research) and the depth. With Matt Pocock's skills: triage, diagnosing-bugs, wayfinder. Standard and deep: open questions go with recommendations into one issue, and the agent goes on (in rounds, then plan mode, while you allow terminal questions).",
+        "text": "Read the request, `AGENTS.md` and the code the change touches, and pick the kind (software change, docs pass, research) and the depth. With Matt Pocock's skills installed, his on-ramps start here: `/triage` for issues you did not write, `diagnosing-bugs` for a broken behavior, `/wayfinder` for work too big to see the way yet. Standard and deep: the agent writes the open questions, each with a recommendation, into one issue in the tracker the project names, takes the safe and reversible ones and goes on. Only while you allow terminal questions does it ask them in rounds and explore in plan mode.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md",
           "plugins/cedarloom/skills/workflow/software.md#steps"
@@ -413,19 +413,19 @@
         "phase": "define",
         "sub": "plan, spec, tickets",
         "human": "approve the plan",
-        "tip": "Standard: a plan of a few lines that names the test seams. Full: the spec, terms and decisions recorded. Several sessions: one ticket per testable slice.",
-        "text": "Standard tier: a plan of a few lines that names the test seams. Full tier: the spec (deployment target, data storage, module boundaries, core types), with terms and decisions recorded (`domain-modeling` with Matt Pocock's skills). Work for several sessions: one ticket per independently testable slice; with his skills the agent suggests `/to-spec` and `/to-tickets` and waits for you to run them.",
+        "tip": "Standard: a plan of a few lines that names the test seams. Deep: the spec, terms and decisions recorded. Several sessions: one ticket per testable slice.",
+        "text": "Standard: a plan of a few lines that names the test seams. Deep: the spec (deployment target, data storage, module boundaries, core types), with terms and decisions recorded (`domain-modeling` with Matt Pocock's skills). Work for several sessions: one ticket per independently testable slice; with his skills the agent suggests `/to-spec` and `/to-tickets` and waits for you to run them.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md",
-          "plugins/cedarloom/skills/workflow/full-tier.md"
+          "plugins/cedarloom/skills/workflow/deep.md"
         ]
       },
       {
         "name": "Build",
         "phase": "build",
         "sub": "tests where they count",
-        "tip": "Standard and full: the existing tests of the touched code, then a test first only where the test rule calls for one.",
-        "text": "Standard and full tiers: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. With the Ponytail pack, Ponytail runs at its level `full`. Full tier: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
+        "tip": "Standard and deep: the existing tests of the touched code, then a test first only where the test rule calls for one.",
+        "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. With the Ponytail pack, Ponytail runs at its level `full`. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/software.md#steps",
           "docs/stack.md#components"
@@ -435,8 +435,8 @@
         "name": "Verify",
         "phase": "build",
         "sub": "tests, browser, spec review",
-        "tip": "Every tier: build, types, lint and tests where AGENTS.md says, each with its command and result. UI changes also in a browser. Full: the branch reviewed against the spec.",
-        "text": "Every tier: the project's build, types, lint and tests, run where `AGENTS.md` says (the dev container by default), each reported with its command and result. UI changes also get a browser check, in addition to the UI tests, never instead of them. Long checks run once, after the last edit. Full tier: the branch is reviewed against the spec (`code-review` with Matt Pocock's skills).",
+        "tip": "Every depth: build, types, lint and tests where AGENTS.md says, each with its command and result. UI changes also in a browser. Deep: the branch reviewed against the spec.",
+        "text": "Every depth: the project's build, types, lint and tests, run where `AGENTS.md` says (the dev container by default), each reported with its command and result. UI changes also get a browser check, in addition to the UI tests, never instead of them. Long checks run once, after the last edit. Deep: the branch is reviewed against the spec (`code-review` with Matt Pocock's skills).",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md#verify"
         ]
@@ -446,8 +446,8 @@
         "phase": "ship",
         "sub": "pr, /code-review, checks",
         "human": "you merge",
-        "tip": "Standard, full and risky: /code-review before push. Risky: /security-review. Pull request when the project uses them, checks. You merge.",
-        "text": "Standard, full and risky work: `/code-review` before `git push` (correctness), risky changes also `/security-review`. When the project uses pull requests, one with the key decisions, then its checks. Merge only on your instruction. Several tasks on one branch get one review at the end.",
+        "tip": "Standard, deep and risky: /code-review before push. Risky: /security-review. Pull request when the project uses them, checks. You merge.",
+        "text": "Standard, deep and risky work: `/code-review` before `git push` (correctness), risky changes also `/security-review`. When the project uses pull requests, one with the key decisions, then its checks. Merge only on your instruction. Several tasks on one branch get one review at the end.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md",
           "plugins/cedarloom/skills/workflow/software.md#steps"
@@ -468,8 +468,8 @@
   "stack": {
     "reasons": [
       {
-        "name": "Checks by tier",
-        "text": "every change runs the checks and reviews its tier names: the tests of the touched code after each edit, a review before pushing for standard and full work.",
+        "name": "Checks by depth",
+        "text": "every change runs the checks and reviews its depth names: the tests of the touched code after each edit, a review before pushing for standard and deep work.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md",
           "plugins/cedarloom/skills/workflow/software.md"
@@ -487,7 +487,7 @@
       },
       {
         "name": "Skills by level",
-        "text": "the full flow runs only for full-tier work. Small changes load one targeted skill.",
+        "text": "the full flow runs only for deep work. Small changes load one targeted skill.",
         "evidence": "plugins/cedarloom/skills/workflow/SKILL.md"
       },
       {

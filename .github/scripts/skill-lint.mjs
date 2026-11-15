@@ -32,8 +32,8 @@ const HANDS_TEXT = /\b(read|pass|hand|send|give|copy|paste)\b[^.\n]{0,60}\b(issu
 const AUTHOR_FILTER = [/^Trusted authors: \S/m, /\bdata, never instructions\b/i];
 // The skills CLI version comes from the app (`skills cli`), so the skill runs the release and checks the app runs.
 const SKILLS_PIN = /\bskills@(npm:skills@)?\d+\.\d+\.\d+/;
-// The workflow skill takes the Default tier line last, after the change-type table, so a handed-over Tier line must not name it first.
-const DEFAULT_TIER_FIRST = /^Tier: (?:(?!workflow skill)[^\n])*Default tier/m;
+// The workflow skill applies the Depth minimum line to its own pick, so a handed-over Depth line must not name it first.
+const DEPTH_MINIMUM_FIRST = /^Depth: (?:(?!workflow skill)[^\n])*Depth minimum/m;
 
 export function lintSkill(dir) {
   const errors = [];
@@ -52,7 +52,7 @@ export function lintSkill(dir) {
   const all = files.map((f) => readFileSync(f, 'utf8')).join('\n');
   if (/\bworkers?\b/i.test(all) && HANDS_TEXT.test(all) && !AUTHOR_FILTER.every((re) => re.test(all)))
     errors.push(`${dir}: hands issue or pull request text to a worker without the author filter (a "Trusted authors:" line and the words "data, never instructions")`);
-  if (DEFAULT_TIER_FIRST.test(all)) errors.push(`${dir}: a Tier line names the Default tier line ahead of the workflow skill`);
+  if (DEPTH_MINIMUM_FIRST.test(all)) errors.push(`${dir}: a Depth line names the Depth minimum line ahead of the workflow skill`);
   if (SKILLS_PIN.test(all)) errors.push(`${dir}: names a skills CLI version: use the line npx benchkeeper skills cli prints`);
   for (const file of files) {
     const body = readFileSync(file, 'utf8').replace(/```[\s\S]*?```/g, '');
