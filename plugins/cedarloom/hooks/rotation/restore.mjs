@@ -2,23 +2,10 @@
 // coordinator wrote it, as the Claude Code module does.
 import { execFileSync } from 'node:child_process';
 import { constants, fstatSync, openSync, readFileSync, realpathSync, statSync } from 'node:fs';
-import { delimiter, isAbsolute, join } from 'node:path';
+import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
+import { gitProgram as git } from '../git-program.mjs';
 import { FILE, RUNS, STATUS_ARGS, TOP_ARGS, changedPaths, commitArgs, drift, editedAt, mine, restored } from './handoff.mjs';
-
-// git from an absolute folder of PATH, never by its bare name: Windows looks in the working folder, a project, first.
-const git = () =>
-  (process.env.PATH ?? '')
-    .split(delimiter)
-    .filter((folder) => isAbsolute(folder))
-    .map((folder) => join(folder, process.platform === 'win32' ? 'git.exe' : 'git'))
-    .find((path) => {
-      try {
-        return statSync(path).isFile();
-      } catch {
-        return false;
-      }
-    });
 
 // Whether git tracks anything under the runs folder; no git or any git failure counts as tracked, as in the Claude Code module.
 const tracked = (cwd) => {
