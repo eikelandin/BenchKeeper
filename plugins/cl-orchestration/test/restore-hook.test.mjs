@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const HOOK = fileURLToPath(new URL('../hooks/rotation/restore.mjs', import.meta.url));
-const OWNED = '# Handoff\nTerminal: term-a\n\n## Next\nwatch #12\n';
+const OWNED = '# Handoff\nSession: s-a\n\n## Next\nwatch #12\n';
 const RUNS = join('.cedarloom', 'runs');
 
 // A folder holding the coordinator's handoff file, untracked in a git work tree unless `git` is false.
@@ -19,14 +19,14 @@ const folder = ({ text = OWNED, git = true } = {}) => {
   return root;
 };
 // What the hook prints for a SessionStart after a clear in that folder, the way Codex runs it.
-const restore = (root, { terminal = 'term-a', input = JSON.stringify({ hook_event_name: 'SessionStart', source: 'clear', cwd: root }) } = {}) => {
-  const r = spawnSync(process.execPath, [HOOK], { input, env: { ...process.env, ORCA_TERMINAL_HANDLE: terminal }, encoding: 'utf8' });
+const restore = (root, { session = 's-a', input = JSON.stringify({ hook_event_name: 'SessionStart', source: 'compact', session_id: session, cwd: root }) } = {}) => {
+  const r = spawnSync(process.execPath, [HOOK], { input, encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? '' : JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
 };
 
-test('restore hook: hands back the file its terminal owns, cut to stay below 10,000 characters', () => {
-  assert.match(restore(folder()), /\n# Handoff\nTerminal: term-a\n\n## Next\nwatch #12\n$/);
+test('restore hook: hands back the file its session owns, cut to stay below 10,000 characters', () => {
+  assert.match(restore(folder()), /\n# Handoff\nSession: s-a\n\n## Next\nwatch #12\n$/);
   assert.ok(restore(folder({ text: OWNED + 'x'.repeat(20_000) })).length < 10_000);
 });
 
@@ -44,7 +44,7 @@ test('restore hook: the drift counts from the edited stamp of the status line, w
   commit('backdated', '1999-01-01T00:00:00Z');
   writeFileSync(join(root, 'README.md'), 'b');
   mkdirSync(join(root, 'sub', RUNS), { recursive: true });
-  writeFileSync(join(root, 'sub', RUNS, 'handoff.md'), `${OWNED}\n<!-- cedarloom:status -->\n2026-01-01T00:00:00.000Z compacting; context: 1 tokens; last clear: none; edited: 2000-01-01T00:00:00.000Z; text: ecc034a0\n<!-- /cedarloom:status -->\n`);
+  writeFileSync(join(root, 'sub', RUNS, 'handoff.md'), `${OWNED}\n<!-- cedarloom:status -->\n2026-01-01T00:00:00.000Z compacting; context: 1 tokens; last clear: none; edited: 2000-01-01T00:00:00.000Z; text: bbba8bb0\n<!-- /cedarloom:status -->\n`);
   const restored = restore(join(root, 'sub'));
   assert.match(restored, /\n## Drift since this file was written \(2000-01-01T00:00:00\.000Z, /);
   // git 2.39 prints %cI in UTC as +00:00, newer as Z.
@@ -52,8 +52,10 @@ test('restore hook: the drift counts from the edited stamp of the status line, w
   assert.match(restored, /\n- `README\.md`\n/);
 });
 
-test('restore hook: prints nothing for another terminal, a linked file or folder, a tracked file, a folder outside git, or bad input', () => {
-  assert.equal(restore(folder(), { terminal: 'term-b' }), '');
+test('restore hook: prints nothing for another session, a linked file or folder, a tracked file, a folder outside git, or bad input', () => {
+  assert.equal(restore(folder(), { session: 's-b' }), '');
+  const unnamed = folder();
+  assert.equal(restore(unnamed, { input: JSON.stringify({ hook_event_name: 'SessionStart', source: 'compact', cwd: unnamed }) }), '');
   const linked = folder();
   renameSync(join(linked, RUNS, 'handoff.md'), join(linked, 'notes.md'));
   symlinkSync(join(linked, 'notes.md'), join(linked, RUNS, 'handoff.md'));

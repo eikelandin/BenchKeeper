@@ -1,5 +1,6 @@
 // Codex SessionStart after a clear or compaction: hands the coordinator's handoff file back with the git drift since the
-// coordinator wrote it, as the Claude Code module does.
+// coordinator wrote it, as the Claude Code module does, when the file names the session of the hook input. A Codex clear
+// starts a new session id and this hook keeps no state between runs, so in practice it serves compaction.
 import { execFileSync } from 'node:child_process';
 import { constants, fstatSync, openSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -38,14 +39,14 @@ const drifted = (cwd, handle, handoff) => {
 let handoff;
 let drifting;
 try {
-  const { cwd } = JSON.parse(await text(process.stdin));
+  const { cwd, session_id: session } = JSON.parse(await text(process.stdin));
   const path = join(cwd, FILE);
   // Opened without following a link where the platform can (Windows cannot), read through that handle, and refused unless
   // its real path is the one under the real working folder, so a committed file or a link on the way is never read.
   const handle = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   if (!fstatSync(handle).isFile() || realpathSync(path) !== join(realpathSync(cwd), FILE)) process.exit(0);
   handoff = readFileSync(handle, 'utf8');
-  if (!mine(handoff, process.env.ORCA_TERMINAL_HANDLE) || tracked(cwd)) process.exit(0);
+  if (!mine(handoff, session) || tracked(cwd)) process.exit(0);
   drifting = drifted(cwd, handle, handoff);
 } catch {
   process.exit(0);
