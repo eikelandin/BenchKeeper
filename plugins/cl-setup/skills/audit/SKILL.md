@@ -22,7 +22,7 @@ Target: $ARGUMENTS (Codex: the text after the skill name). A path audits that fi
 
 ## Steps
 
-1. Scope. From the repository root (`git rev-parse --show-toplevel`), list the files of the target (`git ls-files --cached --others --exclude-standard -- <target>`; a file named as the target counts even when git ignores it) and pick the lens. Read only the lens you use.
+1. Scope. From the repository root (`git rev-parse --show-toplevel`), list the files of the target (`git ls-files --cached --others --exclude-standard -- <target>`; a file named as the target counts even when git ignores it; a tracked file deleted in the working tree is left out) and pick the lens. Read only the lens you use.
    - [instructions](instructions.md): CLAUDE.md, AGENTS.md, rule files, skills, agents, commands, prompts, hook configuration.
    - [docs](docs.md): READMEs, `docs/`, guides, templates.
    - [code](code.md): source and tests.
