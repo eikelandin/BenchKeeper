@@ -1,4 +1,4 @@
-// Writes the current app version into the install commands of the docs (not the plugin's skill text): `npx benchkeeper@<version>` and the clone
+// Writes the current app version into the install commands of the docs (not the plugin's skill text): `npx @cedarloom/app@<version>` and the clone
 // tag `--branch app-v<version>` (older pins name `setup-v`). Other version mentions (benchmark arms, history) stay as written.
 // With --release (release.yml, on the release branch) it also sets minApp in plugins/cedarloom/content.json to that version.
 // Usage: node .github/scripts/version-pins.mjs [--check | --release]   (--check: changes nothing; exit 1 when a file differs, or when
@@ -10,12 +10,12 @@ import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-// Recorded history and benchmark arms keep the versions they name; skill text under plugins/ names the major (npx benchkeeper@6), not a pin.
+// Recorded history and benchmark arms keep the versions they name; skill text under plugins/ names a range (npx -y @cedarloom/app@0.1), not an exact version.
 export const SKIP = /^(bench\/|evaluations\/|CHANGELOG\.md|app\/test\/|plugins\/)|package-lock\.json$/;
 
 export function pins(text, version) {
   return text
-    .replace(/npx benchkeeper@\d+\.\d+\.\d+/g, `npx benchkeeper@${version}`)
+    .replace(/npx @cedarloom\/app@\d+\.\d+\.\d+/g, `npx @cedarloom/app@${version}`)
     .replace(/--branch (setup|app)-v\d+\.\d+(\.\d+)?/g, `--branch app-v${version}`);
 }
 

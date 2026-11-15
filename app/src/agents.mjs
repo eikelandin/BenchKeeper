@@ -34,7 +34,7 @@ export function skillDirs(ids, scope, base) {
 }
 
 // Agents without plugins know BenchKeeper's skills by their bare names.
-export const forAgent = (text, id) => (agent(id).plugins ? text : text.replaceAll('benchkeeper:', ''));
+export const forAgent = (text, id) => (agent(id).plugins ? text : text.replaceAll('cedarloom:', ''));
 
 // Instructions: 'file' owns the whole file, 'block' merges a marked block, 'import' is CLAUDE.md pointing at AGENTS.md.
 export function renderRules(format, current, rules) {

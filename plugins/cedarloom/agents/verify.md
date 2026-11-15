@@ -1,6 +1,6 @@
 ---
 name: verify
-description: "Verifier of review findings on a risky change under the BenchKeeper workflow, before the first fix; started by its phase orchestrator or the coordinator, not for direct use."
+description: "Verifier of review findings on a risky change under the CedarLoom workflow, before the first fix; started by its phase orchestrator or the coordinator, not for direct use."
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: high

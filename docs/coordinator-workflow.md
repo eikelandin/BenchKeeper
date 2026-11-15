@@ -174,7 +174,7 @@ The default is false because an open run spends a turn at every tick, and a sche
 | Work that splits into several pull requests: the worker reports NEEDS_REPLAN with the slices, and the coordinator lists them for the owner, who splits the issue | spec (`spec-template.md:46`), skill text (`SKILL.md:80`) | exists |
 | A worker is released only once it has settled (after its report, or after it was stopped), and one with a pull request only after the merge or once the pull request is left for the owner | `orca.md:125` | exists |
 | Phases with a gate between them: plan, implement, test, review | skill text (`skills/workflow/software.md:11-20`) | exists |
-| One digest file: merges, decisions on the owner's behalf, open questions, risks, models | the `daily-digest` automation and `SKILL.md:71` | exists |
+| One digest file: merges, decisions on the owner's behalf, open questions, risks, models | skill text (`orchestrating-projects/digest.md`) | exists |
 | A wake-up and a restart read the run's state from a generated file instead of `gh` status turns: jobs, open pull requests with head, required checks, open threads and the verdict for the current head, approvals, account limits and the default branch's CI; the job cost and fix rounds per merged pull request come from the same script | `facts.mjs` (`write` and `costs`), read at `SKILL.md:55`; `docs/restart-safe-coordinator.md:18` | exists |
 
 The source run posted a plan in the issue before a larger piece of work fanned out. In the loop one issue is one pull request, so the owner splits the issue instead, and the coordinator needs no right to write plans into the tracker.
@@ -230,7 +230,7 @@ A project's Claude Code settings are reproducible when they are committed in `.c
 | Plugins and marketplaces | `claude plugin install` commands (`app/src/steps/project.mjs:515-516`) | `enabledPlugins` and `extraKnownMarketplaces`, in the local settings only, at a branch or tag (`packages/contracts/src/profile.ts:41-50`, `packages/contracts/src/profile.ts:131-135`) |
 | Hooks | the guard hook and its script (`app/src/steps/project.mjs:546-551`) | refused in a profile (`packages/contracts/src/profile.ts:520-543`); the guard hook ships in the workflow plugin (`packages/emitter/src/claude.ts:95-119`) |
 | Environment | the machine account's variables, local settings (`app/src/steps/project.mjs:565`) | variables from a fixed list (`packages/contracts/src/profile.ts:505-514`) |
-| Record | `.benchkeeper/state.json` with the app and content version | `.cedarloom/profile-files.json`, committed, with hash and pack version per committed file (`packages/profiles/src/record.ts:102`) |
+| Record | `.cedarloom-app/state.json` with the app and content version | `.cedarloom/profile-files.json`, committed, with hash and pack version per committed file (`packages/profiles/src/record.ts:102`) |
 | Drift | `doctor` and `projects update` when a version differs (`app/src/steps/project.mjs:237`, `app/src/doctor.mjs:128`) | `profiles check`: `missing`, `outdated`, `deselected-present` or `not-run` per path (`packages/contracts/src/findings.ts:212-216`) |
 | An owner's change | own entries stay, and the setup removes only its own, which includes an entry of the owner's that is identical to one of them (`app/src/merge.mjs:43-48`, `app/src/guards.mjs:23`) | a changed file is left and reported (`packages/profiles/src/owned.ts:31`); in settings, own additions stay, a removed entry returns and a value the profile sets is overwritten (`packages/contracts/src/compose.ts:47-71`) |
 

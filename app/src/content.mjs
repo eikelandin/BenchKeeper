@@ -20,5 +20,5 @@ export function contentRefusal(dir, version = appVersion) {
   let minApp;
   try { minApp = JSON.parse(readFileSync(`${dir}/content.json`, 'utf8')).minApp; } catch { return null; }
   if (typeof minApp !== 'string' || !/^\d+\.\d+\.\d+$/.test(minApp) || !/^\d+\.\d+\.\d+$/.test(version) || !older(version, minApp)) return null;
-  return `the content in ${dir} needs benchkeeper ${minApp} or newer, this is ${version}: run npx benchkeeper@${minApp.split('.')[0]}`;
+  return `the content in ${dir} needs benchkeeper ${minApp} or newer, this is ${version}: run npx @cedarloom/app@${minApp.split('.')[0]}`;
 }

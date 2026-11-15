@@ -39,11 +39,11 @@ esac
   };
   const result = (...args) => run('release-watch/result.sh "$@"', [...args, join(bin, 'report.md')]);
   const record = (repo) => {
-    try { return readFileSync(join(bin, 'state', 'benchkeeper', 'release-watch', repo), 'utf8'); } catch { return null; }
+    try { return readFileSync(join(bin, 'state', 'cedarloom-app', 'release-watch', repo), 'utf8'); } catch { return null; }
   };
   // Moves every recorded time of a repository back by seconds.
   const age = (repo, seconds) => {
-    const file = join(bin, 'state', 'benchkeeper', 'release-watch', repo);
+    const file = join(bin, 'state', 'cedarloom-app', 'release-watch', repo);
     writeFileSync(file, readFileSync(file, 'utf8').replace(/ (\d+)$/gm, (_, t) => ` ${Number(t) - seconds}`));
   };
   return { bin, precheck, due, result, record, age };

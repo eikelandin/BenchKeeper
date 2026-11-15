@@ -412,7 +412,7 @@ test.describe('views', () => {
   test('Stop: the header button asks first; Cancel keeps the server running', async ({ page }) => {
     await page.getByRole('button', { name: 'Stop BenchKeeper' }).click();
     const dialog = page.getByRole('dialog', { name: 'Stop BenchKeeper?' });
-    await expect(dialog.getByText(/npx benchkeeper@\d+\.\d+\.\d+/)).toBeVisible();
+    await expect(dialog.getByText(/npx @cedarloom\/app@\d+\.\d+\.\d+/)).toBeVisible();
     await noAxe(page);
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await expect(dialog).toBeHidden();
@@ -438,7 +438,7 @@ test.describe('views', () => {
   test('a 401 (a restarted server, another browser) says to start the app again, with no Try again', async ({ page }) => {
     await page.route(/\/api\/overview(\?|$)/, (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"error":"no session"}' }));
     await page.reload();
-    await expect(page.getByText(/Run npx benchkeeper again and open the link it prints/)).toBeVisible();
+    await expect(page.getByText(/Run npx @cedarloom\/app again and open the link it prints/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
   });
 

@@ -26,7 +26,7 @@ ${MERGES}
 | Owner steps | none |
 ${COST}
 | Undo | revert each PR |
-| Answer | comment "a", "b" or free text, or run /benchkeeper:questions |
+| Answer | comment "a", "b" or free text, or run /cedarloom:questions |
 
 | Option | What happens | Trade-off |
 |---|---|---|

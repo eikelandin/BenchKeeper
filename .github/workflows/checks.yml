@@ -63,7 +63,7 @@ jobs:
       # docs/skills.md tables are generated from the skills' front matter and library.json.
       - name: Skills page
         run: node --test .github/scripts/skills-doc.test.mjs && node .github/scripts/skills-doc.mjs --check
-      # Install commands in the docs name the app version (npx benchkeeper@<version>, the clone tag).
+      # Install commands in the docs name the app version (npx @cedarloom/app@<version>, the clone tag).
       - name: Version pins
         run: node --test .github/scripts/version-pins.test.mjs && node .github/scripts/version-pins.mjs --check
       # Each claim in web/src/data/facts.json names its evidence: a repository file or heading, a test title, or a BenchKeeper-research result.
