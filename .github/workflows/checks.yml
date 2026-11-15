@@ -1,6 +1,6 @@
 name: Checks
 
-# `checks` is the required check, a gate over the three parallel jobs.
+# `checks` is the required check, a gate over the parallel jobs it needs.
 on:
   push:
     branches: [main]
@@ -149,7 +149,11 @@ jobs:
         with:
           node-version: 22.23.4
       - name: Plugin tests
-        run: node --import ./plugins/cedarloom/test/setup.mjs --test plugins/cedarloom/test/*.test.mjs
+        run: |
+          shopt -s failglob
+          for dir in plugins/*/test; do
+            node --import "./$dir/setup.mjs" --test "$dir"/*.test.mjs
+          done
 
   # Required check: passes when all parallel jobs pass.
   checks:

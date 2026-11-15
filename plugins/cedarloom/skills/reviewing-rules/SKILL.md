@@ -33,4 +33,4 @@ FILE
 
 ## Maintenance
 
-The prompt is checked against the fixtures in `plugins/cedarloom/test/fixtures/reviewing-rules/` by a unit test with a recorded answer. When the prompt changes, run `bash plugins/cedarloom/test/fixtures/reviewing-rules/live.sh claude` (or `codex`) by hand against a real agent, and record its answers with `--record` once every fixture passes. CI never calls an agent.
+The prompt is checked against the fixtures in `test/fixtures/reviewing-rules/` of this plugin by a unit test with a recorded answer. When the prompt changes, run `bash test/fixtures/reviewing-rules/live.sh claude` (or `codex`) in this plugin's folder by hand against a real agent, and record its answers with `--record` once every fixture passes. CI never calls an agent.
