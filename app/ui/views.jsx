@@ -150,7 +150,7 @@ function SkillDetail({ skill, areas, results, onEdit, onRemove }) {
       <Text>{skill.pickWhen}</Text>
       <Text size="sm">Source: {skill.source === 'own' ? 'BenchKeeper' : skill.source === 'user' ? 'your skills' : <Anchor href={`https://github.com/${skill.source}/tree/${skill.ref}`} target="_blank" rel="noreferrer">{skill.source}</Anchor>}{skill.ref && <>, pinned at <Code>{skill.ref.slice(0, 12)}</Code></>}{skill.license && `, ${skill.license}`}</Text>
       {(areas.length > 0 || skill.agents === 'codex') && <Group gap={4}>{areas.map((a) => <Badge key={a} variant="default">{a}</Badge>)}{skill.agents === 'codex' && <Badge variant="default">Codex only</Badge>}</Group>}
-      {results.length ? <Charts><EvalResults results={results} /></Charts> : <Text size="sm">No eval results for this skill. Measurements: <Anchor href="https://github.com/eikelandin/BenchKeeper-research/blob/main/EVALUATIONS.md" target="_blank" rel="noreferrer">EVALUATIONS.md</Anchor></Text>}
+      {results.length ? <Charts><EvalResults results={results} /></Charts> : <Text size="sm">No eval results for this skill.</Text>}
       {skill.source === 'user' && <Group gap="xs"><Button size="xs" variant="default" onClick={onEdit}>Edit</Button><Button size="xs" variant="default" color="red" leftSection={icon(IconTrash)} onClick={onRemove}>Remove</Button></Group>}
       {copied && <Loading state={text} label="skill text">{(t) => <Code block tabIndex={0}>{t.text}</Code>}</Loading>}
     </Stack>

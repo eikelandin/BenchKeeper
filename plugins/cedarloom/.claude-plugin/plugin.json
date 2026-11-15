@@ -9,6 +9,6 @@
   },
   "homepage": "https://eikelandin.github.io/BenchKeeper/",
   "repository": "https://github.com/eikelandin/BenchKeeper",
-  "license": "MIT",
+  "license": "ISC",
   "dependencies": ["cl-workflow", "cl-setup", "cl-orchestration"]
 }

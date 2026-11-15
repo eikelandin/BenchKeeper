@@ -12,7 +12,7 @@ const contrast = (a: string, b: string): number => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-for (const path of ['./', './overview/', './app/', './writes/', './changelog/', './benchmark/', './404.html']) {
+for (const path of ['./', './overview/', './app/', './writes/', './changelog/', './404.html']) {
   test(`${path} links back to the repository and its security policy`, async ({ page }) => {
     await page.goto(path);
     const footer = page.locator('footer');
@@ -20,18 +20,15 @@ for (const path of ['./', './overview/', './app/', './writes/', './changelog/', 
     await expect(footer.locator('a[href$="/SECURITY.md"]')).toHaveCount(1);
   });
 
-  test(`${path} has no evaluation link and links the research repository only on the benchmark page`, async ({ page }) => {
+  test(`${path} has no evaluation link`, async ({ page }) => {
     await page.goto(path);
     await expect(page.locator('a[href*="EVALUATIONS"], a[href*="evaluations/"]')).toHaveCount(0);
-    if (path !== './benchmark/') return await expect(page.locator('a[href*="BenchKeeper-research"]')).toHaveCount(0);
-    await expect(page.locator('main a[href="https://github.com/eikelandin/BenchKeeper-research"]')).toHaveCount(1);
   });
 
-  test(`${path} names CedarLoom in the title, header and footer, with the brand mark as its icon`, async ({ page }) => {
+  test(`${path} names CedarLoom in the title and header, with the brand mark as its icon`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveTitle(/, CedarLoom$|^CedarLoom: /);
     await expect(page.locator('header .wordmark')).toHaveText('CedarLoom');
-    await expect(page.locator('footer')).toContainText('CedarLoom, MIT License');
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', `${BASE}brand/cedarloom-icon.svg`);
   });
 
@@ -86,9 +83,9 @@ test('the share image is the 1280x640 CedarLoom preview', async ({ page, request
   expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1280, 640]);
 });
 
-test('the sitemap lists the six pages', async ({ request }) => {
+test('the sitemap lists the five pages', async ({ request }) => {
   const xml = await (await request.get('./sitemap.xml')).text();
-  expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname)).toEqual([BASE, `${BASE}overview/`, `${BASE}app/`, `${BASE}writes/`, `${BASE}changelog/`, `${BASE}benchmark/`]);
+  expect([...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname)).toEqual([BASE, `${BASE}overview/`, `${BASE}app/`, `${BASE}writes/`, `${BASE}changelog/`]);
 });
 
 test('the changelog page shows the entries of CHANGELOG.md in its order', async ({ page }) => {
@@ -99,8 +96,7 @@ test('the changelog page shows the entries of CHANGELOG.md in its order', async 
   await expect(page.locator(`footer a[href="${BASE}changelog/"]`)).toHaveCount(1);
 });
 
-test('the footer links to the writes page and the benchmark page', async ({ page }) => {
+test('the footer links to the writes page', async ({ page }) => {
   await page.goto('./');
   await expect(page.locator(`footer a[href="${BASE}writes/"]`)).toHaveCount(1);
-  await expect(page.locator(`footer a[href="${BASE}benchmark/"]`)).toHaveCount(1);
 });

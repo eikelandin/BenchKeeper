@@ -77,8 +77,10 @@ test('precheck: the command line prints no issue that several projects list, nam
 });
 
 const calls = [];
-const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd, args) => {
-  calls.push([cmd, ...args].join(' '));
+const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd, withSettings) => {
+  calls.push([cmd, ...withSettings].join(' '));
+  // The command without the -c settings the policy reader puts before it.
+  const args = withSettings.filter((a, i) => a !== '-c' && withSettings[i - 1] !== '-c');
   if (args[0] === 'fetch') return '';
   if (args[0] === 'ls-remote') return 'c0ffee0000000000000000000000000000000001\tHEAD\n';
   if (args[0] === 'remote') return `${origin}\n`;
