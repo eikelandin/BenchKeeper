@@ -17,7 +17,7 @@ export const REFERENCES = {
 
 const CODE = /\.(?:[cm]?js|[cm]?ts|tsx)$/;
 // Specifiers of import and export statements, dynamic import, require, and `new URL('<path>', import.meta.url)`.
-const SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\(\s*)(['"])([^'"\n]+)\1|new URL\(\s*(['"])([^'"\n]+)\3\s*,\s*import\.meta\.url/g;
+const SPECIFIER = /(?:\bfrom\s*|\bimport\s*(?:\(\s*)?|\brequire\(\s*)(['"])([^'"\n]+)\1|new URL\(\s*(['"])([^'"\n]+)\3\s*,\s*import\.meta\.url/g;
 // What Claude Code supplies to a plugin's mods besides Node's built-ins.
 const PROVIDED = /^(?:node:|claude-code(?:\/|$))/;
 
@@ -35,7 +35,7 @@ export function offences(path, text, plugin) {
       } else if (match[2] !== undefined && !PROVIDED.test(spec)) found.add('import-outside');
     }
   }
-  return [...found].sort();
+  return [...found].sort((a, b) => a.localeCompare(b));
 }
 
 // Offending file to its rule names, over every tracked file of every folder under plugins/.
@@ -56,7 +56,7 @@ export function scan(cwd = root) {
 // Lines that tell what to add to or take from the allow list.
 export function differences(found, allowed) {
   const lines = [];
-  for (const path of Object.keys({ ...found, ...allowed }).sort()) {
+  for (const path of Object.keys({ ...found, ...allowed }).sort((a, b) => a.localeCompare(b))) {
     const now = found[path] ?? [];
     const listed = allowed[path] ?? [];
     for (const name of now) if (!listed.includes(name)) lines.push(`${path}: ${name} is a new reference to the app or a path outside the plugin`);
