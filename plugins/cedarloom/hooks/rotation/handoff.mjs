@@ -1,7 +1,7 @@
 // The coordinator's handoff file and the context that hands it back, for the Claude Code module and the Codex hook.
 export const RUNS = '.cedarloom-app/runs';
 export const FILE = `${RUNS}/handoff.md`;
-export const STATUS = ['<!-- benchkeeper:status -->', '<!-- /benchkeeper:status -->'];
+export const STATUS = ['<!-- cedarloom-app:status -->', '<!-- /cedarloom-app:status -->'];
 const HEADER = "BenchKeeper restored this coordinator's handoff file after a context clear or compaction (.cedarloom-app/runs/handoff.md, below). Before anything else, run its Resume steps: the runner's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
 // Claude Code drops additionalContext above 10,000 characters: the header, this much of the file and drift together and
 // the cut line stay below.

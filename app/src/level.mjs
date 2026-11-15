@@ -8,7 +8,7 @@ import { pluginState } from './steps/global.mjs';
 import { defaultEnv, tryState, usesContainer } from './steps/project.mjs';
 
 // A line of the global rules that every version of the file carries: the file is the app's, so its text says it is there.
-const ID = 'benchkeeper@benchkeeper';
+const ID = 'cedarloom@cedarloom';
 const GLOBAL_RULES_MARK = 'Keep secrets out of output';
 
 const ADDS = {

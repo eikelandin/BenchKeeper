@@ -2,7 +2,7 @@
 
 What BenchKeeper installs, where it writes and how to update or undo it. The short version is the [README](../README.md).
 
-Terms: a **tier** is how much process the `workflow` skill gives a software change (quick, standard or full). A **pack** is a named set of skills and plugins you choose per machine or project ([packs](../plugins/benchkeeper/library/README.md#packs)). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
+Terms: a **tier** is how much process the `workflow` skill gives a software change (quick, standard or full). A **pack** is a named set of skills and plugins you choose per machine or project ([packs](../plugins/cedarloom/library/README.md#packs)). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
 
 ## Prerequisites
 
@@ -104,7 +104,7 @@ Undo: each run is recorded in `$HOME/.config/benchkeeper/ledger/`, and replaced 
 
 The app writes its setup files below your home directory and in the projects you choose, plus scratch folders in the system temp folder and the Dev Containers CLI in your npm prefix. It needs no root, sends no telemetry and never runs on its own. In a terminal it makes one request to the npm registry for a newer version and shows it (off with `BENCHKEEPER_NO_UPDATE_CHECK=1`, and when `CI` is set).
 
-Lite level, plugin only: `npx benchkeeper@6.27.0 apply --level lite`, or by hand `claude plugin marketplace add ESchuderer/BenchKeeper#stable --sparse .claude-plugin plugins && claude plugin install benchkeeper@benchkeeper` (Codex: `codex plugin marketplace add ESchuderer/BenchKeeper@stable --sparse .claude-plugin --sparse plugins && codex plugin add benchkeeper@benchkeeper`).
+Lite level, plugin only: `npx benchkeeper@6.27.0 apply --level lite`, or by hand `claude plugin marketplace add ESchuderer/BenchKeeper#stable --sparse .claude-plugin plugins && claude plugin install cedarloom@cedarloom` (Codex: `codex plugin marketplace add ESchuderer/BenchKeeper@stable --sparse .claude-plugin --sparse plugins && codex plugin add cedarloom@cedarloom`).
 
 ## Per repo
 
@@ -114,7 +114,7 @@ Lite level, plugin only: `npx benchkeeper@6.27.0 apply --level lite`, or by hand
    npx benchkeeper@6.27.0 projects apply --agents claude,codex
    ```
 
-   - Options: `--agents` names the agents the repository uses; `--pack <id>` adds [library packs](../plugins/benchkeeper/library/README.md#packs); `--tier` sets the default tier; `--env` says where the agent runs.
+   - Options: `--agents` names the agents the repository uses; `--pack <id>` adds [library packs](../plugins/cedarloom/library/README.md#packs); `--tier` sets the default tier; `--env` says where the agent runs.
    - It writes a block (the repository rules of `rules/project.md`; where commands run, default tier, skill pointers), the packs' skills from the default branch of their source, and `.benchkeeper/state.json`, whose answers later runs reuse.
    - By default the setup stays on this machine: the block goes into `CLAUDE.local.md` (which imports `AGENTS.md`) and `AGENTS.override.md` (Codex reads it instead of `AGENTS.md`, so the app's block there also holds the text of `AGENTS.md`, rebuilt on each apply; your lines outside the block stay). Every other file the app writes is listed in `.git/info/exclude`, so only the coordinator's two files below land in the repository.
    - `--share` commits the setup instead: the block in `AGENTS.md` and `CLAUDE.md` with `@AGENTS.md`. Your own `AGENTS.md` text, `docs/agents/` and `.devcontainer/` stay committed either way.
@@ -220,11 +220,11 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
 
   - From a clone: `git -C BenchKeeper fetch --tags && git -C BenchKeeper checkout setup-v<major>.<minor>`, then the same commands through `node BenchKeeper/app/bin/benchkeeper.mjs`.
   - The app adds BenchKeeper's marketplace at the branch `stable`, which each release moves.
-  - The plan does not update an installed plugin in the default Claude Code folder: the agent's own update does (`claude plugin marketplace update benchkeeper` and `claude plugin update benchkeeper@benchkeeper`; Codex: `codex plugin marketplace upgrade benchkeeper`).
+  - The plan does not update an installed plugin in the default Claude Code folder: the agent's own update does (`claude plugin marketplace update cedarloom` and `claude plugin update cedarloom@cedarloom`; Codex: `codex plugin marketplace upgrade cedarloom`).
   - Claude Code keeps one plugin cache per config folder, so every registered host account (`benchkeeper accounts list`) has its own copy of the plugin, which the default folder's update never reaches.
   - Third-party marketplaces such as BenchKeeper's have auto-update off by default, and `claude plugin marketplace update` refreshes only the listing, so nothing moves an installed plugin on its own ([Claude Code docs, Keep plugins updated](https://code.claude.com/docs/en/discover-plugins#keep-plugins-updated)).
   - `benchkeeper doctor` therefore names each account whose BenchKeeper plugin is behind the app.
-  - `benchkeeper apply` runs the marketplace refresh and `claude plugin update --scope user benchkeeper@benchkeeper` with `CLAUDE_CONFIG_DIR` set to that account's folder, only for accounts that are behind, already have the plugin and follow `stable`.
+  - `benchkeeper apply` runs the marketplace refresh and `claude plugin update --scope user cedarloom@cedarloom` with `CLAUDE_CONFIG_DIR` set to that account's folder, only for accounts that are behind, already have the plugin and follow `stable`.
     - An account whose folder lies outside the home folder is reported with the manual step.
     - An account on another ref is shown in the overview and left to its own update.
     - `benchkeeper undo <run>` puts back the account's `plugins/installed_plugins.json` and `plugins/known_marketplaces.json` (not the older version's files: Claude Code may prune them later, which leaves restored metadata that names a missing version).
@@ -292,7 +292,7 @@ Three rows of text above the prompt in the Claude Code terminal and desktop app;
 
 The tier buttons run `/benchkeeper:tier` (a skill of the BenchKeeper plugin) for this session (`auto` ends the override); the override survives compaction and resume. `board` opens the sessions board the app last wrote (`$HOME/.config/benchkeeper/board.html`; run `benchkeeper sessions board` or open Sessions in the app first). `doctor` asks the agent to run `benchkeeper doctor` for the project and list the findings, so the agent runs the command and the usual permission prompt applies. `?` shows a short version of this text.
 
-Turn it on: `benchkeeper apply` and accept the change "BenchKeeper status band", the switch Terminal tier strip in the app's Preferences view, or set `tierBand` to `true` for `benchkeeper@benchkeeper` under `pluginConfigs` in `$HOME/.claude/settings.json`. Turn it off: the same switch, set that value to `false` (or `benchkeeper undo <run>` for the run that turned it on; `benchkeeper history` lists the run ids). Start a new Claude Code session after changing the option. The band reads the working folder, git, Ponytail's flag file `.ponytail-active` and the commands and edits of the main loop; it keeps the session's tier override in the plugin's own store, writes nothing else and sends nothing, and what it shows stays on this machine.
+Turn it on: `benchkeeper apply` and accept the change "BenchKeeper status band", the switch Terminal tier strip in the app's Preferences view, or set `tierBand` to `true` for `cedarloom@cedarloom` under `pluginConfigs` in `$HOME/.claude/settings.json`. Turn it off: the same switch, set that value to `false` (or `benchkeeper undo <run>` for the run that turned it on; `benchkeeper history` lists the run ids). Start a new Claude Code session after changing the option. The band reads the working folder, git, Ponytail's flag file `.ponytail-active` and the commands and edits of the main loop; it keeps the session's tier override in the plugin's own store, writes nothing else and sends nothing, and what it shows stays on this machine.
 
 Ponytail draws a band of its own, so with both on the two stack. `benchkeeper doctor` warns (check `ponytail`) when both would show, and the plan offers to hide Ponytail's: it writes `off` to `$HOME/.claude/.ponytail-band` (what `/ponytail band off` does) and `hideStatus: true` to `$HOME/.config/ponytail/config.json`, which hides Ponytail's level in BenchKeeper's status line (Ponytail's own Claude Code status line does not read it). Ponytail's mode and skills stay active. Nothing is written until you apply that change, it is off unless chosen, and `benchkeeper undo <run>` restores both files. `/ponytail band on` shows Ponytail's band again. These are the files of Ponytail 5.3.2 (`hooks/band/register.tsx`, `hooks/ponytail-config.js` in its plugin folder); a later version may move them (unverified). Setup follows the default folders only, not `CLAUDE_CONFIG_DIR` or `XDG_CONFIG_HOME`.
 
@@ -320,7 +320,7 @@ A long-running coordinator of `/benchkeeper:orchestrating-projects` starts over 
 - In Claude Code the plugin also writes a status line into the file's status block before a compaction and before its own clear.
 - Claude Code only: when the main loop ends a turn with no background task running, no other Stop hook blocking the stop, and its context is above the plugin option `rotateAtTokens` (200000 by default), the plugin runs `/clear` and submits a prompt that resumes the coordinator from the file. `rotateAtPercent` above 0 compares that percent of the model's context window instead; both at 0 turns it off. On a model with a 200k context window, auto-compaction comes before 200,000 tokens, so set `rotateAtPercent` there (for example 60). At most one clear every 10 minutes. When Claude Code reports no context size, the plugin says so once in the transcript and clears nothing.
 
-Set the options with `/plugin` or under `pluginConfigs` for `benchkeeper@benchkeeper` in `$HOME/.claude/settings.json`, then start a new session. The hooks read and write only the handoff file, run `git ls-files` in its project folder, and send nothing.
+Set the options with `/plugin` or under `pluginConfigs` for `cedarloom@cedarloom` in `$HOME/.claude/settings.json`, then start a new session. The hooks read and write only the handoff file, run `git ls-files` in its project folder, and send nothing.
 
 ## Sessions board
 

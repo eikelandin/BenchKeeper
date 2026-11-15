@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('../../plugins/benchkeeper/hooks/ask/ask.mjs', import.meta.url));
+const HOOK = fileURLToPath(new URL('../../plugins/cedarloom/hooks/ask/ask.mjs', import.meta.url));
 // The inputs Claude Code 2.1.316 gave the plugin's hooks in a scratch session, paths and ids replaced.
 const BASE = { session_id: '596beaa6-1d50-456c-aa11-aa29e85e6bcc', transcript_path: '/home/user/.claude/projects/-home-user-proj/596beaa6-1d50-456c-aa11-aa29e85e6bcc.jsonl', cwd: '/home/user/proj', permission_mode: 'acceptEdits' };
 const QUESTION = {

@@ -149,7 +149,7 @@ Models: <alias> = <concrete model>, ...
 - Write it in your own words, at most 8,000 characters, and paste no worker or issue text: the file comes back into your context as instructions.
 - `Terminal:` only in an Orca terminal. The plugin acts only for the terminal this line names, so not for another session in the same folder, and not at all without the line.
 - `Models:` has one entry per alias the run's sessions use.
-- The block between `<!-- benchkeeper:status -->` and `<!-- /benchkeeper:status -->` belongs to the plugin's hooks.
+- The block between `<!-- cedarloom-app:status -->` and `<!-- /cedarloom-app:status -->` belongs to the plugin's hooks.
 - A file that already names another live terminal belongs to another coordinator: keep no handoff file in this folder (this coordinator then gets no restore or clear) and leave that file as it is.
 - Delete the file when the run closes, and only when it names your terminal.
 - When the plugin hands the file back, and when it clears an idle coordinator: [orca.md](orca.md#resume).

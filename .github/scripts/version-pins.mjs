@@ -1,6 +1,6 @@
 // Writes the current app version into the install commands of the docs (not the plugin's skill text): `npx benchkeeper@<version>` and the clone
 // tag `--branch app-v<version>` (older pins name `setup-v`). Other version mentions (benchmark arms, history) stay as written.
-// With --release (release.yml, on the release branch) it also sets minApp in plugins/benchkeeper/content.json to that version.
+// With --release (release.yml, on the release branch) it also sets minApp in plugins/cedarloom/content.json to that version.
 // Usage: node .github/scripts/version-pins.mjs [--check | --release]   (--check: changes nothing; exit 1 when a file differs, or when
 // the dev container's Playwright, pnpm or Node differs from web/, app/ and packages/ui, .github/pnpm, or NODE_VERSION of cedarloom.yml)
 import { execFileSync } from 'node:child_process';
@@ -64,7 +64,7 @@ if (isMain(import.meta.url)) {
   // The release branch only (--release from release.yml): on main the app version may move ahead of minApp
   // (app/test/package.test.mjs allows it), so neither --check nor a plain run changes it.
   if (process.argv[2] === '--release') {
-    const f = `${root}/plugins/benchkeeper/content.json`;
+    const f = `${root}/plugins/cedarloom/content.json`;
     const text = readFileSync(f, 'utf8');
     const next = minAppPin(text, version);
     if (next !== text) writeFileSync(f, next);

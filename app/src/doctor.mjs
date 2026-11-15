@@ -75,7 +75,7 @@ export function globalDrift(ctx, agents, devcontainerCli, level) {
     if (c.outdated) return { ...issue('warning', c.step.split(':')[0], c.title, apply), tag: 'outdated' };
     // Rules the user edited are a warning, a missing rules file an error.
     if (/^rules:/.test(c.step) && readText(c.path) != null) return issue('warning', 'rules', `${c.title} differs from setup ${appVersion}`, `benchkeeper apply restores them; the optional "keep your edits" change of benchkeeper plan stops this warning`);
-    const error = /^rules:/.test(c.step) || /^plugin:\w+:benchkeeper@/.test(c.step);
+    const error = /^rules:/.test(c.step) || /^plugin:\w+:cedarloom@/.test(c.step);
     return issue(error ? 'error' : 'warning', c.step.split(':')[0], c.kind === 'command' ? `not installed: ${c.title}` : `${c.title} differs from setup ${appVersion}`, apply);
   }
 }
@@ -99,7 +99,7 @@ function coordinatorChecks(ctx, dir) {
     try { r = policyCheck(text); problems = r.errors.map(errorLine); } catch (e) { problems = [e.message]; }
     for (const p of problems) out.push(issue('warning', 'coordinator', `${policy}: ${p}`, 'fix the file: the coordinator starts nothing while its reader refuses the policy'));
     const plugin = !problems.length && r.doc?.minPlugin ? pluginContent(ctx, dir) : null;
-    if (plugin && policyCheck(text, plugin.version).errors.length) out.push(issue('warning', 'coordinator', `${policy} needs the BenchKeeper plugin ${r.doc.minPlugin} or newer (minPlugin); the plugin Claude Code runs here is ${plugin.version}`, `claude plugin update ${plugin.scope === 'user' ? '' : `--scope ${plugin.scope} `}benchkeeper@benchkeeper`));
+    if (plugin && policyCheck(text, plugin.version).errors.length) out.push(issue('warning', 'coordinator', `${policy} needs the BenchKeeper plugin ${r.doc.minPlugin} or newer (minPlugin); the plugin Claude Code runs here is ${plugin.version}`, `claude plugin update ${plugin.scope === 'user' ? '' : `--scope ${plugin.scope} `}cedarloom@cedarloom`));
   }
   for (const f of COORDINATOR_FILES) {
     const tracked = exists(join(root, f)) && git(ctx, root, ['ls-files', '--', f]);

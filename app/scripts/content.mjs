@@ -4,7 +4,7 @@ import { cpSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const out = fileURLToPath(new URL('../content/', import.meta.url));
-const src = fileURLToPath(new URL('../../plugins/benchkeeper/', import.meta.url));
+const src = fileURLToPath(new URL('../../plugins/cedarloom/', import.meta.url));
 export const PARTS = ['rules', 'skills', 'library', 'evals', 'automations', 'content.json'];
 
 rmSync(out, { recursive: true, force: true });

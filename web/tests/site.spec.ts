@@ -126,6 +126,6 @@ test('the installed parts render code and links from facts.json', async ({ page 
   await page.goto('./');
   const parts = page.locator('#parts');
   await expect(parts.locator('code', { hasText: 'rules/global.md' })).toHaveCount(1);
-  await expect(parts.getByRole('link', { name: 'BenchKeeper library' })).toHaveAttribute('href', /plugins\/benchkeeper\/library\/README\.md$/);
+  await expect(parts.getByRole('link', { name: 'BenchKeeper library' })).toHaveAttribute('href', /plugins\/cedarloom\/library\/README\.md$/);
   await expect(parts).not.toContainText('[');
 });

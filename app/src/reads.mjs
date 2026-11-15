@@ -11,7 +11,7 @@ import { hiddenUserSkills, invalidPacks, libraryWith } from './packs.mjs';
 import { detectLevel } from './level.mjs';
 import { listProjects, prefetchOrigins, projectState, setupOf, usersByPack } from './projects.mjs';
 import { isSettingsFile, redact } from './settings.mjs';
-import { benchkeeperPlugin } from './steps/global.mjs';
+import { cedarloomPlugin } from './steps/global.mjs';
 import { upToDate } from './steps/project.mjs';
 
 // The app version, the install level, the agents with their BenchKeeper plugin, and the setup of each registered project.
@@ -22,7 +22,7 @@ export async function overview(ctx, detected, memo = (key, read) => read()) {
   const installed = detected.filter((a) => a.installed).map((a) => a.id);
   return {
     version: appVersion, level: memo('level', () => detectLevel(ctx, installed)),
-    agents: detected.map((a) => ({ ...a, ...(a.installed && agent(a.id).plugins ? { plugin: memo(`plugin:${a.id}`, () => { try { return benchkeeperPlugin(ctx, a.id); } catch { return null; } }) } : {}), rules: agent(a.id).global.rules.path, skills: agent(a.id).global.skills, unavailable: unavailable(a.id) })),
+    agents: detected.map((a) => ({ ...a, ...(a.installed && agent(a.id).plugins ? { plugin: memo(`plugin:${a.id}`, () => { try { return cedarloomPlugin(ctx, a.id); } catch { return null; } }) } : {}), rules: agent(a.id).global.rules.path, skills: agent(a.id).global.skills, unavailable: unavailable(a.id) })),
     projects: paths.map((path) => { const s = setupOf(ctx, path, projectState(ctx, path)).state; return { path, agents: s?.agents ?? [], setupVersion: s?.contentVersion ?? null, current: upToDate(s) }; }),
   };
 }

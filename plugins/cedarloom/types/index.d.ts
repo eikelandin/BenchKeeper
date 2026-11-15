@@ -6,6 +6,6 @@ export type Check = { result: 'pass' | 'fail'; edits: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    benchkeeper: { tier: TierLine | null; override: string | null; where: Where | null; tests: Check | null; lint: Check | null }
+    cedarloom: { tier: TierLine | null; override: string | null; where: Where | null; tests: Check | null; lint: Check | null }
   }
 }

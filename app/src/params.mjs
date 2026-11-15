@@ -5,7 +5,7 @@ import { contentDir } from './content.mjs';
 import { readText } from './fsx.mjs';
 
 export const FILES = { policy: ['docs/agents/orchestration.json'] };
-// No static path names the content (content/ in the package, plugins/benchkeeper/ in a clone); a content folder whose reader does not load must not keep the app from starting, so only the editor fails, with the reason.
+// No static path names the content (content/ in the package, plugins/cedarloom/ in a clone); a content folder whose reader does not load must not keep the app from starting, so only the editor fails, with the reason.
 const reader = await import(pathToFileURL(join(contentDir, 'skills/orchestrating-projects/policy.mjs')).href).catch((e) => ({ failed: e.message.split('\n')[0] }));
 const VALIDATE = { policy: reader.validate };
 
