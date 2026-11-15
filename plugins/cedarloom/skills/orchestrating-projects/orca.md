@@ -162,6 +162,7 @@ The BenchKeeper plugin hands the handoff file back after a `/clear` or compactio
 
 - When that Claude Code coordinator ends a turn idle (no background task; a session cron does not count) above the plugin option `rotateAtTokens`, 200,000 tokens by default, the plugin clears it with `/clear` and submits a prompt to run the Resume steps.
 - `rotateAtPercent` above 0 sets a percent of the context window instead, and both at 0 turn it off.
+- `rotateAfterTasks` above 0 (off by default) also clears it once that many of the run's tasks have completed or failed since its last clear, whatever the context size.
 - Without the file, or for another terminal, the plugin neither hands it back nor clears.
 
 The file's Resume section holds these steps, in this order, with the run id and the absolute path of this skill's folder filled in:

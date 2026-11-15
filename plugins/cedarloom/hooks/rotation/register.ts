@@ -1,15 +1,17 @@
 // Coordinator context rotation (orchestrating-projects): when the session's project root holds the coordinator's handoff
-// file and the file names this session's Orca terminal, an idle Stop above the plugin's threshold clears the context
-// with /clear and submits a resume prompt, and a clear or compaction hands the file back to the model, with the git drift
-// since the coordinator wrote it. Otherwise every hook here passes. It reads and writes that one file, reads git and sends
-// nothing.
-import type { EngineInterface, Register } from 'claude-code'
+// file and the file names this session's Orca terminal, an idle Stop above the plugin's threshold, or after the set number
+// of settled Orca tasks, clears the context with /clear and submits a resume prompt, and a clear or compaction hands the
+// file back to the model, with the git drift since the coordinator wrote it. Otherwise every hook here passes. It reads
+// and writes that one file, reads git and Orca's task list, and sends nothing.
+import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import { FILE, RUNS, STATUS, STATUS_ARGS, TOP_ARGS, changedPaths, commitArgs, drift, editedAt, fingerprint, mine, restored, stamped, statusBlock } from './handoff.mjs'
 
 // A second /clear while the restore hook of the first still runs cuts that hook off and loses its context.
 const GAP_MS = 10 * 60 * 1000
-const resume = (size: string) => `BenchKeeper cleared this coordinator's context at ${size} to save tokens. Run the Resume steps of the handoff file in your context now, before anything else, then continue from its Next section.`
+// Longer than the gap, so a slow clear still resumes; past it, a clear that never settles no longer holds rotation off.
+const WATCHDOG_MS = 15 * 60 * 1000
+const resume = (why: string) => `BenchKeeper cleared this coordinator's context ${why} to save tokens. Run the Resume steps of the handoff file in your context now, before anything else, then continue from its Next section.`
 
 // Per Claude Code process: the module stays loaded across /clear.
 let running = false
@@ -19,6 +21,9 @@ let lastEnd: number | null = null
 let noted = false
 // Main-loop turns started in this process: a turn that starts between the decision and the clear makes it stale.
 let turns = 0
+type Settled = { run: string; count: number }
+// The settled tasks at the last clear, or at the first read of this run in this process.
+let counted: Settled | null = null
 
 // The text with its status block holding only this line, the block appended when the text has none.
 export function withStatus(text: string, line: string): string {
@@ -89,45 +94,78 @@ async function status($: EngineInterface, text: string, event: string, tokens: n
 // A row of the transcript the person sees and the model does not read.
 const note = ($: EngineInterface, text: string) => $.session.append({ message: { type: 'system', content: [{ type: 'text', text }] } })
 
-async function rotate($: EngineInterface, size: string, now: number, seen: number, before: number | null) {
+// The completed and failed tasks of the Orca run bound to this terminal; null when Orca gives no such list.
+async function settledTasks($: EngineInterface): Promise<Settled | null> {
+  try {
+    const out = await $.process.run(['orca', 'orchestration', 'task-list', '--json'], { cwd: await $.session.root() })
+    const result = (JSON.parse(out.stdout) as { result?: { runId?: unknown; tasks?: unknown } } | null)?.result
+    if (out.exitCode !== 0 || typeof result?.runId !== 'string' || !Array.isArray(result.tasks)) return null
+    return { run: result.runId, count: result.tasks.filter((task: { status?: unknown } | null) => task?.status === 'completed' || task?.status === 'failed').length }
+  } catch {
+    return null
+  }
+}
+
+async function rotate($: EngineInterface, why: string, now: number, seen: number, before: number | null, tasks: Settled | null) {
   // A prompt queued during the judged turn (an Orca wake) has started a new one: give up and let its Stop judge again.
   if (turns !== seen) {
     lastEnd = before
     return
   }
   running = true
+  if (tasks !== null) counted = tasks
+  let expired = false
+  let watchdog: Timer | undefined
   try {
-    await $.command.run({ command: 'clear' })
-    const submitted = await $.prompt.submit({ text: resume(size) })
-    if (submitted.drop !== undefined) throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
+    const clearing = async () => {
+      await $.command.run({ command: 'clear' })
+      if (expired) return
+      const submitted = await $.prompt.submit({ text: resume(why) })
+      if (submitted.drop !== undefined) throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
+    }
+    const late = new Promise<never>((_, fail) => {
+      watchdog = $.clock.after(WATCHDOG_MS, () => {
+        expired = true
+        fail(new Error(`the clear did not finish within ${WATCHDOG_MS / 60_000} minutes`))
+      })
+    })
+    await Promise.race([clearing(), late])
   } catch (error) {
     await note($, `BenchKeeper could not clear and resume this coordinator: ${error instanceof Error ? error.message : String(error)}`).catch(() => undefined)
   } finally {
+    watchdog?.cancel()
     lastEnd = await $.clock.now().catch(() => now)
     running = false
   }
 }
 
 // The checks that need the engine, once the turn is known to be idle; schedules the clear when it is due.
-async function decide($: EngineInterface, atTokens: number, atPercent: number) {
+async function decide($: EngineInterface, atTokens: number, atPercent: number, afterTasks: number) {
   const now = await $.clock.now()
   if (lastEnd !== null && now - lastEnd < GAP_MS) return
   const text = await own($)
   if (text === null) return
+  const tasks = afterTasks > 0 ? await settledTasks($) : null
+  // A new run, or a list that shrank, starts the count again.
+  if (tasks !== null && (counted === null || counted.run !== tasks.run || tasks.count < counted.count)) counted = tasks
+  const settled = tasks !== null && counted !== null ? tasks.count - counted.count : 0
   const { context } = await $.session.usage()
+  const bySize = atPercent > 0 || atTokens > 0
   const figure = atPercent > 0 ? context.percent : context.tokens
-  if (figure === undefined) {
-    if (!noted) {
-      noted = true
-      await note($, 'BenchKeeper cannot read the context size of this session, so it will not clear this coordinator at its threshold.')
-      if (await safe($)) await status($, text, 'usage unread', context.tokens).catch(() => undefined)
-    }
-    return
+  if (bySize && figure === undefined && !noted) {
+    noted = true
+    await note($, 'BenchKeeper cannot read the context size of this session, so it will not clear this coordinator at its threshold.')
+    if (await safe($)) await status($, text, 'usage unread', context.tokens).catch(() => undefined)
   }
-  if (figure < (atPercent > 0 ? atPercent : atTokens)) return
+  const why =
+    bySize && figure !== undefined && figure >= (atPercent > 0 ? atPercent : atTokens)
+      ? `at ${atPercent > 0 ? `${figure}% of its context window` : `${figure} tokens`}`
+      : afterTasks > 0 && settled >= afterTasks
+        ? `after ${settled} settled tasks`
+        : null
+  if (why === null) return
   if (!(await safe($))) return
-  const size = atPercent > 0 ? `${figure}% of its context window` : `${figure} tokens`
-  await status($, text, `clearing at ${size}`, context.tokens).catch(() => undefined)
+  await status($, text, `clearing ${why}`, context.tokens).catch(() => undefined)
   // The gap starts now, so a timer that never fires cannot let a second clear through.
   const before = lastEnd
   lastEnd = now
@@ -135,12 +173,13 @@ async function decide($: EngineInterface, atTokens: number, atPercent: number) {
   // a second later: a prompt queued during the turn that starts within that second makes the clear give up; one that
   // starts later still waits for the clear.
   const seen = turns
-  $.clock.after(1000, () => void rotate($, size, now, seen, before))
+  $.clock.after(1000, () => void rotate($, why, now, seen, before, tasks))
 }
 
 export const register: Register = (on, options) => {
   const atTokens = typeof options.rotateAtTokens === 'number' ? options.rotateAtTokens : 200000
   const atPercent = typeof options.rotateAtPercent === 'number' ? options.rotateAtPercent : 0
+  const afterTasks = typeof options.rotateAfterTasks === 'number' ? options.rotateAfterTasks : 0
 
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) turns++
@@ -169,10 +208,10 @@ export const register: Register = (on, options) => {
     // (e.session_crons) are future wakes that survive /clear, not work in flight, so they do not hold rotation back.
     if (e.agent_id || e.stop_hook_active || !Array.isArray(e.background_tasks) || e.background_tasks.length || running || deciding) return result
     if (result.block !== undefined || result.preventContinuation) return result
-    if (atPercent <= 0 && atTokens <= 0) return result
+    if (atPercent <= 0 && atTokens <= 0 && afterTasks <= 0) return result
     deciding = true
     try {
-      await decide($, atTokens, atPercent)
+      await decide($, atTokens, atPercent, afterTasks)
     } finally {
       deciding = false
     }

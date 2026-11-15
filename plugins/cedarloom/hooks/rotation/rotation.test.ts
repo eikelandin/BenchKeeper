@@ -13,9 +13,9 @@ const HANDOFF = '# Handoff\nrun r1\nTerminal: term-a\n\n## Next\nwatch #12\n'
 const IDLE = { stop_hook_active: false, background_tasks: [] }
 // Each test loads the plugin afresh, so its module state (running, lastEnd, noted) starts empty.
 
-type Setup = { file?: string | null; tokens?: number | null; terminal?: string; stop?: { block?: string; preventContinuation?: true }; hold?: Promise<void>; tracked?: boolean; link?: true; git?: number; slow?: Promise<void>; drop?: string; surfaces?: string[]; changed?: { log: string; status: string } }
+type Setup = { file?: string | null; tokens?: number | null; terminal?: string; stop?: { block?: string; preventContinuation?: true }; hold?: Promise<void>; tracked?: boolean; link?: true; git?: number; slow?: Promise<void>; drop?: string; surfaces?: string[]; changed?: { log: string; status: string }; orca?: { run: string; completed: number; failed: number } }
 
-function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', stop = {}, hold, tracked = false, link, git = 0, slow, drop, surfaces = ['terminal'], changed = { log: '', status: '' } }: Setup = {}) {
+function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', stop = {}, hold, tracked = false, link, git = 0, slow, drop, surfaces = ['terminal'], changed = { log: '', status: '' }, orca }: Setup = {}) {
   const clock = mock.clock(on, { now: 3_600_000 })
   const session = mock.session(on)
   const files: Record<string, string> = file === null ? {} : { [PATH]: file }
@@ -34,6 +34,11 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
   })
   on('process.run', async (_, e) => {
     await slow
+    // Orca's task list holds one task still waiting besides the settled ones.
+    if (e.argv[0] === 'orca') {
+      const tasks = orca === undefined ? [] : [{ status: 'ready' }, ...Array.from({ length: orca.completed }, () => ({ status: 'completed' })), ...Array.from({ length: orca.failed }, () => ({ status: 'failed' }))]
+      return { value: { exitCode: orca === undefined ? 1 : 0, stdout: JSON.stringify({ ok: true, result: { runId: orca?.run, tasks } }), stderr: '' } } as never
+    }
     // The log call lists the commits after its --since; the time is the second field of a line.
     const since = e.argv.find((arg) => arg.startsWith('--since-as-filter='))?.slice('--since-as-filter='.length)
     const log = () => changed.log.split('\n').filter((line) => line !== '' && Date.parse(line.split(' ')[1] ?? '') > Date.parse(since ?? '')).map((line) => `${line}\n`).join('')
@@ -208,11 +213,17 @@ for (const stop of [{ block: 'keep going' }, { preventContinuation: true } as co
   })
 }
 
-test('a Stop while the clear still runs does not clear again, also past the 10-minute gap', async ($, on) => {
+// One idle Stop whose /clear runs until release is called.
+async function held($: Engine, on: On) {
   let release = () => {}
   const e = engine(on, { hold: new Promise<void>((done) => (release = done)) })
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)
+  return { e, release: () => release() }
+}
+
+test('a Stop while the clear still runs does not clear again, also past the 10-minute gap', async ($, on) => {
+  const { e, release } = await held($, on)
   await e.clock.advance(11 * 60_000)
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)
@@ -220,6 +231,51 @@ test('a Stop while the clear still runs does not clear again, also past the 10-m
   release()
   await e.clock.advance(1000)
   expect(e.ran.length).toBe(2)
+})
+
+test('a clear that never settles is given up after 15 minutes with a note and no resume prompt, and the next idle Stop after the gap clears', async ($, on) => {
+  const { e, release } = await held($, on)
+  await e.clock.advance(15 * 60_000)
+  expect(e.session.appended().map((row) => row.message.type)).toEqual(['system'])
+  release()
+  await e.clock.advance(1000)
+  expect(e.ran).toEqual(['/clear'])
+  await e.clock.advance(10 * 60_000)
+  await $.classic.Stop(IDLE)
+  await e.clock.advance(1000)
+  expect(e.ran.length).toBe(3)
+  expect(e.ran[1]).toBe('/clear')
+  expect(e.ran[2]).toContain('250000 tokens')
+})
+
+test('the set number of tasks settled since the last clear clears an idle coordinator below the threshold; a new run counts afresh', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
+  const orca = { run: 'run-1', completed: 3, failed: 0 }
+  const e = engine(on, { tokens: 150000, orca })
+  const stop = async () => {
+    await $.classic.Stop(IDLE)
+    await e.clock.advance(1000)
+  }
+  // The first read starts the count; one settled task is not enough.
+  await stop()
+  orca.completed = 4
+  await stop()
+  expect(e.ran).toEqual([])
+  orca.failed = 1
+  await clears($, e, 'after 2 settled tasks')
+  // The count starts again at the clear.
+  await e.clock.advance(11 * 60_000)
+  orca.completed = 5
+  await stop()
+  expect(e.ran.length).toBe(2)
+  // The tasks a new run settled before its first read do not count.
+  Object.assign(orca, { run: 'run-2', completed: 9 })
+  await stop()
+  expect(e.ran.length).toBe(2)
+  orca.completed = 11
+  await stop()
+  expect(e.ran.length).toBe(4)
+  expect(e.ran[2]).toBe('/clear')
+  expect(e.ran[3]).toContain('after 2 settled tasks')
 })
 
 test('a turn that starts before the clear makes it give up, and the next idle Stop clears', async ($, on) => {
