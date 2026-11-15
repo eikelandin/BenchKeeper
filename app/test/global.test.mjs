@@ -470,8 +470,8 @@ test('third-party plugins are not pinned: the marketplace is added as the agent 
   assert.equal(add('claude', 'ponytail@ponytail', { packs: ['ponytail'] }), 'DietrichGebert/ponytail');
   assert.equal(add('codex', 'ponytail@ponytail', { packs: ['ponytail'] }), 'DietrichGebert/ponytail');
   assert.equal(add('codex', 'mattpocock-skills@mattpocock', { packs: ['matt-pocock'] }), 'mattpocock/skills');
-  assert.equal(add('claude', 'cedarloom@cedarloom'), 'ESchuderer/BenchKeeper#stable');
-  assert.equal(add('codex', 'cedarloom@cedarloom'), 'ESchuderer/BenchKeeper@stable');
+  assert.equal(add('claude', 'cedarloom@cedarloom'), 'eikelandin/BenchKeeper#stable');
+  assert.equal(add('codex', 'cedarloom@cedarloom'), 'eikelandin/BenchKeeper@stable');
   assert.deepEqual(pin(PLUGINS.codex[1], '6.0.0'), { ref: undefined, version: undefined });
   // Any marketplace ref, any installed version and any installed commit: no step, nothing to move by hand.
   mkdirSync(join(home, '.codex/plugins/cache/ponytail/ponytail/5.10.0'), { recursive: true });

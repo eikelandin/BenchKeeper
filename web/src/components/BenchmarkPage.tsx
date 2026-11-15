@@ -1,7 +1,7 @@
 import { Anchor, Code, Stack, Table, Text, Title } from '@mantine/core';
 import { SiteShell } from './SiteShell';
 
-const RESEARCH = 'https://github.com/ESchuderer/BenchKeeper-research';
+const RESEARCH = 'https://github.com/eikelandin/BenchKeeper-research';
 const FILE = `${RESEARCH}/blob/main`;
 // What a column of a recorded result means and how to compare it, from research bench/results/2026-10-18-mistreevous.md and the research README.
 const READING: [string, string, string][] = [

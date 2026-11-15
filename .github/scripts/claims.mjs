@@ -15,7 +15,7 @@ const THIRD_PARTY = ['core', 'prerequisites[]', 'parallelTools[]', 'openhands'];
 const STRINGS = ['description', 'tagline', 'overview.audience', 'sdlc.requirements', 'quickstart.needs', 'quickstart.choose', 'quickstart.next', 'quickstart.changes'];
 // A new top-level key is either a claim above or named here, so nothing new goes unchecked.
 const NOT_CLAIMS = ['evidence'];
-const RESEARCH = 'https://github.com/ESchuderer/BenchKeeper-research/';
+const RESEARCH = 'https://github.com/eikelandin/BenchKeeper-research/';
 
 const slug = (h) => h.trim().toLowerCase().replace(/[^a-z0-9 _-]/g, '').replace(/ /g, '-');
 // A generated block repeats facts.json, so a heading whose section holds nothing else cannot back a claim.
