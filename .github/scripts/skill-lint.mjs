@@ -1,7 +1,7 @@
 // Structural checks for BenchKeeper's own skills (plugin skills, own library skills, the bundled packs' skills) and the plugin's agents.
 // Usage: node .github/scripts/skill-lint.mjs [skill folders...]   (default: every own skill and agent), exit 1 on any error.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
@@ -19,13 +19,14 @@ export function frontMatter(text) {
   return fields;
 }
 
-function markdownFiles(dir) {
+function filesIn(dir) {
   return readdirSync(dir).flatMap((name) => {
     const p = join(dir, name);
-    if (statSync(p).isDirectory()) return markdownFiles(p);
-    return name.endsWith('.md') ? [p] : [];
+    return statSync(p).isDirectory() ? filesIn(p) : [p];
   });
 }
+
+const markdownFiles = (dir) => filesIn(dir).filter((p) => p.endsWith('.md'));
 
 // A skill that hands issue or pull request text to a worker names the author filter somewhere in its files (docs/security.md, untrusted input).
 const HANDS_TEXT = /\b(read|pass|hand|send|give|copy|paste)\b[^.\n]{0,60}\b(issues?|pull requests?|PRs?)\b[^.\n]{0,60}\b(comments?|bod(y|ies)|text)\b/i;
@@ -113,6 +114,26 @@ const pluginParts = (part) => readdirSync(join(root, 'plugins')).map((p) => join
 // Claude Code loads a plugin's agents from agents/ and its subfolders.
 export const ownAgents = () => pluginParts('agents').flatMap(markdownFiles);
 
+// Hooks do not run in bare mode, the role guard's included (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
+// A line (continuations joined) whose words, split at spaces, quotes, commas, brackets and shell operators, hold claude and
+// after it --bare: a command line, or a spawn or execFile call with its argument list.
+const bareLaunch = (text) =>
+  text.replace(/[\\`]\r?\n/g, ' ').split('\n').some((line) => {
+    const words = line.split(/[\s'"`,()[\]{};|&<>]+/);
+    const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+    return at >= 0 && words.includes('--bare', at + 1);
+  });
+
+export const bareLaunches = (files) =>
+  files.filter((file) => bareLaunch(readFileSync(file, 'utf8'))).map((file) => `${file}: starts claude with --bare, which runs no hooks (the role guard's included)`);
+
+// The files every plugin ships; its tests name commands the hooks deny.
+export function pluginFiles() {
+  const plugins = join(root, 'plugins');
+  return readdirSync(plugins, { withFileTypes: true }).filter((entry) => entry.isDirectory())
+    .flatMap(({ name }) => filesIn(join(plugins, name)).filter((p) => !p.slice(plugins.length).split(sep).includes('test')));
+}
+
 // Copied unchanged from another repository: its conventions, not ours.
 const VENDORED = ['packages/packs/bundled/cedarloom.mantine/skills/mantine-form'].map((d) => join(root, d));
 
@@ -134,7 +155,8 @@ export function ownSkills() {
 if (isMain(import.meta.url)) {
   const dirs = process.argv.length > 2 ? process.argv.slice(2).map((d) => resolve(d)) : ownSkills();
   const agents = process.argv.length > 2 ? [] : ownAgents();
-  const errors = [...dirs.flatMap(lintSkill), ...agents.flatMap(lintAgent)];
+  const launches = process.argv.length > 2 ? [] : bareLaunches(pluginFiles());
+  const errors = [...dirs.flatMap(lintSkill), ...agents.flatMap(lintAgent), ...launches];
   for (const e of errors) console.log(`::error::${e.replace(root + '/', '')}`);
   console.log(`${agents.length} agents, ${dirs.length} skills checked, ${errors.length} errors`);
   process.exit(errors.length ? 1 : 0);
