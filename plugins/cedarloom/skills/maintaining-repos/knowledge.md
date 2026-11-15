@@ -1,6 +1,6 @@
 # Knowledge base
 
-What earlier passes learned about this project, so a repeated pass skips finished work. It is derived from the repository and rebuildable: a lost or cleared base costs time, never correctness. The owner reads it with `benchkeeper knowledge show` and deletes it with `benchkeeper knowledge clear`.
+What earlier passes learned about this project, so a repeated pass skips finished work. It is derived from the repository and rebuildable: a lost or cleared base costs time, never correctness. The owner reads it in the files of the folder that [Where](#where) names and clears it by deleting that folder.
 
 ## Where
 

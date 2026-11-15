@@ -43,7 +43,7 @@ The block is the text [project-rules.md](project-rules.md) describes, between a 
 
 - Shared: in `AGENTS.md`, committed, where the repository has no `AGENTS.md` or its `AGENTS.md` holds the block, or the user picks "the whole block, committed" in [AGENTS.md and CLAUDE.md](#4-agentsmd-and-claudemd).
 - Local, otherwise: in `CLAUDE.local.md`, when Claude Code is selected. It starts with `@AGENTS.md` unless `CLAUDE.md` already imports it, and gets a line in `$(git rev-parse --git-path info/exclude)` unless `git check-ignore -q CLAUDE.local.md` succeeds. A local setup gives Codex no block: say so in the report.
-- An existing block: change only the text between its markers. A block between `<!-- cedarloom-app:project start -->` and `<!-- cedarloom-app:project end -->`, which the earlier app wrote, is replaced in its place.
+- An existing block: change only the text between its markers. A block the app wrote counts as the block in every step and is replaced in its place: between `<!-- benchkeeper:project start -->` and `<!-- benchkeeper:project end -->` (app releases), or between `<!-- cedarloom-app:project start -->` and `<!-- cedarloom-app:project end -->` (later app builds).
 
 ## 4. AGENTS.md and CLAUDE.md
 
@@ -82,6 +82,7 @@ List everything agent-related in the project that the plan does not create or ke
 - hooks in `.claude/settings*.json`, `.codex/hooks.json` and the `[hooks]` table of `.codex/config.toml`
 - other agent rules files (for example `GEMINI.md`, `.cursorrules`, `.github/copilot-instructions.md`)
 - spec or workflow tool folders with their skills and CI entries (for example `openspec/`, `.specify/`)
+- an `AGENTS.override.md` with a block the app wrote (`benchkeeper:` or `cedarloom-app:` markers): Codex reads it instead of `AGENTS.md`. Remove the block and keep the user's own lines (text before a `project` block without an `override` block is the app's copy of `AGENTS.md` when it matches that file); the file goes when nothing else is in it
 
 For each item, say what it is and whether it still works, checked in its execution environment: host hooks on the host, container launchers through `devcontainer exec`. A missing host binary does not make a container launcher dead. A removed skill listed in `skills-lock.json` loses its entry there too, and the file goes when no entry is left. A tool folder with open work: propose moving the open items into the issue tracker first. `AGENTS.md` and `CLAUDE.md` are updated in [AGENTS.md and CLAUDE.md](#4-agentsmd-and-claudemd), never removed.
 
@@ -91,7 +92,7 @@ After the apply step, give the diff (`git diff` against the default branch plus 
 - Every command and tool named in the touched `AGENTS.md` files exists where that file says it runs (container or host). Instructions for a tool whose skills or binary this run removed are gone.
 - Statements in `AGENTS.md` that the run checked (commands, test status, build output, reproducibility) match what the checks showed.
 - Each link in a touched `AGENTS.md` resolves. An `AGENTS.md` that holds the block has Commands, the block, Every change considers and Pointers in that order, and `CLAUDE.md` is exactly `@AGENTS.md`. A committed `AGENTS.md` without the block: its diff holds only the parts the user picked, and `CLAUDE.md` is unchanged.
-- The text between the block's markers is the one [project-rules.md](project-rules.md) gives for the chosen answer, and the block appears once in the file. A local `CLAUDE.local.md` is ignored by git.
+- The text between the block's markers is the one [project-rules.md](project-rules.md) gives for the chosen answer, and the block appears once in the file. No block with `benchkeeper:` or `cedarloom-app:` markers remains in `AGENTS.md`, `CLAUDE.local.md` or `AGENTS.override.md`. A local `CLAUDE.local.md` is ignored by git.
 - A new `docs/agents/orchestration.json` is valid JSON, holds only keys the schema names, and the values the user approved.
 - A folder `AGENTS.md` or `CLAUDE.md` added inside a docs or site source folder is excluded from that build (for example `exclude_docs` in MkDocs).
 - Each removal left no folder or lock entry.
