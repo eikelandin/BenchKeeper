@@ -1,6 +1,6 @@
 // Optional status band (userConfig tierBand, off by default): a row with the project, its branch and Ponytail's level (when
 // that plugin is on), and a row with the last test run and the last lint or type check, ASK while /benchkeeper:ask or
-// /benchkeeper:questions allows terminal questions, and buttons for the sessions board and the doctor.
+// /benchkeeper:questions allows terminal questions.
 // It reads the working folder, git, one flag file of Ponytail and the commands and edits of the main loop; it writes and
 // sends nothing.
 import { atom, read, update } from 'claude-code'
@@ -64,32 +64,22 @@ async function refresh($: EngineInterface) {
   await update($, where, () => ({ project: cwd.split(/[\\/]/).filter(Boolean).pop() || cwd, branch: branch || null, ponytail: /^[a-z-]{1,12}$/.test(level) ? level : null }))
 }
 
-// The board the app writes on each scan of its Sessions view, and on benchkeeper sessions board; the band only opens it.
-async function openBoard($: EngineInterface) {
-  const home = (await $.env.get('CEDARLOOM_APP_HOME')) ?? (await $.env.get('HOME')) ?? (await $.env.get('USERPROFILE'))
-  const file = `${home}/.config/cedarloom-app/board.html`
-  if (!(await $.fs.exists(file))) return $.ui.toast('No sessions board yet: open Sessions in the BenchKeeper app, or run benchkeeper sessions board')
-  const windows = (await $.env.get('OS')) === 'Windows_NT'
-  const mac = !windows && (await $.process.run(['uname'])).stdout.trim() === 'Darwin'
-  // explorer takes the path as one argument; cmd would read & or % in a home folder name as its own syntax.
-  await $.process.run(windows ? ['explorer.exe', file.replaceAll('/', '\\')] : [mac ? 'open' : 'xdg-open', file])
-}
-
-const HELP = 'BenchKeeper band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/benchkeeper:ask, /benchkeeper:questions). board opens the sessions board. doctor asks the agent to run benchkeeper doctor. Nothing leaves this machine. Turn off: set the status band option to false in the plugin options.'
+const HELP = 'BenchKeeper band. Top row: project, branch, Ponytail level. Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/benchkeeper:ask, /benchkeeper:questions). Nothing leaves this machine. Turn off: set the status band option to false in the plugin options.'
 
 export const register: Register = (on, options) => {
-  const on_ = options.tierBand === true
+  // Off: no hook at all, so tool calls and prompts pass the band by. Changing the option reloads the module.
+  if (options.tierBand !== true) return
 
   on('turn.step', async function* ($, e, next) {
     const result = yield* next(e)
-    if (on_ && !e.agentId) await refresh($).catch(() => undefined)
+    if (!e.agentId) await refresh($).catch(() => undefined)
     return result
   })
 
   // The last test run and lint or type check of the main loop. Never denies.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const ran = await next(e)
-    if (on_ && !e.agentId && ran.deny === undefined) {
+    if (!e.agentId && ran.deny === undefined) {
       const testRun = outcome(TEST, e.command, ran)
       const lintRun = outcome(LINT, e.command, ran)
       if (testRun !== undefined) await update($, tests, () => (testRun && { result: testRun, edits: 0 }))
@@ -101,7 +91,7 @@ export const register: Register = (on, options) => {
   // An edit of the main loop makes the results before it stale; a denied or failed edit changed nothing.
   on('tool.call', { tool: EDITS }, async ($, e, next) => {
     const ran = await next(e)
-    if (on_ && !e.agentId && ran.deny === undefined && !ran.isError) {
+    if (!e.agentId && ran.deny === undefined && !ran.isError) {
       const stale = (c: Check | null) => (c ? { ...c, edits: c.edits + 1 } : null)
       await update($, tests, stale)
       await update($, lint, stale)
@@ -110,7 +100,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('session.start', async ($, e, next) => {
-    if (on_) await refresh($).catch(() => undefined)
+    await refresh($).catch(() => undefined)
     return next(e)
   }).catch(($, e, next) => next(e))
 
@@ -118,21 +108,21 @@ export const register: Register = (on, options) => {
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
     // A resumed conversation starts with questions off, as the hook drops the window then.
     if (e.source === 'resume') asking = null
-    if (on_) await refresh($).catch(() => undefined)
+    await refresh($).catch(() => undefined)
     return next(e)
   }).catch(($, e, next) => next(e))
 
   on('prompt.submit', async ($, e, next) => {
-    if (on_ && e.command?.name === 'benchkeeper:ask') {
+    if (e.command?.name === 'benchkeeper:ask') {
       const end = askUntil(e.command.args, await $.clock.now())
       if (end !== undefined) asking = end
     }
-    if (on_ && e.command?.name === 'benchkeeper:questions') asking = Infinity
+    if (e.command?.name === 'benchkeeper:questions') asking = Infinity
     return next(e)
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (!on_ || e.props.hasSurvey) return next(e)
+    if (e.props.hasSurvey) return next(e)
     // Other mods share this slot: theirs draw below. next(e) rejects only when nothing answers beneath (a test).
     const below = await next(e).catch(() => undefined)
     const at = await read($, where)
@@ -152,8 +142,6 @@ export const register: Register = (on, options) => {
         <Text>tests: {state(testRun)}  lint/types: {state(lintRun)}</Text>
         {ask ? <Text>{ask}</Text> : null}
         <Box flexGrow={1} />
-        <Button key="board" plain label="board" onPress={() => openBoard($).catch(() => $.ui.toast('Could not open the sessions board'))} />
-        <Button key="doctor" plain label="doctor" onPress={() => $.command.run({ command: 'benchkeeper:operating-benchkeeper', args: 'run benchkeeper doctor for this project and list the findings' }).catch(() => $.ui.toast('Could not start the doctor'))} />
         <Button key="help" plain label="?" onPress={() => $.ui.toast(HELP)} />
       </Box>
       </Box>

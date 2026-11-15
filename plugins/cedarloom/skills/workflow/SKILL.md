@@ -1,7 +1,7 @@
 ---
 name: workflow
 description: "Picks the workflow and depth for a task: a software change, a docs pass, research, or a batch of tasks on one branch, each at quick, standard or deep depth, with the checks and reviews each needs. Use before the first edit in a repository, before issue or pull request work, and before research with two or more items."
-writes: "The depth line `Depth: <depth> (<reason>)` before the first edit; through its playbooks commits and a pull request in the project's convention."
+writes: "The depth line `Depth: <depth> (<reason>)` and the risk line `Risk: <class> (<reason>)` before the first edit; through its playbooks commits and a pull request in the project's convention."
 ---
 
 # Workflow
@@ -22,6 +22,7 @@ Every depth:
 
    - Risky: authentication, permissions, secrets, input validation, production data, deploy or production configuration, an irreversible action.
    - Which depth, first match: the user's depth for the task; the `Depth:` line of a coordinator's spec; your pick from the table above. A `Depth minimum:` line in `AGENTS.md` raises your pick to that depth, and a risky change raises it to deep.
+   - A software change also gets its risk class and the `Risk:` line ([risk.md](risk.md)). The class raises your pick too: high to deep, medium to standard.
    - Several requests in one prompt: a depth for each.
    - Before the first edit or command, write the depth line `Depth: <depth> (<reason>)`: the change type's name from the [change-type table](#change-types), `research` or `docs pass`, or a few words when none fits, and `risky` when it is (`Depth: deep (new auth flow; risky)`).
    - Unsure between two depths: take the deeper one.
@@ -33,7 +34,7 @@ Every depth:
    - Standard and deep, and any risky change: also [software.md](software.md), deep also [deep.md](deep.md).
    - Docs pass: [docs.md](docs.md). Research: [research.md](research.md).
    - Branches, commits and pull requests follow the project's own convention (`AGENTS.md`, a contributing guide, the history).
-   - A pull request body holds the depth line, the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (what could break, who is affected) and How to revert.
+   - A pull request body holds the depth line, the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (the `Risk:` line, then what could break, who is affected) and How to revert.
    - Two or more independent items that each need more than a few files or searches: one subagent per item in parallel, then one merged report. Smaller items run in this session.
 
    The playbooks hold the detail; these are the steps, in order:

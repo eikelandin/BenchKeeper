@@ -160,7 +160,7 @@ Several logins per agent, for example work and personal, each in a folder of its
 - Usage, Claude Code: `accounts track <name>` adds a status line script and a `StopFailure` hook to the account's folder.
   - It is a plan with a diff and undo.
   - An account that already has a status line of its own is refused, except one that only runs Ponytail's `ponytail-statusline.sh` or `.ps1`: that one is replaced and comes back with `benchkeeper undo <run>` or `accounts track <name> --off`. A dev container account has no undo run: there `--off` is the way back.
-  - The status line prints what the plugin option `statusStyle` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it with `/plugin` in a session of that account):
+  - The status line prints what the key `statusStyle` under `pluginConfigs."cedarloom@cedarloom".options` in that account's `settings.json` picks (Preferences in the app sets it per host account; a dev container account sets it in its own `settings.json`):
     - `merged` (default): the windows and Ponytail's level from the account's `.ponytail-active` (`[PONYTAIL]`, or `[PONYTAIL:LITE]` and `[PONYTAIL:ULTRA]`, coloured as Ponytail's own badge)
     - `plugin`: the level only
     - `benchkeeper`: the windows only
@@ -277,7 +277,7 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
 Two rows of text above the prompt in the Claude Code terminal and desktop app; the VS Code extension does not draw it. It is off by default.
 
 - Top row: the project folder, its git branch, and the level of Ponytail (a separate, optional plugin for lean code) when it is installed.
-- Checks row: the last test run and the last lint or type check of the main loop, each `passed`, `failed`, `not run` or `stale (N edits since)`, then `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the buttons `board`, `doctor` and `?`.
+- Checks row: the last test run and the last lint or type check of the main loop, each `passed`, `failed`, `not run` or `stale (N edits since)`, then `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the button `?`.
   - Test runs: `npm test`, `pnpm test`, `yarn test`, `bun test` (also with `run` and as `npm run test:<name>`), `node --test`, `playwright test`, `pytest`, `go test`, `cargo test`, `vitest` or `jest`.
   - Lint or type checks: `eslint`, `npm run lint`, `tsc`, `ruff`, `mypy`, `pyright`, `go vet`, `cargo clippy` or `biome`.
   - Stale: an edit by the main loop (Edit, Write, MultiEdit, NotebookEdit; not a subagent's, not a failed one) after a result makes it stale.
@@ -285,7 +285,7 @@ Two rows of text above the prompt in the Claude Code terminal and desktop app; t
   - Redirections (`> test.log`, `2>&1`, `&> test.log`) are ignored, and one `sh -c '<script>'` (also `sh -lc`, as in `devcontainer exec ... sh -lc 'cd app && npm test'`) is read as its script.
   - `not run`: a chain with `||`, `;`, `|` or `&`, a quoted name, a background run, or a failed chain that is not the check alone.
 
-`board` opens the sessions board the app last wrote (`$HOME/.config/benchkeeper/board.html`; run `benchkeeper sessions board` or open Sessions in the app first). `doctor` asks the agent to run `benchkeeper doctor` for the project and list the findings, so the agent runs the command and the usual permission prompt applies. `?` shows a short version of this text.
+`?` shows a short version of this text.
 
 Turn it on: `benchkeeper apply` and accept the change "BenchKeeper status band", the switch Terminal tier strip in the app's Preferences view, or set `tierBand` to `true` for `cedarloom@cedarloom` under `pluginConfigs` in `$HOME/.claude/settings.json`. Turn it off: the same switch, set that value to `false` (or `benchkeeper undo <run>` for the run that turned it on; `benchkeeper history` lists the run ids). Start a new Claude Code session after changing the option. The band reads the working folder, git, Ponytail's flag file `.ponytail-active` and the commands and edits of the main loop; it writes and sends nothing, and what it shows stays on this machine.
 
@@ -319,7 +319,7 @@ Set the options with `/plugin` or under `pluginConfigs` for `cedarloom@cedarloom
 
 ## Sessions board
 
-`benchkeeper sessions board` writes `$HOME/.config/benchkeeper/board.html` and opens it; the browser UI shows the same page under Sessions and rewrites the file on each scan, and the status band's board button opens it.
+`benchkeeper sessions board` writes `$HOME/.config/benchkeeper/board.html` and opens it; the browser UI shows the same page under Sessions and rewrites the file on each scan.
 
 Per Claude Code and Codex session on this machine, the board shows:
 
