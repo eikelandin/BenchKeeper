@@ -8,8 +8,8 @@ const FILE = 'docs/agents/orchestration.json';
 const OWNER_ONLY = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', FILE, 'docs/agents/worker-rules.md'];
 // A path with one of these names as a segment is the owner's at any depth: Claude Code also loads the skills of a .claude folder below the root, and they decide what agents may do.
 const OWNER_ONLY_NAMES = ['.claude', '.mcp.json'];
-// A worker session's model and effort by the tier of its task. Every default effort is high: a higher one costs much more and is the owner's to ask for, in the policy.
-const TIERS = { quick: ['sonnet', 'high'], standard: ['opus', 'high'], full: ['opus', 'high'], research: ['fable', 'high'] };
+// A worker session's model and effort by the depth of its task, and for research. Every default effort is high: a higher one costs much more and is the owner's to ask for, in the policy.
+const DEPTHS = { quick: ['sonnet', 'high'], standard: ['opus', 'high'], deep: ['opus', 'high'], research: ['fable', 'high'] };
 // A sensitive change is planned and reviewed on the strongest model; xhigh only for the first independent review of a security or firmware-safety change (owner, 2026-11-12).
 const SENSITIVE = { plan: ['fable', 'high'], review: ['fable', 'high'], independent: ['fable', 'high'], security: ['fable', 'xhigh'] };
 
@@ -121,6 +121,7 @@ export function effective(doc, version = pluginVersion()) {
         allowed: merge.allowed ?? false,
         requiredChecks: merge.requiredChecks ?? [],
         mode: merge.mode ?? 'strict',
+        autoMergeMax: merge.autoMergeMax ?? 'medium',
         additivePaths: merge.additivePaths ?? [],
         ownerOnlyPaths: [...new Set([...OWNER_ONLY, ...(merge.ownerOnlyPaths ?? [])])],
         ownerOnlyNames: OWNER_ONLY_NAMES,
@@ -130,11 +131,12 @@ export function effective(doc, version = pluginVersion()) {
       issuesPerWorker: doc.issuesPerWorker ?? 1,
       keepRunning: doc.keepRunning ?? false,
       permissionPrompts: doc.permissionPrompts ?? 'block',
+      riskyPaths: doc.riskyPaths ?? [],
       review: { depth: review.depth ?? 'high', sensitiveDepth: review.sensitiveDepth ?? 'high', sensitivePaths: review.sensitivePaths ?? [] },
       issues: { repository: issues.repository ?? null, labels: issues.labels ?? [] },
       minPlugin: doc.minPlugin ?? null,
       models: {
-        worker: Object.fromEntries(Object.entries(TIERS).map(([tier, [model, effort]]) => [tier, { model: models.worker?.model ?? model, effort: models.worker?.effort ?? effort }])),
+        worker: Object.fromEntries(Object.entries(DEPTHS).map(([depth, [model, effort]]) => [depth, { model: models.worker?.model ?? model, effort: models.worker?.effort ?? effort }])),
         phases: Object.fromEntries(Object.entries(plain(models.phases ?? {})).map(([phase, named]) => [phase, plain(named)])),
         sensitive: Object.fromEntries(Object.entries(SENSITIVE).map(([use, [model, effort]]) => [use, { model: models.sensitive?.[use]?.model ?? model, effort: models.sensitive?.[use]?.effort ?? effort }])),
       },
