@@ -18,11 +18,9 @@
   "plugins/orchestration/skills/orchestrating-projects/recurring-runs.md": ["app-package"],
   "plugins/orchestration/skills/orchestrating-projects/spec-template.md": ["app-state"],
   "plugins/setup/library/README.md": ["app-package"],
-  "plugins/setup/skills/maintaining-repos/knowledge.md": ["app-state"],
-  "plugins/setup/skills/maintaining-repos/SKILL.md": ["app-package", "app-state"],
   "plugins/setup/skills/operating-cedarloom-app/SKILL.md": ["app-package", "app-path", "app-state"],
   "plugins/setup/skills/reviewing-rules/SKILL.md": ["app-state"],
-  "plugins/setup/skills/setting-up-projects/SKILL.md": ["app-package", "app-path", "app-state"],
+  "plugins/setup/skills/setting-up-projects/SKILL.md": ["app-package", "app-state"],
   "plugins/workflow/hooks/tier/register.tsx": ["app-path"],
   "plugins/workflow/skills/ask/SKILL.md": ["app-state"]
 }
