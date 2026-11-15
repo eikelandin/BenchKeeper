@@ -40,6 +40,17 @@ const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot
 
 // Inside double quotes bash drops a backslash only before these (https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html).
 const BASH_QUOTED_ESCAPES = '$`"\\';
+// Bash's ANSI-C quoting $'...' (https://www.gnu.org/software/bash/manual/html_node/ANSI_002dC-Quoting.html).
+const ANSI_C = /\$'((?:[^'\\]|\\[\s\S])*)'?/y;
+const ANSI_C_ESCAPE = /\\(?:([abeEfnrtv\\'"?])|([0-7]{1,3})|x([\da-fA-F]{1,2})|u([\da-fA-F]{1,4})|U([\da-fA-F]{1,8})|c([\s\S]))/g;
+const ANSI_C_CHARS = { a: '\x07', b: '\b', e: '\x1b', E: '\x1b', f: '\f', n: '\n', r: '\r', t: '\t', v: '\v' };
+// The text of $'...' as bash reads it: an unknown escape keeps its backslash, and a NUL ends the text.
+const ansiC = (body) =>
+  body.replace(ANSI_C_ESCAPE, (_, char, octal, hex, u, U, control) =>
+    char ? (ANSI_C_CHARS[char] ?? char)
+    : octal ? String.fromCharCode(parseInt(octal, 8) & 0xff)
+    : control ? String.fromCharCode(control.charCodeAt(0) & 0x1f)
+    : String.fromCodePoint(parseInt(hex ?? u ?? U, 16))).split('\0')[0];
 
 // The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
 // continuation joins its lines, a quoted word stays whole, and redirections are dropped. The text of a quoted word is read again
@@ -75,6 +86,17 @@ function commands(source, powershell, nested = false) {
       if (c === quote) quote = null;
       else if (c === escape && quote === '"' && i + 1 < s.length && (powershell || BASH_QUOTED_ESCAPES.includes(s[i + 1]))) word += s[++i];
       else word += c;
+    } else if (!powershell && c === '$' && s[i + 1] === '$') {
+      // $$ is the shell's process id, so a quote after it is a plain one.
+      word += '$$';
+      i++;
+      started = true;
+    } else if (!powershell && c === '$' && s[i + 1] === "'") {
+      ANSI_C.lastIndex = i;
+      const [whole, body] = ANSI_C.exec(s);
+      word += ansiC(body);
+      i += whole.length - 1;
+      started = quoted = true;
     } else if (c === '"' || c === "'") {
       quote = c;
       started = quoted = true;
@@ -176,6 +198,8 @@ function push(args, dir, known) {
     // git resolves tags/x and heads/x as refs/tags/x and refs/heads/x.
     const [src, dst = src] = spec.replace(/^\+/, '').split(':').map((side) => side.replace(/^(tags|heads)\//, 'refs/$1/'));
     if (isTag(dir, src) || isTag(dir, dst)) return 'a tag push';
+    // : and +: push the branches both sides have, a * pattern every branch it matches.
+    if ((!src && !dst) || `${src}${dst}`.includes('*')) return 'a push of every branch';
     targets.push(dst === '@' ? 'HEAD' : dst.replace(/^refs\/heads\//, ''));
   }
   // A push of the current branch passes only where the guard can read which branch that is.
@@ -275,19 +299,19 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   // A Monitor call on a WebSocket runs no command.
   if (tool === 'Monitor' && cmd === undefined && toolInput?.ws) return null;
   if (typeof cmd !== 'string') return 'a command the guard cannot read';
-  // A guarded session must not start another one as the coordinator; Windows reads the name in any case.
-  if (cmd.replace(/["'\\`]/g, '').toUpperCase().includes(ROLE)) return `a command that names ${ROLE}`;
   const powershell = tool === 'PowerShell';
+  const parsed = commands(cmd, powershell);
+  const source = [cmd, ...parsed.flatMap((c) => c.words)].join('\n');
+  // A guarded session must not start another one as the coordinator; Windows reads the name in any case.
+  if (source.replace(/["'\\`]/g, '').toUpperCase().includes(ROLE)) return `a command that names ${ROLE}`;
   const changesDir = (w) => CHANGE_DIR.has(powershell ? w.toLowerCase() : w);
   // The folder git runs in is known in the session's folder and after a cd to an existing folder that the command starts with.
   // Any other folder change (later, conditional, nested, undone, unresolved, or in a comment or a here-document) may or may
   // not hold where git runs: from then on git is read in every folder seen, and a push has to name its branch.
   let dir = cwd, known = true, first = changesDir(/\S*/.exec(cmd.trimStart())[0]);
   const seen = [cwd];
-  const parsed = commands(cmd, powershell);
-  const source = [cmd, ...parsed.flatMap((c) => c.words)].join('\n');
   // Before the command, through env or export in bash, or $env:GIT_DIR in PowerShell.
-  const gitDir = /\bGIT_DIR\s*=/i.test(cmd);
+  const gitDir = /\bGIT_DIR\s*=/i.test(source);
   for (const { words, nested } of parsed) {
     const at = words.findIndex(changesDir);
     if (at >= 0) {
