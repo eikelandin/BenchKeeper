@@ -78,6 +78,7 @@ const DENIED = [
   `gh api graphql -f query='mutation { mergePull'"Request"'(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
   `gh api /graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
   `gh api https://api.github.com/graphql -f query='mutation { mergePullRequest(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`,
+  ...['graphql#x', 'graphql/', 'graphql//', 'GRAPHQL'].map((path) => `gh api '${path}' -f query='mutation { mergePullRequest(input: {pullRequestId: "PR_1"}) { clientMutationId } }'`),
   `gh api graphql -f query='mutation { createCommitOnBranch(input: {branch: {repositoryNameWithOwner: "o/r", branchName: "main"}, message: {headline: "x"}, expectedHeadOid: "1", fileChanges: {additions: [{path: "README.md", contents: "aGk="}]}}) { commit { oid } } }'`,
   "gh api -X PUT 'repos/o/r/pulls/12/%6Derge?x=%zz'",
   'gh api -X PATCH repos/acme/graphql -F archived=true',
@@ -127,6 +128,7 @@ const ALLOWED = [
   'gh api -H "Accept: application/vnd.github+json; charset=utf-8" repos/o/r/pulls/12/merge',
   'gh api repos/owner/repo/pulls/12/comments/3/replies -f body=Fixed',
   'gh api repos/o/r/contents/README.md',
+  'gh api repos/o/r/contents/my.graphql',
   'gh api repos/acme/contents/issues/123/comments -f body=done',
   'gh api graphql -f query="{ viewer { login } }"',
   'git push -u origin feat/x',
@@ -212,6 +214,10 @@ test('role guard: denies a push to a remote whose default branch it cannot read:
   for (const command of [`git --git-dir=${feature}/.git push origin HEAD:trunk`, `git --git-dir ${feature}/.git push origin HEAD:trunk`]) {
     assert.equal(decision(command, { cwd: dirname(fresh) }), 'deny', command);
   }
+  // The session folder reads the default branch trunk, but git pushes from the repository GIT_DIR or --git-dir names.
+  const other = [`git --git-dir=${fresh}/.git push origin HEAD:develop`, `GIT_DIR=${fresh}/.git git push origin HEAD:develop`, `env GIT_DIR=${fresh}/.git git push origin HEAD:develop`];
+  for (const command of other) assert.equal(decision(command), 'deny', command);
+  assert.equal(decision(`$env:GIT_DIR = '${fresh}/.git'; git push origin HEAD:develop`, { tool: 'PowerShell' }), 'deny');
 });
 
 test('role guard: a push that names no remote is checked against the remote git pushes to', () => {

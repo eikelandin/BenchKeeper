@@ -35,6 +35,7 @@ const DEFAULT_BRANCHES = ['main', 'master'];
 // Commands that change the folder the following commands run in, in bash and PowerShell.
 const CHANGE_DIR = new Set(['cd', 'pushd', 'popd', 'chdir', 'set-location', 'sl', 'push-location', 'pop-location']);
 const UNREAD_BRANCH = 'a push without a branch name from a folder the guard cannot read (name it: git push <remote> <branch>)';
+const GIT_DIR_PUSH = 'a push from the repository GIT_DIR or --git-dir names, which the guard does not read (push from its folder: git -C <dir> push <remote> <branch>)';
 const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot read (push to a remote by name whose refs/remotes/<remote>/HEAD is set: git remote set-head <remote> --auto)';
 
 // Inside double quotes bash drops a backslash only before these (https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html).
@@ -191,7 +192,8 @@ function push(args, dir, known) {
   return target ? `a push to the default branch ${target}` : null;
 }
 
-function git(args, cwd, known) {
+// gitDir: the command text sets GIT_DIR.
+function git(args, cwd, known, gitDir) {
   let i = 0;
   let dir = cwd;
   for (; i < args.length && args[i].startsWith('-'); i++) {
@@ -201,12 +203,13 @@ function git(args, cwd, known) {
       if (to) dir = to;
       else known = false;
     }
-    // git then runs in the repository --git-dir names, not in the folder the guard reads.
-    if (/^--git-dir(=|$)/.test(args[i])) known = false;
+    if (/^--git-dir(=|$)/.test(args[i])) gitDir = true;
     if (GIT_VALUE_OPTS.has(args[i])) i++;
   }
   const [sub, ...rest] = args.slice(i);
   if (sub === 'stash') return 'git stash';
+  // git then pushes from the repository GIT_DIR or --git-dir names, whose branches and remotes the guard does not read.
+  if (sub === 'push' && gitDir) return GIT_DIR_PUSH;
   // Only the explicit read forms pass: `git config <key>` alone reads too, but `--get` says so.
   if (sub === 'config' && !(rest.some((w) => CONFIG_READ.test(w)) && !rest.some((w) => CONFIG_WRITE.test(w)))) return 'git config';
   return sub === 'push' ? push(rest, dir, known) : null;
@@ -244,8 +247,9 @@ const decoded = (path) => path.replace(/%[\da-f]{2}/gi, (escape) => String.fromC
 // source: the command text and its words with quotes resolved, where a mutation split by quotes is whole.
 function api(args, source) {
   const call = apiCall(args);
-  // A REST call to /graphql or its full URL reaches the same endpoint, its fields sent as the JSON body.
-  if (/(^|\/)graphql$/.test(decoded(call.positionals[0] ?? '').split('?')[0] ?? '')) {
+  // A REST call to /graphql or its full URL reaches the same endpoint, its fields sent as the JSON body. The request line
+  // carries no fragment (#x), and a host may read the path in any case and with trailing slashes.
+  if (/(^|\/)graphql\/*$/i.test(decoded(call.positionals[0] ?? '').split(/[?#]/)[0] ?? '')) {
     // A query read from a file stays unseen, so it is denied.
     if (call.input || call.fields.some((v) => /^query=@/.test(v ?? ''))) return 'a gh api graphql query from a file';
     if (MUTATIONS.test(source)) return 'a gh api graphql mutation';
@@ -284,6 +288,8 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   const seen = [cwd];
   const parsed = commands(cmd, powershell);
   const source = [cmd, ...parsed.flatMap((c) => c.words)].join('\n');
+  // Before the command, through env or export in bash, or $env:GIT_DIR in PowerShell.
+  const gitDir = /\bGIT_DIR\s*=/i.test(cmd);
   for (const { words, nested } of parsed) {
     const at = words.findIndex(changesDir);
     if (at >= 0) {
@@ -300,7 +306,7 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
       const name = program(words[j]);
       const rest = words.slice(j + 1);
       const why =
-        name === 'git' ? (known ? [dir] : seen).reduce((found, d) => found ?? git(rest, d, known), null)
+        name === 'git' ? (known ? [dir] : seen).reduce((found, d) => found ?? git(rest, d, known, gitDir), null)
         : name === 'gh' ? gh(rest, source)
         : name === 'claude' && rest.includes(BARE) ? 'a launch in bare mode, which runs no hooks'
         : null;
