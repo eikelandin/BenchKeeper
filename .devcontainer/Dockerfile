@@ -8,13 +8,11 @@ RUN apt-get update \
     bubblewrap=0.8.0-2+deb12u1 socat=1.7.4.4-2 ripgrep=13.0.0-4+b2 procps=2:4.0.2-3 \
   && rm -rf /var/lib/apt/lists/*
 
-# Playwright MCP with its Chromium, and the Chromium headless shell of @playwright/test (keep 1.65.0 equal to web/);
-# the system libraries once, from the MCP's Playwright
+# The Chromium headless shell of @playwright/test and its system libraries (keep 1.65.0 equal to web/)
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN npm i -g --ignore-scripts --prefix /usr/local @playwright/mcp@0.0.83 \
-  && mcp=/usr/local/lib/node_modules/@playwright/mcp/node_modules/playwright-core/cli.js \
-  && node $mcp install-deps chromium && node $mcp install chromium \
-  && npm i -g --ignore-scripts --prefix /tmp/pw playwright@1.65.0 && node /tmp/pw/lib/node_modules/playwright/cli.js install --only-shell chromium \
+RUN npm i -g --ignore-scripts --prefix /tmp/pw playwright@1.65.0 \
+  && pw=/tmp/pw/lib/node_modules/playwright/cli.js \
+  && node $pw install-deps chromium && node $pw install --only-shell chromium \
   && chown -R node:node /ms-playwright \
   && npm cache clean --force && rm -rf /tmp/pw /var/lib/apt/lists/*
 
