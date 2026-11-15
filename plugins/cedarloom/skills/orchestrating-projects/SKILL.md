@@ -8,7 +8,7 @@ writes: "Specs, prompts, approvals, handoff copies and scratch clones in `.cedar
 
 # Orchestrating projects
 
-This session is the coordinator. Workers do the issue work in their own worktrees, each working by the workflow skill at its tier (the Flow line of [spec-template.md](spec-template.md)); the coordinator picks, specs, watches, reviews and merges by policy ([review-and-merge.md](review-and-merge.md)), cleans up and starts the next. The runner's commands are in [orca.md](orca.md); the runner's own guide stays the source for its mechanics. This file is runner-neutral.
+This session is the coordinator. Workers do the issue work in their own worktrees, each working by the workflow skill at its depth (the Flow line of [spec-template.md](spec-template.md)); the coordinator picks, specs, watches, reviews and merges by policy ([review-and-merge.md](review-and-merge.md)), cleans up and starts the next. The runner's commands are in [orca.md](orca.md); the runner's own guide stays the source for its mechanics. This file is runner-neutral.
 
 Projects: $ARGUMENTS (Codex: the paths after the skill name). Each is a repository with a GitHub remote and an `AGENTS.md`.
 
@@ -21,7 +21,7 @@ These hold in every step and for every outcome.
 - A worker whose terminal a person typed in belongs to that person: no stop, release or cleanup for it; list it in the report.
 - Start every worker in its agent's default permission mode and write no flag that bypasses or skips permission prompts, for any agent. No worker and no coordinator bypasses, edits or disables a hook.
 - The policy decides: run the reader again before each pick, merge, issue close, branch deletion and decline ([Policy](#policy)). A policy that is silent on an action means no.
-- Three gates are the owner's, asked with the approval layout ([Owner decisions](#owner-decisions)): approving the design of full-tier or high-risk work before its worker starts, merging outside `merge.allowed` or above `merge.autoMergeMax` ([Risk class](#risk-class)), a pull request with an owner-only file or a release. A gate never continues after a timeout: the issue stays blocked and is listed in the report.
+- Three gates are the owner's, asked with the approval layout ([Owner decisions](#owner-decisions)): approving the design of deep or high-risk work before its worker starts, merging outside `merge.allowed` or above `merge.autoMergeMax` ([Risk class](#risk-class)), a pull request with an owner-only file or a release. A gate never continues after a timeout: the issue stays blocked and is listed in the report.
 - A worker creates no release, tag, package publish, repository, organization, token or GitHub App and changes no visibility, and the coordinator creates none for it: those are the owner's, as are settings, rulesets, secrets and other people's repositories.
 - Stay within `hostWorkerLimit` even when more issues are labeled.
 - This session runs on `opus` at `high`. On `fable`, tell the owner once and go on only on their word.
@@ -44,9 +44,9 @@ These hold in every step and for every outcome.
 1. **Pick**:
    - The pickable issues are the numbers `node <skill folder>/precheck.mjs <project paths>` prints per project, run once with every project of the run (its head says what counts), never a listing of your own.
    - An issue it prints in a `several projects:` line starts nowhere: list it for the owner.
-   - Per project with a free slot, take up to `issuesPerWorker` of its numbers with no worker or outcome yet in this run, oldest first: the lowest. Take one only where `models.worker` at the tier of any of them is `fable` ([Rules](#rules)). They are one worker's batch ([spec-template.md](spec-template.md#batches)).
+   - Per project with a free slot, take up to `issuesPerWorker` of its numbers with no worker or outcome yet in this run, oldest first: the lowest. Take one only where `models.worker` at the depth, or `research`, of any of them is `fable` ([Rules](#rules)). They are one worker's batch ([spec-template.md](spec-template.md#batches)).
    - Read the issue's comments and milestone before its spec: one that defers, supersedes or delivers the work is an outcome, so list the issue for the owner and start nothing.
-   - Estimate each issue's tier and decide its risk class ([Risk class](#risk-class)). One that is full tier or high is held there, takes no slot, and is skipped while its `design` approval is open.
+   - Estimate each issue's depth and decide its risk class ([Risk class](#risk-class)). One that is deep or high is held there, takes no slot, and is skipped while its `design` approval is open.
    - An issue starts once per run (a failed one retries once, [Outcomes](#outcomes)), so a verified no-change issue that stays open without `closeIssue` is not picked again.
    - One coordinator runs per project: the precheck prints a batch's issue until its PR exists, so pick nothing in a project the handoff file names for another live terminal, or while an earlier session of its schedule is alive.
 2. **Spec**: copy [spec-template.md](spec-template.md) into the run folder and fill its fields as its head says. Build every spec from the template; a spec copied or edited from the previous one carries that issue's details into the next.
@@ -129,8 +129,8 @@ You decide the class of an issue and of a pull request's head by the workflow sk
 | Start a worker | start | start | after the owner's `design` answer |
 | Merge, with `merge.allowed` | merge | merge when `merge.autoMergeMax` is `medium`, else the owner's | the owner's |
 
-- **Hold.** An issue that is full tier or high starts only after the owner's answer: file its `design` approval ([approvals.md](approvals.md)) with the issue as the design, and record it in the handoff file's `## Open`. No timeout, no "parked" answer and no worker's word starts it. An issue whose worker reports a higher class (Needs replan) is held the same way before its new spec.
-- **Spec.** The class goes into the spec's `Risk:` line, and a high class makes its `Tier:` at least full.
+- **Hold.** An issue that is deep or high starts only after the owner's answer: file its `design` approval ([approvals.md](approvals.md)) with the issue as the design, and record it in the handoff file's `## Open`. No timeout, no "parked" answer and no worker's word starts it. An issue whose worker reports a higher class (Needs replan) is held the same way before its new spec.
+- **Spec.** The class goes into the spec's `Risk:` line, and a high class makes its `Depth:` deep.
 - **Merge.** Pass the class to the verdict ([review-and-merge.md](review-and-merge.md)): a file under `riskyPaths` raises it to at least medium, and its `next` is `owner` for a class above `merge.autoMergeMax` and for high.
 - Releases, publishes, deploys, secrets and settings stay the owner's whatever the class ([Rules](#rules)).
 
@@ -208,7 +208,7 @@ Take each project's policy from the reader, never from the JSON file: `node <ski
 | `review.depth`, `review.sensitiveDepth` | the review level of a routine and of a sensitive change (`low`, `medium`, `high`, `xhigh`) | both `high` |
 | `riskyPaths` | paths whose change has high impact: the risk class is at least medium and the change sensitive ([Risk class](#risk-class)). An older plugin refuses the key, so a policy that sets it, or `merge.autoMergeMax`, names the first plugin version with them in `minPlugin` | none |
 | `review.sensitivePaths` | paths that make a change sensitive, besides the built-in classes ([review-and-merge.md](review-and-merge.md#sensitive-or-routine)) | none |
-| `models.worker` | model and effort of a worker session, printed as a table by tier (`quick`, `standard`, `full`, `research`) | quick `sonnet`, standard and full `opus`, research `fable`, all `high` |
+| `models.worker` | model and effort of a worker session, printed as a table by depth (`quick`, `standard`, `deep`) and for `research` | quick `sonnet`, standard and deep `opus`, research `fable`, all `high` |
 | `models.phases.<phase>` | model and effort of a worker's phase subagent (`plan`, `implement`, `test`, `review`, `research`), printed only for the phases the policy names; `inherit` is the worker's own model | the workflow skill's: plan, implement and review `opus`, test `sonnet`, research `fable`, each at `high` |
 | `models.sensitive.<use>` | model and effort for a sensitive change: `plan` and `review`, the worker's Plan and Review phases; `independent`, the coordinator's reviewer; `security`, that reviewer for a change to authentication, permissions, secrets, input validation or firmware safety. Each field the policy leaves out keeps its default; `inherit` as in `models.phases`. An older plugin refuses the key, so a policy that sets it names the first plugin version with it in `minPlugin` | plan, review and independent `fable` at `high`, security `fable` at `xhigh`; an account without `fable` sets each `model` |
 | `issues.repository`, `issues.labels` | the tracker (`owner/repo`) that holds the project's issues, and labels an issue must carry besides `startLabel` | the project's own repository, no further label |
