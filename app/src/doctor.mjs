@@ -57,7 +57,7 @@ function featureVars(ctx, env) {
   return out;
 }
 
-// The global plan's pending changes: rules or the workflow plugin missing are errors, other drift warnings.
+// The global plan's pending changes: rules or the cl-workflow plugin missing are errors, other drift warnings.
 export function globalDrift(ctx, agents, devcontainerCli, level) {
   let plan;
   try { plan = preview(globalPlan({ ctx, agents, devcontainerCli, options: { level, containers: containerProjects(ctx) } })); } catch (e) { return [issue('error', 'global', `global setup cannot be read: ${e.message}`, 'fix the file named above, then run benchkeeper plan')]; }

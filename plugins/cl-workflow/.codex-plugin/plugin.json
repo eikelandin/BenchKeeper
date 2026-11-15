@@ -1,0 +1,11 @@
+{
+  "name": "cl-workflow",
+  "version": "6.27.0",
+  "description": "Preview for Codex: the skills. Chooses how much checking a task gets (a software change, a docs pass or research). Works next to other skill packs and plugins when they are installed.",
+  "author": {
+    "name": "eikelandin",
+    "url": "https://github.com/eikelandin"
+  },
+  "license": "MIT",
+  "skills": "./skills/"
+}

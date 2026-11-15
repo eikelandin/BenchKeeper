@@ -15,12 +15,12 @@
   "plugins/cedarloom/evals/skill-designing-technical-uis.json": ["app-state"],
   "plugins/cedarloom/evals/skill-operating-cedarloom-app.json": ["app-state"],
   "plugins/cedarloom/evals/skill-workflow.json": ["app-state"],
-  "plugins/orchestration/skills/orchestrating-projects/recurring-runs.md": ["app-package"],
-  "plugins/orchestration/skills/orchestrating-projects/spec-template.md": ["app-state"],
-  "plugins/setup/library/README.md": ["app-package"],
-  "plugins/setup/skills/operating-cedarloom-app/SKILL.md": ["app-package", "app-path", "app-state"],
-  "plugins/setup/skills/reviewing-rules/SKILL.md": ["app-state"],
-  "plugins/setup/skills/setting-up-projects/SKILL.md": ["app-package", "app-state"],
-  "plugins/workflow/hooks/tier/register.tsx": ["app-path"],
-  "plugins/workflow/skills/ask/SKILL.md": ["app-state"]
+  "plugins/cl-orchestration/skills/orchestrating-projects/recurring-runs.md": ["app-package"],
+  "plugins/cl-orchestration/skills/orchestrating-projects/spec-template.md": ["app-state"],
+  "plugins/cl-setup/library/README.md": ["app-package"],
+  "plugins/cl-setup/skills/operating-cedarloom-app/SKILL.md": ["app-package", "app-path", "app-state"],
+  "plugins/cl-setup/skills/reviewing-rules/SKILL.md": ["app-state"],
+  "plugins/cl-setup/skills/setting-up-projects/SKILL.md": ["app-package", "app-state"],
+  "plugins/cl-workflow/hooks/tier/register.tsx": ["app-path"],
+  "plugins/cl-workflow/skills/ask/SKILL.md": ["app-state"]
 }

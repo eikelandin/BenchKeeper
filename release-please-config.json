@@ -26,7 +26,7 @@
         { "type": "json", "path": "content.json", "jsonpath": "$.contentVersion" }
       ]
     },
-    "plugins/workflow": {
+    "plugins/cl-workflow": {
       "release-type": "simple",
       "component": "cedarloom-workflow",
       "include-component-in-tag": true,
@@ -36,7 +36,7 @@
         { "type": "json", "path": ".codex-plugin/plugin.json", "jsonpath": "$.version" }
       ]
     },
-    "plugins/setup": {
+    "plugins/cl-setup": {
       "release-type": "simple",
       "component": "cedarloom-setup",
       "include-component-in-tag": true,
@@ -46,7 +46,7 @@
         { "type": "json", "path": ".codex-plugin/plugin.json", "jsonpath": "$.version" }
       ]
     },
-    "plugins/orchestration": {
+    "plugins/cl-orchestration": {
       "release-type": "simple",
       "component": "cedarloom-orchestration",
       "include-component-in-tag": true,

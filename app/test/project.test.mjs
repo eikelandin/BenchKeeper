@@ -506,7 +506,7 @@ test('the workflow load line: on by default, off per project and kept off, on ag
   const r = repo();
   const block = () => readFileSync(join(r.dir, 'AGENTS.md'), 'utf8');
   apply(preview(plan(r, { agents: ['claude'], share: true }).changes), r.ctx, { scope: r.dir });
-  assert.match(block(), /load the `workflow:workflow` skill/);
+  assert.match(block(), /load the `cl-workflow:workflow` skill/);
   assert.equal(readState(r.dir).workflowLoad, undefined);
   apply(preview(plan(r, { workflowLoad: false }).changes), r.ctx, { scope: r.dir });
   assert.doesNotMatch(block(), /workflow` skill/);
@@ -514,7 +514,7 @@ test('the workflow load line: on by default, off per project and kept off, on ag
   assert.equal(readState(r.dir).workflowLoad, false);
   assert.deepEqual(preview(plan(r, {}).changes).map((c) => c.title), [], 'a later plan keeps it off');
   apply(preview(plan(r, { workflowLoad: true }).changes), r.ctx, { scope: r.dir });
-  assert.match(block(), /load the `workflow:workflow` skill/);
+  assert.match(block(), /load the `cl-workflow:workflow` skill/);
 });
 
 test('packs with plugins install them', () => {
@@ -757,8 +757,8 @@ test('bare skill names without plugin agents', () => {
   const mixed = repo();
   const mp = plan(mixed, { agents: ['claude', 'gemini'], env: 'host', share: true }).changes;
   apply(preview(mp), mixed.ctx, { scope: mixed.dir, select: mp.map((c) => c.id) });
-  assert.doesNotMatch(read(join(mixed.dir, 'AGENTS.md')), /workflow:workflow/, 'one shared block, a name every chosen agent knows');
-  assert.doesNotMatch(read(join(g.dir, 'AGENTS.md')), /workflow:workflow/);
+  assert.doesNotMatch(read(join(mixed.dir, 'AGENTS.md')), /cl-workflow:workflow/, 'one shared block, a name every chosen agent knows');
+  assert.doesNotMatch(read(join(g.dir, 'AGENTS.md')), /cl-workflow:workflow/);
 });
 
 const POLICY = 'docs/agents/orchestration.json', RULES = 'docs/agents/worker-rules.md';

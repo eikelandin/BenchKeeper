@@ -14,10 +14,10 @@ const hasClaude = spawnSync('claude', ['--version'], { stdio: 'ignore' }).status
 const skip = !hasClaude && !process.env.CI;
 
 const EXPECTED = {
-  workflow: ['workflow@cedarloom'],
-  setup: ['setup@cedarloom'],
-  orchestration: ['orchestration@cedarloom', 'workflow@cedarloom'],
-  cedarloom: ['cedarloom@cedarloom', 'orchestration@cedarloom', 'setup@cedarloom', 'workflow@cedarloom'],
+  'cl-workflow': ['cl-workflow@cedarloom'],
+  'cl-setup': ['cl-setup@cedarloom'],
+  'cl-orchestration': ['cl-orchestration@cedarloom', 'cl-workflow@cedarloom'],
+  cedarloom: ['cedarloom@cedarloom', 'cl-orchestration@cedarloom', 'cl-setup@cedarloom', 'cl-workflow@cedarloom'],
 };
 
 for (const { name } of marketplace.plugins) {

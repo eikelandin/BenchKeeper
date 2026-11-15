@@ -33,8 +33,8 @@ export function skillDirs(ids, scope, base) {
   return [...dirs].map(([dir, agents]) => ({ dir, agents }));
 }
 
-// The plugins whose skills and agents BenchKeeper sets up; each prefixes its own (workflow:ask).
-export const OWN_PLUGINS = ['workflow', 'setup', 'orchestration'];
+// The plugins whose skills and agents BenchKeeper sets up; each prefixes its own (cl-workflow:ask).
+export const OWN_PLUGINS = ['cl-workflow', 'cl-setup', 'cl-orchestration'];
 // The marketplace id of one of BenchKeeper's plugins or of the cedarloom bundle that installs them.
 export const isOwnPlugin = (id) => ['cedarloom', ...OWN_PLUGINS].some((p) => id === `${p}@cedarloom`);
 const OWN_PREFIX = new RegExp(`(?<![\\w-])(?:${OWN_PLUGINS.join('|')}):(?=[a-z])`, 'g');

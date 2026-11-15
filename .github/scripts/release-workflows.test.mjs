@@ -145,15 +145,15 @@ const noJq = spawnSync('jq', ['--version'], { stdio: 'ignore' }).status !== 0 &&
 test('release.yml tags every plugin component at its version and creates one Release with the changelog section of each plugin', { skip: noJq }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'bk-tags-'));
   try {
-    const packages = { app: { component: 'app' }, 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/workflow': { component: 'cedarloom-workflow' }, 'plugins/setup': { component: 'cedarloom-setup' }, 'plugins/orchestration': { component: 'cedarloom-orchestration' } };
+    const packages = { app: { component: 'app' }, 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/cl-workflow': { component: 'cedarloom-workflow' }, 'plugins/cl-setup': { component: 'cedarloom-setup' }, 'plugins/cl-orchestration': { component: 'cedarloom-orchestration' } };
     writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
     // setup stays at its last release; orchestration has no changelog yet; workflow's first release has no compare link.
-    const manifest = { app: '6.27.0', 'plugins/cedarloom': '6.28.0', 'plugins/workflow': '6.28.0', 'plugins/setup': '6.27.0', 'plugins/orchestration': '6.28.0' };
+    const manifest = { app: '6.27.0', 'plugins/cedarloom': '6.28.0', 'plugins/cl-workflow': '6.28.0', 'plugins/cl-setup': '6.27.0', 'plugins/cl-orchestration': '6.28.0' };
     writeFileSync(join(dir, '.release-please-manifest.json'), JSON.stringify(manifest));
     const changelogs = {
       cedarloom: '# Changelog\n\n## [6.28.0](x) (2026-11-20)\n\n### Features\n\n* rules\n\n## [6.27.0](x)\n\n* old\n',
-      workflow: '# Changelog\n\n## 6.28.0 (2026-11-20)\n\n### Bug Fixes\n\n* review\n',
-      setup: '# Changelog\n\n## [6.27.0](x)\n\n* older\n',
+      'cl-workflow': '# Changelog\n\n## 6.28.0 (2026-11-20)\n\n### Bug Fixes\n\n* review\n',
+      'cl-setup': '# Changelog\n\n## [6.27.0](x)\n\n* older\n',
     };
     for (const [name, text] of Object.entries(changelogs)) {
       mkdirSync(join(dir, 'plugins', name), { recursive: true });
@@ -174,7 +174,7 @@ gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release 
       ...tag('cedarloom-orchestration-v6.28.0'),
       ['release', 'view', 'cedarloom-v6.28.0', '--repo', 'o/r'],
       ['release', 'create', 'cedarloom-v6.28.0', '--repo', 'o/r', '--target', 'abc', '--title', 'cedarloom v6.28.0', '--notes',
-        '## cedarloom\n\n### Features\n\n* rules\n\n## workflow\n\n### Bug Fixes\n\n* review\n\n', '--latest'],
+        '## cedarloom\n\n### Features\n\n* rules\n\n## cl-workflow\n\n### Bug Fixes\n\n* review\n\n', '--latest'],
     ]);
   } finally {
     rmSync(dir, { recursive: true, force: true });

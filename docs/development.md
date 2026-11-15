@@ -30,7 +30,7 @@ In the dev container, 3 app tests fail because of the container, not the code or
 
 ## Plugin mod types
 
-The plugin mods (`hooks/` of `plugins/workflow`: the status band; of `plugins/orchestration`: the coordinator rotation) are type-checked by hand, not in CI: Claude Code writes the types a mod imports (`claude-code`, `claude-code/testing`) only when a logged-in session loads it, into `.claude-plugin/types/` of that plugin (git-ignored), and no `claude plugin` command writes them. For each of the two plugins `<p>`:
+The plugin mods (`hooks/` of `plugins/cl-workflow`: the status band; of `plugins/cl-orchestration`: the coordinator rotation) are type-checked by hand, not in CI: Claude Code writes the types a mod imports (`claude-code`, `claude-code/testing`) only when a logged-in session loads it, into `.claude-plugin/types/` of that plugin (git-ignored), and no `claude plugin` command writes them. For each of the two plugins `<p>`:
 
 1. Load the mod once: `claude --plugin-dir plugins/<p>`, then quit the session.
 2. In the dev container: `node_modules/.bin/tsc -p plugins/<p>` (the options are the ones the types file names for a hooks module).

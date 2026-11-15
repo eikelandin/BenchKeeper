@@ -36,8 +36,8 @@
     "url": "https://github.com/mattpocock/skills",
     "role": "an add-on: when installed, his skills may run a workflow step in more detail (bug diagnosis, a test first, prototypes, interface design) under the floor and gates of the workflow skill, which is complete without them",
     "evidence": [
-      "plugins/workflow/skills/workflow/SKILL.md",
-      "plugins/workflow/skills/workflow/software.md#steps"
+      "plugins/cl-workflow/skills/workflow/SKILL.md",
+      "plugins/cl-workflow/skills/workflow/software.md#steps"
     ]
   },
   "quickstart": {
@@ -88,7 +88,7 @@
       "for": "agent, at least one; Gemini CLI and GitHub Copilot CLI get rules, skills, settings, doctor and project setup only. Version 2.1.292 or later for the effort a skill passes to a subagent call, such as `xhigh` for a security review: 2.1.267 to 2.1.291 run each subagent at the `effort` of its definition (`high` for the reviewer), and an older one ignores that field on Opus 4.7, Opus 4.8 and Fable 5",
       "evidence": [
         "docs/setup.md#agent-and-os-support",
-        "plugins/orchestration/skills/orchestrating-projects/review-and-merge.md#review",
+        "plugins/cl-orchestration/skills/orchestrating-projects/review-and-merge.md#review",
         "https://code.claude.com/docs/en/sub-agents#choose-an-effort-level",
         "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21292",
         "https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21267"
@@ -106,7 +106,7 @@
       "for": "clone, branches, commits",
       "evidence": [
         "https://git-scm.com/downloads",
-        "plugins/workflow/skills/workflow/SKILL.md"
+        "plugins/cl-workflow/skills/workflow/SKILL.md"
       ]
     },
     {
@@ -115,7 +115,7 @@
       "for": "issues and pull requests (optional, local branches without it)",
       "evidence": [
         "https://cli.github.com/",
-        "plugins/workflow/skills/workflow/software.md#steps"
+        "plugins/cl-workflow/skills/workflow/software.md#steps"
       ]
     },
     {
@@ -148,7 +148,7 @@
       "for": "optional, the runner the `orchestrating-projects` skill needs (CLI `orca`)",
       "evidence": [
         "https://github.com/stablyai/orca",
-        "plugins/orchestration/skills/orchestrating-projects/orca.md"
+        "plugins/cl-orchestration/skills/orchestrating-projects/orca.md"
       ]
     }
   ],
@@ -329,15 +329,15 @@
       "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cedarloom/rules/global.md",
       "scope": "Global, every session, full level",
       "text": "Secrets kept out, confirmation before hard-to-reverse actions or actions visible to others, assumptions stated, the minimum change and the check that proves it done. The repository rules (when and how to ask, best practice with a source, writing without filler, sources for claims, checks never weakened, load the workflow skill) are in `rules/project.md`, part of each project's block.",
-      "evidence": ["plugins/cedarloom/rules/global.md", "plugins/setup/rules/project.md", "docs/stack.md#contents"]
+      "evidence": ["plugins/cedarloom/rules/global.md", "plugins/cl-setup/rules/project.md", "docs/stack.md#contents"]
     },
     {
       "id": "workflow",
       "title": "`workflow`",
-      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/workflow/skills/workflow/SKILL.md",
+      "href": "https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cl-workflow/skills/workflow/SKILL.md",
       "scope": "Global, before repository work",
       "text": "The task kind and depth, the playbooks for software changes, docs passes and research, the check per change type, batch mode with long checks at the end.",
-      "evidence": ["plugins/workflow/skills/workflow/SKILL.md", "docs/stack.md#contents"]
+      "evidence": ["plugins/cl-workflow/skills/workflow/SKILL.md", "docs/stack.md#contents"]
     },
     {
       "id": "mattpocock",
@@ -360,7 +360,7 @@
       "title": "The app and the setup skills",
       "href": "https://github.com/eikelandin/BenchKeeper/tree/main/app",
       "scope": "On request",
-      "text": "`npx @cedarloom/app@6.27.0` sets up the machine and each repository, shows every change first and records each run for undo. Its Dashboard reports drift, Fix everything applies the global plan and updates the projects that are behind, and the Sessions board tracks tier, cost and outcome per session. `/setup:setting-up-projects` adds stack skills and the dev container, `/setup:maintaining-repos` runs a maintenance pass, `/orchestration:orchestrating-projects` coordinates workers on labeled issues across projects.",
+      "text": "`npx @cedarloom/app@6.27.0` sets up the machine and each repository, shows every change first and records each run for undo. Its Dashboard reports drift, Fix everything applies the global plan and updates the projects that are behind, and the Sessions board tracks tier, cost and outcome per session. `/cl-setup:setting-up-projects` adds stack skills and the dev container, `/cl-setup:maintaining-repos` runs a maintenance pass, `/cl-orchestration:orchestrating-projects` coordinates workers on labeled issues across projects.",
       "evidence": ["app/README.md#web-ui", "app/ui/fix.jsx", "docs/stack.md#contents"]
     },
     {
@@ -368,8 +368,8 @@
       "title": "Devcontainer and browser checks",
       "href": "https://code.visualstudio.com/docs/devcontainers/devcontainer-cli",
       "scope": "Per repository",
-      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Domain skills come from the [BenchKeeper library](https://github.com/eikelandin/BenchKeeper/blob/main/plugins/setup/library/README.md), stack skills from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
-      "evidence": ["docs/stack.md#components", "plugins/setup/skills/setting-up-projects/SKILL.md", "plugins/setup/skills/setting-up-projects/devcontainer.md"]
+      "text": "Installs, builds, tests and the browser run in the container as a non-root user. Domain skills come from the [BenchKeeper library](https://github.com/eikelandin/BenchKeeper/blob/main/plugins/cl-setup/library/README.md), stack skills from [find-skills](https://github.com/vercel-labs/skills), at most two per technology.",
+      "evidence": ["docs/stack.md#components", "plugins/cl-setup/skills/setting-up-projects/SKILL.md", "plugins/cl-setup/skills/setting-up-projects/devcontainer.md"]
     }
   ],
   "sdlc": {
@@ -404,8 +404,8 @@
         "tip": "Reads the request, AGENTS.md and the code it touches, and picks the kind (software change, docs pass, research) and the depth. With Matt Pocock's skills: triage, diagnosing-bugs, wayfinder. Standard and deep: open questions go with recommendations into one issue, and the agent goes on (in rounds, then plan mode, while you allow terminal questions).",
         "text": "Read the request, `AGENTS.md` and the code the change touches, and pick the kind (software change, docs pass, research) and the depth. With Matt Pocock's skills installed, his on-ramps start here: `/triage` for issues you did not write, `diagnosing-bugs` for a broken behavior, `/wayfinder` for work too big to see the way yet. Standard and deep: the agent writes the open questions, each with a recommendation, into one issue in the tracker the project names, takes the safe and reversible ones and goes on. Only while you allow terminal questions does it ask them in rounds and explore in plan mode.",
         "evidence": [
-          "plugins/workflow/skills/workflow/SKILL.md",
-          "plugins/workflow/skills/workflow/software.md#steps"
+          "plugins/cl-workflow/skills/workflow/SKILL.md",
+          "plugins/cl-workflow/skills/workflow/software.md#steps"
         ]
       },
       {
@@ -416,8 +416,8 @@
         "tip": "Standard: a plan of a few lines that names the test seams. Deep: the spec, terms and decisions recorded. Several sessions: one ticket per testable slice.",
         "text": "Standard: a plan of a few lines that names the test seams. Deep: the spec (deployment target, data storage, module boundaries, core types), with terms and decisions recorded (`domain-modeling` with Matt Pocock's skills). Work for several sessions: one ticket per independently testable slice; with his skills the agent suggests `/to-spec` and `/to-tickets` and waits for you to run them.",
         "evidence": [
-          "plugins/workflow/skills/workflow/SKILL.md",
-          "plugins/workflow/skills/workflow/deep.md"
+          "plugins/cl-workflow/skills/workflow/SKILL.md",
+          "plugins/cl-workflow/skills/workflow/deep.md"
         ]
       },
       {
@@ -427,7 +427,7 @@
         "tip": "Standard and deep: the existing tests of the touched code, then a test first only where the test rule calls for one.",
         "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. With the Ponytail pack, Ponytail runs at its level `full`. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
         "evidence": [
-          "plugins/workflow/skills/workflow/software.md#steps",
+          "plugins/cl-workflow/skills/workflow/software.md#steps",
           "docs/stack.md#components"
         ]
       },
@@ -438,7 +438,7 @@
         "tip": "Every depth: build, types, lint and tests where AGENTS.md says, each with its command and result. UI changes also in a browser. Deep: the branch reviewed against the spec.",
         "text": "Every depth: the project's build, types, lint and tests, run where `AGENTS.md` says (the dev container by default), each reported with its command and result. UI changes also get a browser check, in addition to the UI tests, never instead of them. Long checks run once, after the last edit. Deep: the branch is reviewed against the spec (`code-review` with Matt Pocock's skills).",
         "evidence": [
-          "plugins/workflow/skills/workflow/SKILL.md#verify"
+          "plugins/cl-workflow/skills/workflow/SKILL.md#verify"
         ]
       },
       {
@@ -449,8 +449,8 @@
         "tip": "Standard, deep and risky: /code-review before push. Risky: /security-review. Pull request when the project uses them, checks. You merge.",
         "text": "Standard, deep and risky work: `/code-review` before `git push` (correctness), risky changes also `/security-review`. When the project uses pull requests, one with the key decisions, then its checks. Merge only on your instruction. Several tasks on one branch get one review at the end.",
         "evidence": [
-          "plugins/workflow/skills/workflow/SKILL.md",
-          "plugins/workflow/skills/workflow/software.md#steps"
+          "plugins/cl-workflow/skills/workflow/SKILL.md",
+          "plugins/cl-workflow/skills/workflow/software.md#steps"
         ]
       },
       {
@@ -460,7 +460,7 @@
         "tip": "After a session that went sideways: retro. On request: /maintaining-repos (audit, cleanup, architecture, test audit, debt, dependencies, pins, docs drift, unused skills). benchkeeper doctor for setup drift. Findings become new requests.",
         "text": "After a session that went sideways: `/retro` (Matt Pocock's skills). On request (`/maintaining-repos`): Ponytail's audit and debt, cleanup tools (unused code, duplicates), architecture checks (cycles, forwarding modules), a test audit by mutation testing, dependency audit, version pins, docs drift, `/doctor prompt-audit`, `/skill-doctor`, repository hygiene, and with Matt Pocock's skills `/improve-codebase-architecture` and `/triage`. `benchkeeper doctor` reports setup drift on the machine and in the project. Findings become new requests.",
         "evidence": [
-          "plugins/setup/skills/maintaining-repos/SKILL.md"
+          "plugins/cl-setup/skills/maintaining-repos/SKILL.md"
         ]
       }
     ]
@@ -471,14 +471,14 @@
         "name": "Checks by depth",
         "text": "every change runs the checks and reviews its depth names: the tests of the touched code after each edit, a review before pushing for standard and deep work.",
         "evidence": [
-          "plugins/workflow/skills/workflow/SKILL.md",
-          "plugins/workflow/skills/workflow/software.md"
+          "plugins/cl-workflow/skills/workflow/SKILL.md",
+          "plugins/cl-workflow/skills/workflow/software.md"
         ]
       },
       {
         "name": "Long checks last",
         "text": "the full suite, end-to-end tests and builds run once after the last edit, in a subagent that returns only failures and key lines.",
-        "evidence": "plugins/workflow/skills/workflow/SKILL.md"
+        "evidence": "plugins/cl-workflow/skills/workflow/SKILL.md"
       },
       {
         "name": "Simplicity",
@@ -488,7 +488,7 @@
       {
         "name": "Skills by level",
         "text": "the full flow runs only for deep work. Small changes load one targeted skill.",
-        "evidence": "plugins/workflow/skills/workflow/SKILL.md"
+        "evidence": "plugins/cl-workflow/skills/workflow/SKILL.md"
       },
       {
         "name": "One install",

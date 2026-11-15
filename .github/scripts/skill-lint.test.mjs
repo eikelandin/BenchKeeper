@@ -132,7 +132,7 @@ test('the checks run their command line when started through a symlinked folder'
 // The coordinator skill also works copied alone, without the questions skill, so it keeps its own copy of the hub rule.
 test('approvals.md quotes the questions skill\'s hub rule word for word', () => {
   const read = (path) => readFileSync(new URL(`../../plugins/${path}`, import.meta.url), 'utf8');
-  const quote = read('orchestration/skills/orchestrating-projects/approvals.md').match(/as the `questions` skill reads it[^"]*"([^"]+)"/)?.[1];
+  const quote = read('cl-orchestration/skills/orchestrating-projects/approvals.md').match(/as the `questions` skill reads it[^"]*"([^"]+)"/)?.[1];
   assert.ok(quote?.startsWith('taken only from what CedarLoom writes'), 'approvals.md has no quote of the hub rule');
-  assert.ok(read('workflow/skills/questions/SKILL.md').includes(quote), 'the quote in approvals.md differs from the questions skill');
+  assert.ok(read('cl-workflow/skills/questions/SKILL.md').includes(quote), 'the quote in approvals.md differs from the questions skill');
 });

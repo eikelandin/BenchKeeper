@@ -39,7 +39,7 @@ async function lines(file, each) {
 }
 const parse = (line) => { try { return JSON.parse(line); } catch { return null; } };
 const texts = (content) => (typeof content === 'string' ? [content] : Array.isArray(content) ? content.map((c) => c.text ?? (typeof c.content === 'string' ? c.content : '')) : []);
-// `(override)` marks a tier set with /workflow:tier: no change type.
+// `(override)` marks a tier set with /cl-workflow:tier: no change type.
 const tiers = (data, text) => { for (const m of text.matchAll(TIER)) data.tiers.push([m[1], m[2] && m[2] !== 'override' ? m[2] : null]); };
 const sec = (iso) => Math.round(Date.parse(iso) / 1000);
 // [start, end] pairs in epoch seconds, sorted, overlapping or adjacent ones merged.

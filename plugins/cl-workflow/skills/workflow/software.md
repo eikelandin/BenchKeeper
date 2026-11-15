@@ -1,0 +1,39 @@
+# Software change
+
+## Steps
+
+Standard and deep. The order per depth is the checklist in [SKILL.md](SKILL.md), and its change-type table and Verify apply; deep also [deep.md](deep.md). Standard: for a refactor the suite passes before and after with tests unchanged. Detail:
+
+- **Installed skills** that match a step may run it under the gates of [SKILL.md](SKILL.md): a test first where the [test rule](SKILL.md#verify) calls for one, bug diagnosis ([diagnose.md](diagnose.md) is the floor), interface design, prototypes, domain docs. A skill only the user starts is suggested, then wait. None installed: do the step directly.
+- **Review before pushing** standard, deep or risky work.
+  - First a scope line: the branch or diff range and the issue it implements, when one exists.
+  - Passes: standard one correctness pass, fixes made once; deep the rounds in [deep.md](deep.md), plus a security pass when risky; quick none.
+  - Claude Code: the built-in `/code-review <level> <range>` with the scope line's range as the target (for example `refs/remotes/origin/<default branch>...HEAD`, since with no target it skips commits already pushed) and the level always written, `high` at standard and `xhigh` at deep unless a spec's `Review:` line names another (without a level the command reuses the one typed last on that machine).
+  - Claude Code, risky changes and a change whose `Review:` line asks for it: also `/security-review`.
+  - Codex, or no `origin`: a correctness pass and, for risky changes and a change whose `Review:` line asks for it, a security pass by subagents over the changed assets, trust boundaries and failure modes (authentication, permissions, secrets and input handling among them).
+  - Docs-only changes skip this unless risky.
+- **Pull request**, when the project uses them: the body from step 3 of [SKILL.md](SKILL.md). After pushing, wait for the checks (step 5 of [SKILL.md](SKILL.md)). Review comments and failing checks: fixes on the same branch, committed by the project's convention.
+
+## Phases
+
+Standard and deep, except a change that only deletes: this session is the phase orchestrator.
+
+- It runs each phase as a subagent with a fresh context and keeps the decision after each phase and the questions to the user, which a subagent cannot ask ([Claude Code withholds the question tool from subagents](https://code.claude.com/docs/en/sub-agents#available-tools)).
+- Standard depth, neither risky nor named in the `fable` line below: Plan and Implement run in this session itself on the session's model, following their steps below; Plan check, Test and Review stay subagents. Every other change runs every phase as a subagent.
+- Where the plugin's agent named for a phase below is available (Claude Code), the phase runs as that agent, which sets its tools and effort.
+- The session passes the phase's model in the call: the alias named with the phase below, or the one the spec or the user names. For `inherit` it passes no model ([a call takes an alias only](https://code.claude.com/docs/en/sub-agents#choose-a-model)), so the phase runs on the session's own model.
+- Implement of a change that only renames, edits docs or edits tests passes `sonnet` at `high`.
+- A risky change, or one that touches CI, data formats, guards or money: Plan and Review pass `fable` at `high`, Implement stays `opus` and Test `sonnet`. The Review of a change to authentication, permissions, secrets, input validation or firmware safety passes `fable` at `xhigh`. A spec's Flow line wins over both.
+- A call overrides the effort only where the line above, the spec or the user names one; `xhigh` runs nowhere else.
+- A phase whose model the account refuses reruns once on `opus`, and the report says so.
+- Codex, or a setup without the plugin: a general subagent briefed with the phase step below.
+
+1. **Plan** (`cl-workflow:plan`, model `opus`): the read-only exploration of step 2 of [SKILL.md](SKILL.md). It returns the plan with an acceptance table as step 1 of [deep.md](deep.md) defines it (deep: that whole spec) and the open questions, each with a recommendation. The session saves the plan outside the repository and names its path in every later phase. A plan the task already has (step 2 of [SKILL.md](SKILL.md)) replaces this phase.
+2. **Plan check** (`cl-workflow:verify`, the Plan phase's model): a subagent that did not write the plan checks it against the code and the task (each step's files and claims at their file and line, every place the change must reach, and per acceptance row that its instrument observes the result and fails the wrong implementation it names) and returns its findings with evidence. Findings go back to Plan; on a plan the task brought, to its author instead (in the session while terminal questions are allowed, else by the questions line of [SKILL.md](SKILL.md)), and the session revises that plan itself only by recommendations that are safe and reversible. The revised plan gets one more check of the changed parts, and findings left after it go to the user with the plan. A passed check adds the line `Plan check: passed (<who checked>)` to the plan file, and any later edit of the plan removes it. Skipped for a plan that carries that line or names another independent check of its current text (a coordinator's spec read by a fresh session).
+3. **Implement** (`cl-workflow:implement`, model `opus`): the existing tests of the touched code, the change with the tests the [test rule](SKILL.md#verify) calls for, written first, fast checks after each edit, commits; it stops and reports stuck on the signals of step 6 of [the implement agent](../../agents/implement.md).
+4. **Test** (`cl-workflow:test`, model `sonnet`): the long checks of step 5 of [SKILL.md](SKILL.md), by a subagent that did not write the code, which then tries to break the change against the acceptance table and returns failures and key lines.
+5. **Review** (`cl-workflow:review`, model `opus`): a subagent that did not write the code gets the task, its acceptance table, the decisions that apply and the diff, and receives the implementer's statements as claims to verify. It runs the acceptance rows that CI does not run, and checks the diff against the plan (deep: the spec review of step 4 of [deep.md](deep.md)), then the review before pushing (above).
+
+After each phase the session goes on, loops back with the report (a failed check or a finding to fix goes back to implement, a plan the code contradicts back to plan), or stops and reports (deep: the drift rule and the round limit of [deep.md](deep.md); the rule for rounds: [deep.md](deep.md#review-rounds)).
+
+An implement phase that reports stuck reruns once on a stronger model or a higher effort (for example sonnet to opus, opus to fable, or an effort below high to high; xhigh only where the spec or the user asks for it); a second stuck report, or a first one with no step left, stops and goes to the user.
