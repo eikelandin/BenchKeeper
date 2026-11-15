@@ -118,6 +118,22 @@ test('role guard: passes reads and worker steps in a guarded session', () => {
   assert.equal(decision('git push', { cwd: feature }), 'none');
 });
 
+// Known passes: the guard reads the current branch before the command runs, so a switch to the default branch earlier in the
+// same command text is not seen; the ruleset on the default branch refuses these pushes. A fix moves them to the denied forms.
+test('role guard: known passes, a push of the current branch after a switch to the default branch in the same command', () => {
+  const bash = [
+    'git checkout main && git push',
+    'git switch main && git merge --ff-only feat/x && git push',
+    'git checkout main && git pull && git merge feat/x && git push origin HEAD',
+    'git checkout main; git push -u origin HEAD',
+    'git branch -M main && git push -u origin HEAD',
+    'git checkout -B main && git push',
+    `cd ${feature} && git checkout main && git merge feat/x && git push`,
+  ];
+  for (const command of bash) assert.equal(decision(command, { cwd: feature }), 'none', command);
+  assert.equal(decision('git checkout main && git merge feat/x && git push', { tool: 'PowerShell', cwd: feature }), 'none');
+});
+
 test('role guard: follows a cd to the folder git runs in', () => {
   for (const command of [`cd ${trunk} && git push`, `cd ${trunk} && git push origin release-candidate`]) assert.equal(decision(command, { cwd: feature }), 'deny', command);
   assert.equal(decision(`cd ${feature} && git push`), 'none');
