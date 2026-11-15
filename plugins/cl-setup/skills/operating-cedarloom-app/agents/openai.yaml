@@ -1,5 +1,0 @@
-interface:
-  display_name: "Operating the CedarLoom app"
-  short_description: "Plan, apply, undo and check the setup through the CLI"
-policy:
-  allow_implicit_invocation: false

@@ -8,7 +8,7 @@ test('plugin install lines that name a release tag get the plugins version; app 
 });
 
 test('files under plugins/ are not rewritten: their pins name the 0.x minor range', () => {
-  assert.ok(SKIP.test('plugins/cl-setup/skills/operating-cedarloom-app/SKILL.md'));
+  assert.ok(SKIP.test('plugins/cl-setup/skills/setting-up-projects/SKILL.md'));
   assert.ok(!SKIP.test('README.md'));
 });
 
