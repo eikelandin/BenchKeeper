@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { effective, read, validate } from '../../plugins/cedarloom/skills/orchestrating-projects/policy.mjs';
-import { initRepo } from './helpers.mjs';
+import { effective, read, validate } from '../skills/orchestrating-projects/policy.mjs';
+import { initRepo } from './git-repo.mjs';
 
 const BUILT_IN = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', 'docs/agents/orchestration.json', 'docs/agents/worker-rules.md'];
 const DEFAULTS = {
@@ -108,7 +108,7 @@ test('policy: models.sensitive fills each entry and field it does not name', () 
 });
 
 test('policy: a path entry that leaves the repository, starts at its root or holds a glob is rejected', () => {
-  const { policy, errors } = effective(JSON.parse(readFileSync(new URL('./fixtures/params/policy/invalid/pattern.json', import.meta.url), 'utf8')), '6.26.0');
+  const { policy, errors } = effective({ schemaVersion: 2, merge: { ownerOnlyPaths: ['../x', '/x', 'a/*'] } }, '6.26.0');
   assert.equal(policy, null);
   assert.deepEqual(rules(errors), [['pattern', 'merge.ownerOnlyPaths[0]'], ['pattern', 'merge.ownerOnlyPaths[1]'], ['pattern', 'merge.ownerOnlyPaths[2]']]);
   // A folder with a closing slash, a file below a folder, names that start with dots and a name with a space inside are paths.
@@ -153,7 +153,7 @@ test('policy: each refused value is named with its rule and path', () => {
 
 test('policy: a skill folder copied alone, as for an agent without plugins, checks with its own schema; minPlugin cannot be checked there and gives no policy', async () => {
   const copy = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'skills', 'orchestrating-projects');
-  cpSync(fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects', import.meta.url)), copy, { recursive: true });
+  cpSync(fileURLToPath(new URL('../skills/orchestrating-projects', import.meta.url)), copy, { recursive: true });
   const copied = await import(pathToFileURL(join(copy, 'policy.mjs')).href);
   assert.equal(copied.effective({ startLabel: 'go', merge: { mode: 'disjoint' } }).policy.merge.mode, 'disjoint');
   assert.deepEqual(rules(copied.effective({ merge: { mode: 'disjont' } }).errors), [['enum', 'merge.mode']]);
@@ -163,7 +163,7 @@ test('policy: a skill folder copied alone, as for an agent without plugins, chec
   // A schema that gains a keyword the check does not implement refuses every file, the valid ones too, instead of passing what the schema refuses.
   const schema = join(copy, 'orchestration.schema.json');
   for (const edit of [(s) => { s.properties.trustedAuthors.maxItems = 1; }, (s) => { s.properties.merge.additionalProperties = true; }, (s) => { s.patternProperties['^//'] = { type: 'string' }; }]) {
-    const edited = JSON.parse(readFileSync(new URL('../../plugins/cedarloom/skills/orchestrating-projects/orchestration.schema.json', import.meta.url), 'utf8'));
+    const edited = JSON.parse(readFileSync(new URL('../skills/orchestrating-projects/orchestration.schema.json', import.meta.url), 'utf8'));
     edit(edited);
     writeFileSync(schema, JSON.stringify(edited));
     assert.throws(() => copied.validate({ startLabel: 'go' }), /does not implement/);
@@ -219,7 +219,7 @@ test('policy: the command line prints the policy of the default branch and exits
   commit('{ "merge": { "mode": "disjont" } }');
   const project = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'project');
   git('clone', '-q', origin, project);
-  const cli = (dir, env = {}) => spawnSync(process.execPath, [fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects/policy.mjs', import.meta.url)), dir], { encoding: 'utf8', env: { ...process.env, ...env } });
+  const cli = (dir, env = {}) => spawnSync(process.execPath, [fileURLToPath(new URL('../skills/orchestrating-projects/policy.mjs', import.meta.url)), dir], { encoding: 'utf8', env: { ...process.env, ...env } });
   const rejected = cli(project);
   assert.deepEqual([rejected.status, rejected.stdout], [1, '']);
   assert.match(rejected.stderr, /^enum at merge\.mode: /);

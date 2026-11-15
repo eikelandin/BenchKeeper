@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { answer, missing } from '../../plugins/cedarloom/skills/orchestrating-projects/approval.mjs';
+import { answer, missing } from '../skills/orchestrating-projects/approval.mjs';
 
-const SKILL = '../../plugins/cedarloom/skills/orchestrating-projects/';
+const SKILL = '../skills/orchestrating-projects/';
 const WHAT = 'What: Approve the design of the streamed export (plan: docs/plans/export.md).';
 const MERGES = '| Merges | the coordinator after green checks; .github stays for the owner |';
 const COST = '| Cost | 2 worker sessions, about 3 hours (unverified) |';
@@ -179,7 +179,7 @@ test('approval: the command line refuses a file outside the run folder with exit
 // The coordinator skill also works copied alone, without the questions skill, so it keeps its own copy of the hub rule.
 test('approval: approvals.md quotes the questions skill\'s hub rule word for word', () => {
   const approvals = readFileSync(new URL(`${SKILL}approvals.md`, import.meta.url), 'utf8');
-  const questions = readFileSync(new URL('../../plugins/cedarloom/skills/questions/SKILL.md', import.meta.url), 'utf8');
+  const questions = readFileSync(new URL('../skills/questions/SKILL.md', import.meta.url), 'utf8');
   const quote = approvals.match(/as the `questions` skill reads it[^"]*"([^"]+)"/)?.[1];
   assert.ok(quote?.startsWith('taken only from what CedarLoom writes'), 'approvals.md has no quote of the hub rule');
   assert.ok(questions.includes(quote), 'the quote in approvals.md differs from the questions skill');

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-const HOOK = fileURLToPath(new URL('../../plugins/cedarloom/hooks/rotation/restore.mjs', import.meta.url));
+const HOOK = fileURLToPath(new URL('../hooks/rotation/restore.mjs', import.meta.url));
 const OWNED = '# Handoff\nTerminal: term-a\n\n## Next\nwatch #12\n';
 const RUNS = join('.cedarloom-app', 'runs');
 

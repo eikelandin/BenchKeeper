@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { costs, costTable, facts, jobs } from '../../plugins/cedarloom/skills/orchestrating-projects/facts.mjs';
+import { costs, costTable, facts, jobs } from '../skills/orchestrating-projects/facts.mjs';
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/facts/', import.meta.url));
-const SCRIPT = fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects/facts.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/facts.mjs', import.meta.url));
 const RUN = join(FIXTURES, 'run');
 const NOW = Date.parse('2026-11-13T12:00:00Z');
 const COMMANDS = JSON.parse(readFileSync(join(FIXTURES, 'commands.json'), 'utf8'));

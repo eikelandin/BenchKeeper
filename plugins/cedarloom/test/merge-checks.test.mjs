@@ -5,8 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { both, next, ownerOnly, pin, sensitive, unsafe } from '../../plugins/cedarloom/skills/orchestrating-projects/merge-checks.mjs';
-import { initRepo } from './helpers.mjs';
+import { both, next, ownerOnly, pin, sensitive, unsafe } from '../skills/orchestrating-projects/merge-checks.mjs';
+import { initRepo } from './git-repo.mjs';
 
 // By code point, so that no editor or tool recomposes them: e with acute in one character, the combining acute, the long s, Escape and the line separator.
 const [E_ACUTE, ACUTE, LONG_S, ESC, LINE_SEPARATOR] = [0xe9, 0x301, 0x17f, 0x1b, 0x2028].map((code) => String.fromCodePoint(code));
@@ -89,7 +89,7 @@ test('merge checks: the next step is the owner\'s before a re-review, a re-revie
   assert.equal(next({ ...state, upToDate: false, mode: 'disjoint', shared: ['Schemas/a.json'], additive: ['schemas'] }), 'update');
 });
 
-const SCRIPT = fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects/merge-checks.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/merge-checks.mjs', import.meta.url));
 const cli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
 const folder = () => mkdtempSync(join(tmpdir(), 'bk-merge-'));
 
