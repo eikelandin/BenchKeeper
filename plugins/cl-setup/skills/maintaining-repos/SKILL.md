@@ -29,8 +29,6 @@ A tool that is missing and cannot be installed is not a failed pass: do that par
 
 One list, ranked: each finding has its file and line, the tool or search that found it, effort and risk.
 
-Baseline: the verdicts of the knowledge base (`verdicts.json`). The next pass reads them first and reports new, resolved and kept findings; a verdict is reused only while its files are unchanged.
-
 ## Changes after approval
 
 Each approved item is a change under `cl-workflow:workflow` (the cl-workflow plugin, when installed; a refactor in one module is standard, across modules deep; several quick items on one branch run as a batch, a risky or larger item at its own depth), behavior unchanged, the project's tests before and after. Before deleting anything, search every reference to it (code, tests, docs, scripts, config) and record the result. Remove a test only with its recorded reason: it protects nothing, or the code it covers is removed with it.

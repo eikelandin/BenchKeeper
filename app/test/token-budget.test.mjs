@@ -121,6 +121,15 @@ test('dead references: the definition of a reference link, not a footnote', () =
   assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:3 anchor #setup']);
 });
 
+test('dead references: link destinations with parentheses, escapes, angle brackets and titles', () => {
+  const root = repo({
+    'AGENTS.md': "See [g](docs/guide(v2).md) (and [h](docs/guide(v3).md \"Title\")), [i](<docs/a (b).md>), [e](docs/guide\\(v2\\).md), [s](docs/gone.md 'Title').\n\n[r]: <docs/a (b).md>\n",
+    'docs/guide(v2).md': '# Guide\n',
+    'docs/a (b).md': '# A\n',
+  });
+  assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:1 link docs/guide(v3).md', 'AGENTS.md:1 link docs/gone.md']);
+});
+
 test('check reports the change against the baseline and fails on a lost span, a dead link or a budget', () => {
   const root = repo({ 'AGENTS.md': AGENTS, 'docs/guide.md': '# Guide\n\n## Setup\n' });
   addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);

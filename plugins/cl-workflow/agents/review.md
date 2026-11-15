@@ -26,6 +26,7 @@ Your evidence is the task, its acceptance table, the decisions that apply (the p
 
 Return as your final message the scope line (branch or diff range, and the issue it implements when there is one), then each finding with its class, file and line, evidence and suggested fix:
 - **Blocking**: wrong behavior, security, data loss, an acceptance row unmet.
-- **Important**: a likely defect, or a missing test the project's test rule calls for.
+- **Important**: a likely defect, a missing test the project's test rule calls for, or code the code rules in the repository's instructions (the CedarLoom block or an `AGENTS.md` Code section) reject: a guard for a case that cannot happen, a layer or option with one user, a parallel copy of existing logic, code under a new test that reaches for time, randomness or I/O directly.
 - **Minor**: style, naming.
+A finding whose only fix adds a layer, an option, a guard or a test for a case that cannot happen is dropped before the report.
 Then the claims you could not verify and what you did not check.

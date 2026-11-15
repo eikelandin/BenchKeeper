@@ -123,8 +123,6 @@ Each step is separate; do the ones the outcome allows, in this order:
    - Remote: when `gh api repos/<owner/repo>/git/ref/heads/<branch> --jq .object.sha` prints that `headRefOid`, run `gh api -X DELETE repos/<owner/repo>/git/refs/heads/<branch>`. A ref already gone needs nothing (GitHub deletes head branches itself where the repository says so). A commit pushed between the read and the delete goes with the branch. Not `git push --force-with-lease`: the guard hook denies it as a force push, and it runs the `pre-push` hook of the git directory workers share.
    - Local, a branch checked out nowhere (a batch's other branches once its worktree is gone): when `git -C <project path> rev-parse refs/heads/<branch>` prints that `headRefOid`, run `git -C <project path> branch -D <branch>` (`-D`, because a squash merge leaves the branch unmerged for git).
 
-Cleanup of a finished worker happens as part of reacting to its outcome, without waiting to be asked.
-
 ## Questions and owner decisions
 
 ### Worker questions
