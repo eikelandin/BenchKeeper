@@ -1,6 +1,6 @@
 {
   "name": "cedarloom",
-  "owner": { "name": "ESchuderer", "url": "https://github.com/ESchuderer" },
+  "owner": { "name": "eikelandin", "url": "https://github.com/eikelandin" },
   "description": "CedarLoom: workflow and setup skills for Claude Code and Codex.",
   "plugins": [
     {

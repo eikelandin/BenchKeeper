@@ -11,7 +11,7 @@ permissions: {}
 
 jobs:
   analysis:
-    if: github.repository == 'ESchuderer/BenchKeeper'
+    if: github.repository == 'eikelandin/BenchKeeper'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

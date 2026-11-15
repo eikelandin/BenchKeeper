@@ -5,7 +5,7 @@ import facts from '../data/facts.json';
 import { SiteShell } from './SiteShell';
 import { SDLC_INTRO, StepList, half, md } from './Page';
 
-const REPO = 'https://github.com/ESchuderer/BenchKeeper';
+const REPO = 'https://github.com/eikelandin/BenchKeeper';
 const { overview } = facts;
 
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: ReactNode }) {

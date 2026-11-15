@@ -144,15 +144,18 @@ export const doctor = async (ctx: Context): Promise<number> => {
   return findings.some((finding) => severityOf(finding) === "error") ? EXIT.refused : EXIT.ok;
 };
 
-// A finding before any plan, in the command's result format: an unreadable file exits 66, a wrong document 65, rules 1.
+// A refusal's exit code: an unreadable file exits 66, a wrong document 65, rules 1.
+const refusalCode = ({ code }: Finding): number => {
+  if (!code.startsWith("document.")) return EXIT.refused;
+  return code === "document.unreadable" ? EXIT.noInput : EXIT.data;
+};
+
+// A finding before any plan, in the command's result format.
 export const refused = (
   ctx: Context,
   format: "draft" | "extensions" | "intent" | "levels" | "outbox" | "plan" | "profile-diff" | "versions",
   finding: Finding,
-): number => {
-  const code = finding.code === "document.unreadable" ? EXIT.noInput : EXIT.data;
-  return fail(ctx, format, [finding], finding.code.startsWith("document.") ? code : EXIT.refused);
-};
+): number => fail(ctx, format, [finding], refusalCode(finding));
 
 // Shows a plan with `note`, or with --yes applies it as one run; every output form carries the findings.
 export const change = (ctx: Context, plan: Plan, { note, data, findings, held }: Change, yes?: true): number => {
@@ -427,6 +430,70 @@ export const profilesCheck = async (ctx: Context, { project }: { project?: strin
 /** Shows a change of this machine's profile selection, or with --yes makes it as one run. */
 export const profilesChoose = (ctx: Context, choice: useCases.Choice, { yes }: { yes?: true }): number =>
   configChange(ctx, useCases.planChoice(ctx.config, choice), yes);
+
+// The plugin parts the plan waits to approve by name, which the apply line names after --allow.
+const waitingParts = (findings: readonly Finding[]): string[] =>
+  findings.flatMap((finding) => (finding.code === "profile.approval-needed" ? [finding.params.part] : []));
+
+// The machine's plan and, unless an error holds it back, the line that applies it; the errors name the fix.
+const planLines = (preview: PlanPreview | null, held: boolean, allow: readonly string[]): string[] => {
+  if (preview === null) return held ? [] : ["Nothing to change in this machine's rules and settings."];
+  const named = allow.length === 0 ? "" : ` --allow ${allow.join(" ")}`;
+  return held ? [showPlan(preview)] : [showPlan(preview), `Apply it with: cedarloom profiles apply --yes${named}`];
+};
+
+// Saves the preset as the selection as one run; a number is the exit code of a refusal it reported.
+const savePreset = (ctx: Context, preset: string): { runId: string; cleared: string[] } | number => {
+  const planned = useCases.planPreset(ctx.config, preset);
+  if (!planned.ok) return refused(ctx, "plan", planned.finding);
+  const saved = useCases.applyPlan(ctx.state, planned.value.plan, { yes: true });
+  if (!saved.ok) return fail(ctx, "run", [saved.finding], EXIT.refused);
+  const { runId, status } = saved.value;
+  return status === "applied" && runId !== null ? { runId, cleared: planned.value.cleared } : result(ctx, saved.value);
+};
+
+// The saved run, the line that undoes it and the hand switches the preset cleared.
+const savedLines = ({ runId, preset, cleared }: { runId: string; preset: string; cleared: string[] }): string[] => [
+  `Saved the preset ${preset} as this machine's profile in run ${runId}; undo it with: cedarloom runs undo ${runId}`,
+  ...(cleared.length === 0 ? [] : [`Cleared the parts switched by hand: ${cleared.join(", ")}`]),
+];
+
+// The machine's plan with the waiting plugin parts allowed, as the apply line applies it; their warnings stay.
+const allowedPlan = async (ctx: Context): Promise<Result<useCases.ProfilePlan & { allow: string[] }>> => {
+  const options = { app: ctx.app, fetch: ctx.io.fetch };
+  const first = await useCases.planProfile(ctx.config, ctx.state, machineOf(ctx), options);
+  if (!first.ok) return first;
+  const allow = waitingParts(first.value.findings);
+  if (allow.length === 0) return { ok: true, value: { ...first.value, allow } };
+  const second = await useCases.planProfile(ctx.config, ctx.state, machineOf(ctx), { ...options, allow });
+  if (!second.ok) return second;
+  const approvals = first.value.findings.filter((finding) => finding.code === "profile.approval-needed");
+  return { ok: true, value: { plan: second.value.plan, findings: [...second.value.findings, ...approvals], allow } };
+};
+
+/**
+ * Saves a preset as this machine's selection as one run, then shows the machine's plan and the line that applies it:
+ * the selection is CedarLoom's own file and the run undoes it, while Claude Code's home changes only at the apply.
+ * A plan that cannot be made or is held back exits as a refusal; the selection stays saved and the run is named.
+ */
+export const profilesUse = async (ctx: Context, preset: string): Promise<number> => {
+  const saved = savePreset(ctx, preset);
+  if (typeof saved === "number") return saved;
+  const head = { runId: saved.runId, preset, cleared: saved.cleared };
+  const profile = await allowedPlan(ctx);
+  if (!profile.ok) {
+    emit(ctx, "profile-use", { ...head, findings: [profile.finding] }, savedLines(head).join("\n"));
+    report(ctx, [profile.finding]);
+    return refusalCode(profile.finding);
+  }
+  const { plan, findings, allow } = profile.value;
+  const held = useCases.heldBack(findings);
+  const preview = plan === null ? null : useCases.previewPlan(plan);
+  const data = { ...head, planHash: preview?.planHash ?? null, plan: preview?.plan ?? null, findings, held, allow };
+  emit(ctx, "profile-use", data, [...savedLines(head), ...planLines(preview, held, allow)].join("\n"));
+  report(ctx, findings);
+  return held ? EXIT.refused : EXIT.ok;
+};
 
 /** Shows copying a pack's profile into a file that this machine's selection then names; with --yes, does it. */
 export const profilesInit = (ctx: Context, file: string, { from, yes }: { from: PackRef; yes?: true }): number =>

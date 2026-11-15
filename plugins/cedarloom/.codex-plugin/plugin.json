@@ -3,11 +3,11 @@
   "version": "6.27.0",
   "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and sets up and maintains projects. Works next to other skill packs and plugins when they are installed.",
   "author": {
-    "name": "ESchuderer",
-    "url": "https://github.com/ESchuderer"
+    "name": "eikelandin",
+    "url": "https://github.com/eikelandin"
   },
-  "homepage": "https://eschuderer.github.io/BenchKeeper/",
-  "repository": "https://github.com/ESchuderer/BenchKeeper",
+  "homepage": "https://eikelandin.github.io/BenchKeeper/",
+  "repository": "https://github.com/eikelandin/BenchKeeper",
   "license": "MIT",
   "skills": "./skills/",
   "hooks": "./hooks/codex.json"

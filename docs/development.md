@@ -24,8 +24,8 @@ The CI job `app` runs `npm run check:imports`, `npm run check:baselines`, `npm r
 
 In the dev container, 3 app tests fail because of the container, not the code or its Node version; on the CI runners the first two pass and the third is skipped. A failure beyond these three is a real one.
 
-- `machine setup` and `machine session variables` need `ssh-keygen`, which the image lacks ([#979](https://github.com/ESchuderer/BenchKeeper/issues/979)).
-- `sandbox: srt confines a real command ...` runs because `.devcontainer/compose.yaml` sets `BENCHKEEPER_SANDBOX_TEST=1` (CI does not, so it skips the test there), and srt does not start in the rootless podman container ([#1019](https://github.com/ESchuderer/BenchKeeper/issues/1019)).
+- `machine setup` and `machine session variables` need `ssh-keygen`, which the image lacks ([#979](https://github.com/eikelandin/BenchKeeper/issues/979)).
+- `sandbox: srt confines a real command ...` runs because `.devcontainer/compose.yaml` sets `BENCHKEEPER_SANDBOX_TEST=1` (CI does not, so it skips the test there), and srt does not start in the rootless podman container ([#1019](https://github.com/eikelandin/BenchKeeper/issues/1019)).
 
 ## Plugin mod types
 

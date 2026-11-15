@@ -5,12 +5,12 @@ version = 1
 
 [[annotations]]
 path = "**"
-SPDX-FileCopyrightText = "2026 ESchuderer"
+SPDX-FileCopyrightText = "2026 eikelandin"
 SPDX-License-Identifier = "MIT"
 
 [[annotations]]
 path = "patches/thread-stream@4.2.0.patch"
-SPDX-FileCopyrightText = ["2021 Matteo Collina", "2026 ESchuderer"]
+SPDX-FileCopyrightText = ["2021 Matteo Collina", "2026 eikelandin"]
 SPDX-License-Identifier = "MIT"
 
 # Keeps the notice MIT when `**` becomes ISC at launch; the file's own copyright line already wins.
@@ -23,7 +23,7 @@ SPDX-License-Identifier = "MIT"
 [[annotations]]
 path = ["packages/ui/test/editor.spec.ts", "packages/ui/vite.config.ts"]
 precedence = "override"
-SPDX-FileCopyrightText = "2026 ESchuderer"
+SPDX-FileCopyrightText = "2026 eikelandin"
 SPDX-License-Identifier = "MIT"
 
 # The CedarLoom name and logos are not under the code license: LICENSES/LicenseRef-Brand.txt, the brand repository's

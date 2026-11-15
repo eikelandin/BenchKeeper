@@ -12,7 +12,7 @@ CedarLoom is the new name of BenchKeeper. Until CedarLoom 0.1.0 the released too
 <!-- generated:description -->
 BenchKeeper sets up Claude Code and Codex the same way on your machine and in each repository: short global rules and a workflow skill that sizes each task, plus a dev container, `AGENTS.md` and skills per repository. Its app shows every change before it applies it and records each run so you can undo it.
 
-[What BenchKeeper is](https://eschuderer.github.io/BenchKeeper/overview/): the workflow, what each part brings and the defaults it sets.
+[What BenchKeeper is](https://eikelandin.github.io/BenchKeeper/overview/): the workflow, what each part brings and the defaults it sets.
 <!-- /generated:description -->
 
 For developers who run Claude Code or Codex in more than one repository and want the same rules, skills and dev container setup in each.
@@ -58,11 +58,11 @@ If `npx` cannot find that version, run the app from a clone: [steps](docs/setup.
   <img src="web/public/app/fix-light.webp" alt="Fix everything in the BenchKeeper app: a diff of a rules file and the plugin install commands, each with a checkbox, before the Apply step">
 </picture>
 
-Fix everything shows each file change as a diff and each command as its command line, and writes nothing until you press Apply. The screenshot uses example data. [Every view of the app](https://eschuderer.github.io/BenchKeeper/app/).
+Fix everything shows each file change as a diff and each command as its command line, and writes nothing until you press Apply. The screenshot uses example data. [Every view of the app](https://eikelandin.github.io/BenchKeeper/app/).
 
 ## More
 
-- [Project site](https://eschuderer.github.io/BenchKeeper/): the workflow, the install levels and the app
+- [Project site](https://eikelandin.github.io/BenchKeeper/): the workflow, the install levels and the app
 - [Setup guide](docs/setup.md): prerequisites, levels, what a full `apply` writes, per-repository setup, updates, undo
 - [Accounts](docs/setup.md#accounts): several Claude Code and Codex logins, signed in through private browser windows, on the host and in dev containers
 - [Stack](docs/stack.md): components, repository map, how the stack was chosen, optional tools
@@ -70,7 +70,7 @@ Fix everything shows each file change as a diff and each command as its command 
 - [Automations](docs/automations.md): scheduled agent runs from templates, installed disabled on the runner from the app or the CLI, with the catalogue, the file format and the lint rules
 - [Restart-safe coordinator](docs/restart-safe-coordinator.md): one Orca coordinator kept through usage limits, account switches and restarts, by a model-free loop, short decision cycles and a watchdog you set up
 - [Coordinator workflow](docs/coordinator-workflow.md): where each rule of a coordinator run lives (policy field, skill text, worker rule file or agent default), the policy's version 2, and what project setup writes and compares
-- [Evaluations](https://github.com/ESchuderer/BenchKeeper-research/blob/main/EVALUATIONS.md): the evidence for each component BenchKeeper ships or left out, kept in BenchKeeper-research
+- [Evaluations](https://github.com/eikelandin/BenchKeeper-research/blob/main/EVALUATIONS.md): the evidence for each component BenchKeeper ships or left out, kept in BenchKeeper-research
 - [Security notes](docs/security.md) and [how to report a vulnerability](SECURITY.md)
 - [Changelogs](docs/releasing.md#components). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
 
