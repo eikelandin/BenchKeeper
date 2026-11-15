@@ -15,12 +15,13 @@ const DEFAULTS = {
   workersPerProject: 1,
   hostWorkerLimit: 2,
   stallMinutes: 20,
-  merge: { allowed: false, requiredChecks: [], mode: 'strict', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json'] },
+  merge: { allowed: false, requiredChecks: [], mode: 'strict', autoMergeMax: 'medium', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json'] },
   closeIssue: false,
   deleteMergedBranch: false,
   issuesPerWorker: 1,
   keepRunning: false,
   permissionPrompts: 'block',
+  riskyPaths: [],
   review: { depth: 'high', sensitiveDepth: 'high', sensitivePaths: [] },
   issues: { repository: null, labels: [] },
   minPlugin: null,
@@ -121,6 +122,8 @@ const NO_PATHS = ['', '/x', '../x', 'x/..', 'a/*', 'a\\b', './x', 'x//y', 'x/./y
 // One refused document per row, with the one rule and path named for it.
 const REFUSED = [
   ...PATH_LISTS.flatMap(([group, list]) => NO_PATHS.map((path) => [{ [group]: { [list]: [path] } }, 'pattern', `${group}.${list}[0]`])),
+  ...NO_PATHS.map((path) => [{ riskyPaths: [path] }, 'pattern', 'riskyPaths[0]']),
+  [{ merge: { autoMergeMax: 'high' } }, 'enum', 'merge.autoMergeMax'],
   ...['owner/tracker/docs', 'owner/tra cker', 'owner/..', 'tracker'].map((repository) => [{ issues: { repository, labels: ['project-a'] } }, 'pattern', 'issues.repository']),
   [{ issues: { repository: 'owner/tracker', labels: [] } }, 'length', 'issues.labels'],
   [{ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['go', 'GO'] } }, 'length', 'issues.labels'],
