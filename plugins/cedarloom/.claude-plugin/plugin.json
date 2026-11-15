@@ -32,6 +32,13 @@
       "default": 0,
       "min": 0,
       "max": 100
+    },
+    "rotateAfterTasks": {
+      "type": "number",
+      "title": "Clear an idle coordinator after this many settled Orca tasks",
+      "description": "0 (default) is off. Above 0, an idle coordinator that keeps the handoff file of /cedarloom:orchestrating-projects is also cleared with /clear and resumed from the file once this many tasks of its Orca run have completed or failed since its last clear, whatever its context size. The plugin then runs orca orchestration task-list --json at each idle stop. The same 10-minute gap applies.",
+      "default": 0,
+      "min": 0
     }
   }
 }

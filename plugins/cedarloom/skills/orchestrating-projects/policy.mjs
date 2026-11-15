@@ -1,4 +1,4 @@
-// Usage: node policy.mjs <project path>. Prints the project's effective coordinator policy as JSON; a file the schema rejects, a minPlugin newer than this plugin or an unreadable file prints each error and exits 1, and nothing may start there.
+// Usage: node policy.mjs <project path>. Prints the project's effective coordinator policy as JSON; a file the schema rejects, a minPlugin newer than this plugin or an unreadable file prints each error and exits 1, and nothing may start there. Without the file it prints the defaults, exits 0 and says so on stderr.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -17,8 +17,8 @@ const SENSITIVE = { plan: ['fable', 'high'], review: ['fable', 'high'], independ
 export const escaped = (text, to = '?') => text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, to);
 
 const shipped = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
-// content.json lies two folders up in the plugin and in the app's packed content; a skill folder copied alone (an agent without plugins) has none, so its version is unknown.
-const pluginVersion = () => { try { const v = shipped('../../content.json').contentVersion; return /^\d+\.\d+\.\d+$/.test(v) ? v : null; } catch { return null; } };
+// The plugin's manifest lies two folders up; a skill folder copied alone (an agent without plugins) has none, so its version is unknown.
+const pluginVersion = () => { try { const v = shipped('../../.claude-plugin/plugin.json').version; return /^\d+\.\d+\.\d+$/.test(v) ? v : null; } catch { return null; } };
 
 // Started from a hook or `git rebase --exec`, these variables name another repository and carry that command's -c settings: neither reaches git here, and git fails instead of asking (as repoEnv in the app's src/git.mjs).
 const REPO_VARS = /^GIT_(DIR|WORK_TREE|COMMON_DIR|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|PREFIX)$/;
@@ -105,7 +105,7 @@ const plain = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.sta
 export function effective(doc, version = pluginVersion()) {
   const errors = validate(doc);
   // The one check the schema cannot hold: it depends on the plugin that reads the file, which the app's editor does not judge.
-  if (!errors.length && doc.minPlugin && !version) errors.push({ rule: 'range', path: 'minPlugin', message: 'cannot be checked: the version of this plugin is unknown (no content.json two folders above the skill)' });
+  if (!errors.length && doc.minPlugin && !version) errors.push({ rule: 'range', path: 'minPlugin', message: 'cannot be checked: the version of this plugin is unknown (no .claude-plugin/plugin.json two folders above the skill)' });
   else if (!errors.length && doc.minPlugin && older(version, doc.minPlugin)) errors.push({ rule: 'range', path: 'minPlugin', message: `must be at most ${version}, the version of this plugin` });
   if (errors.length) return { policy: null, errors };
   const { merge = {}, review = {}, issues = {}, models = {} } = doc;
@@ -148,7 +148,7 @@ export function effective(doc, version = pluginVersion()) {
 const REF = 'refs/cedarloom/policy';
 const unreadable = (message) => ({ policy: null, errors: [{ rule: 'unreadable', path: '', message }] });
 
-// The effective policy of the project in dir. A project without the file gets the defaults, which start and merge nothing.
+// The effective policy of the project in dir. A project without the file gets the defaults, which start and merge nothing, and absent: true.
 export function read(dir, run = sh) {
   let commit;
   try {
@@ -163,7 +163,7 @@ export function read(dir, run = sh) {
   let text;
   try {
     // ls-tree decides whether the file exists, so a show that fails is never read as "no file", which would mean the defaults. --full-tree: the path counts from the repository root, as in the show, also when dir is a folder below it.
-    if (!run(dir, 'git', ['ls-tree', '--full-tree', '--name-only', commit, '--', FILE]).trim()) return effective({});
+    if (!run(dir, 'git', ['ls-tree', '--full-tree', '--name-only', commit, '--', FILE]).trim()) return { ...effective({}), absent: true };
     text = run(dir, 'git', ['show', `${commit}:${FILE}`]);
   } catch { return unreadable(`git could not read ${FILE} from origin's default branch`); }
   let doc;
@@ -181,7 +181,8 @@ export const isMain = (url) => { try { return realpathSync(process.argv[1]) === 
 if (isMain(import.meta.url)) {
   try {
     if (process.argv.length !== 3) throw new Error('usage: node policy.mjs <project path>');
-    const { policy, errors } = read(process.argv[2]);
+    const { policy, errors, absent } = read(process.argv[2]);
+    if (absent) console.error(`no ${FILE} on origin's default branch: these defaults start and merge nothing`);
     for (const e of errors) console.error(errorLine(e));
     if (policy) console.log(JSON.stringify(policy, null, 2));
     process.exitCode = policy ? 0 : 1;
