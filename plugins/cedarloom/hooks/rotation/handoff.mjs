@@ -74,13 +74,16 @@ export const TOP_ARGS = [...GIT, 'rev-parse', '--show-toplevel'];
 
 // The paths of `status --porcelain=v1 -z` output: "XY path" entries, a rename or copy followed by its original path, which is
 // skipped. The run folder .cedarloom/runs/ with the handoff file is not drift; the rest of .cedarloom/ can be committed and is.
+// A wholly untracked .cedarloom/ is one `?? .cedarloom/` entry that holds no committed file, so it is not drift either.
 export const changedPaths = (stdout) => {
   const entries = stdout.split('\0');
   const paths = [];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     if (entry.length < 4) continue;
-    if (!/(^|\/)\.cedarloom\/runs(\/|$)/.test(entry.slice(3))) paths.push(entry.slice(3));
+    const path = entry.slice(3);
+    const untrackedFolder = entry.startsWith('?? ') && /(^|\/)\.cedarloom\/$/.test(path);
+    if (!untrackedFolder && !/(^|\/)\.cedarloom\/runs(\/|$)/.test(path)) paths.push(path);
     if ('RC'.includes(entry[0]) || 'RC'.includes(entry[1])) i++;
   }
   return paths;

@@ -93,12 +93,13 @@ test('a clear or compaction hands the file back after the other hooks, and nothi
 })
 
 test('the restored file is followed by the commits and the files changed since it was written', async ($, on) => {
-  engine(on, { changed: { log: 'abc1234 2026-01-01T00:00:00+00:00 add a\n', status: ' M src/a.ts\0?? .cedarloom/runs/\0 M .cedarloom/profile-files.json\0 M coord/.cedarloom/runs/state.json\0' } })
+  engine(on, { changed: { log: 'abc1234 2026-01-01T00:00:00+00:00 add a\n', status: ' M src/a.ts\0?? .cedarloom/runs/\0?? .cedarloom/\0 M .cedarloom/profile-files.json\0 M coord/.cedarloom/runs/state.json\0' } })
   const restored = (await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1] ?? ''
   expect(restored).toContain('\nabc1234 2026-01-01T00:00:00+00:00 add a\n')
   expect(restored).toContain('\n- `src/a.ts`')
   expect(restored).toContain('\n- `.cedarloom/profile-files.json`')
   expect(restored).not.toContain('- `.cedarloom/runs/`')
+  expect(restored).not.toContain('- `.cedarloom/`')
   expect(restored).not.toContain('state.json')
 })
 
