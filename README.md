@@ -60,6 +60,18 @@ The role guard refuses merges, releases and pushes to the default branch in ever
 
 What each skill reads and writes: [Skills](docs/skills.md). Hooks and plugin settings: [The plugins](docs/plugins.md). How the coordinator's rules are split between policy, skills and worker rules: [Coordinator workflow](docs/coordinator-workflow.md).
 
+## Typical flow
+
+1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without Orca. Update with the commands under [Update](#update).
+2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](docs/coordinator-workflow.md)). The coordinator starts nothing until that file is on the default branch.
+3. Per task, without Orca:
+   - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
+   - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
+4. Per task, with Orca (needs `cl-orchestration`):
+   - Label the issues with the `startLabel`.
+   - In an Orca terminal, run `CEDARLOOM_ROLE=coordinator claude`, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts an Orca worker per issue and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
+   - The coordinator files its questions as issues: without a hub, in the project's tracker, where you answer each in a comment; with a hub set ([The plugins](docs/plugins.md)), in the hub, where `/cl-workflow:questions` asks them in any other session.
+
 ## Update
 
 Marketplaces other than Anthropic's have auto-update off, so a plugin changes only when you update it, and only when its version changed in a release ([Claude Code docs](https://code.claude.com/docs/en/discover-plugins#keep-plugins-updated)).
