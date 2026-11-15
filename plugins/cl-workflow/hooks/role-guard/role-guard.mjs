@@ -9,7 +9,6 @@
 // session with that command.
 import { spawnSync } from 'node:child_process';
 import { statSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { basename, resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { openUntil, windowFile } from '../ask/window-file.mjs';
@@ -23,7 +22,9 @@ const EDIT_PATHS = ['file_path', 'notebook_path'];
 // A session started with /cl-workflow:questions as its prompt (claude -p expands it, https://code.claude.com/docs/en/headless) would
 // hold the flag, and no hook input or variable Claude Code documents tells such a session from a typed one.
 const QUESTIONS = /(^|[^\w-])\/(cl-workflow:)?questions(?![\w.-])/i;
-// Folders the guard follows in one command; each cd is read from every folder seen before it.
+// The program names that start such a session: claude, and claude-code as npx runs the package.
+const LAUNCHERS = new Set(['claude', 'claude-code']);
+// Folders the guard follows in one command: the session folder and one per cd.
 const MAX_FOLDERS = 64;
 
 const ROLE = 'CEDARLOOM_ROLE';
@@ -126,6 +127,8 @@ function commands(source, powershell, nested = false) {
 }
 
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
+// A launcher also goes by its package with a version (npx @anthropic-ai/claude-code@latest) and, on Windows, by its script file (claude.cmd).
+const launcher = (word) => program(word).replace(/@[^@]*$/, '').replace(/\.(cmd|ps1|bat)$/, '');
 
 const GIT = gitProgram();
 // Without git every query fails: no tag, no branch and no remote's default branch is known, so every push is denied.
@@ -355,24 +358,27 @@ const matches = (segment, name) => {
   while (tokens[t] === ANY) t++;
   return t === tokens.length;
 };
-// A resolved path is the folder or inside it, in any case, since macOS and Windows read paths so.
+const wild = (segment) => /[*?[]/.test(segment);
+// A resolved path is the folder or inside it, in any case, since macOS and Windows read paths so. Two wildcard segments in a
+// row (*/*) count as no match: ordinary commands use them, and by default bash and zsh expand * to no dot folder.
 const inside = (path, [parent, child]) => {
   const parts = path.split(/[\\/]+/);
-  return parts.some((part, i) => i + 1 < parts.length && matches(part, parent) && matches(parts[i + 1], child));
+  return parts.some((part, i) => i + 1 < parts.length && !(wild(part) && wild(parts[i + 1])) && matches(part, parent) && matches(parts[i + 1], child));
 };
 
-// Every path a command may reach: the session folder, each folder a cd, pushd or Set-Location names, read from every folder seen
-// before it, and each word and redirection target read from each of those folders; null past MAX_FOLDERS.
+// Every path a command may reach: the session folder, the folder each cd, pushd or Set-Location names (its first word that is
+// no option, read from the folder the cd before it reached), and each word and redirection target read from each of those
+// folders; null past MAX_FOLDERS.
 function reached(parsed, cwd) {
-  const seen = new Set([resolve(cwd)]);
+  const seen = [resolve(cwd)];
   const paths = [];
-  const local = (word) => (/^~([\\/]|$)/.test(word) ? homedir() + word.slice(1) : word).replace(/\\/g, '/');
+  const local = (word) => word.replace(/\\/g, '/');
   for (const { words, targets } of parsed) {
-    const from = [...seen];
-    for (const word of [...words, ...targets]) for (const dir of from) paths.push(resolve(dir, local(word)));
+    for (const word of [...words, ...targets]) for (const dir of seen) paths.push(resolve(dir, local(word)));
     const at = words.findIndex((word) => CHANGE_DIR.has(word.toLowerCase()));
-    if (at >= 0) for (const word of words.slice(at + 1).filter((w) => !w.startsWith('-'))) for (const dir of from) seen.add(resolve(dir, local(word)));
-    if (seen.size > MAX_FOLDERS) return null;
+    const to = at >= 0 && words.slice(at + 1).find((w) => !w.startsWith('-'));
+    if (to) seen.push(resolve(seen.at(-1), local(to)));
+    if (seen.length > MAX_FOLDERS) return null;
   }
   return [...seen, ...paths];
 }
@@ -395,7 +401,7 @@ function queue({ tool_name: tool, tool_input: toolInput, agent_id: agent }, cwd)
     texts = [cmd, ...parsed.flatMap(({ words, targets }) => [...words, ...targets])];
     paths = reached(parsed, cwd);
     if (!paths) return `a command with more than ${MAX_FOLDERS} folders to follow, which may name the local question queue (.cedarloom/questions/),`;
-    if (QUESTIONS.test(texts.join('\n')) && parsed.some(({ words }) => words.some((word) => program(word).startsWith('claude')))) {
+    if (QUESTIONS.test(texts.join('\n')) && parsed.some(({ words }) => words.some((word) => LAUNCHERS.has(launcher(word))))) {
       return 'a session started with /cl-workflow:questions, which could write into the local question queue (.cedarloom/questions/),';
     }
   }

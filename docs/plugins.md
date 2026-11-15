@@ -60,7 +60,7 @@ The hub is one GitHub repository, often private, that holds the work items of th
 
 - Public repositories never mention the hub (a check refuses such a merge); the coordinator closes a hub issue after the merge, linking the pull request.
 - A question goes to the tracker if private with issues on, else to the hub; without one (a value that is no plain `owner/name` is named as rejected), to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
-- Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name; braces and variables are not read). A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
+- Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name, but two such segments in a row, as in `*/*`, match no folder). Like the rest of the guard it does not try to catch a command written to get around it (`.c*/q*`, braces, variables, bracket classes, look-alike letters, a tool's own folder option such as `git -C`), nor one that acts on `.cedarloom` itself, such as `rm -rf .cedarloom`. A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
 
 ## Role guard
 
@@ -94,6 +94,15 @@ A long-running coordinator of `/cl-orchestration:orchestrating-projects` starts 
 - A `/clear` and resume prompt that have not finished after 15 minutes are given up: the plugin says so in the transcript, submits no resume prompt, and clears again at a later idle stop.
 
 The options are those of `cl-orchestration@cedarloom` (see the top of this page). The hooks read and write only the handoff file, run `git ls-files` in its project folder (and, with `rotateAfterTasks`, `orca orchestration task-list --json`), and send nothing.
+
+## Code Mode (optional)
+
+[Code Mode](https://code.claude.com/docs/en/code-mode) is an experimental Claude Code feature in which Claude writes JavaScript that makes several tool calls in one step. It is off by default and may change or be removed in any release.
+
+- Needs, among others: Claude Code v2.1.323 or later on the native build, an interactive terminal session, and Opus 5.5, Sonnet 5.5, Haiku 5.5 or Fable 5.2. The full list, and the settings that block it (an API key helper, agent teams, OpenTelemetry export, `DISABLE_TELEMETRY`), are in its [requirements](https://code.claude.com/docs/en/code-mode#requirements).
+- Turn it on: set `"CLAUDE_CODE_EXPERIMENTAL_CODE_MODE": "1"` in the `env` block of `$HOME/.claude/settings.json`. Claude Code ignores it in a project's settings. A Code Mode session resumes only with it on.
+- The hooks of these plugins keep working: each tool call the code makes still reaches the `PreToolUse` hooks, and a hook that fails or times out refuses that call.
+- Code Mode does not start while the `cl-workflow` [status band](#the-status-band) is on, since its module checks tool calls: set `tierBand` to `false` (the default) first.
 
 ## Untrusted input
 

@@ -8,24 +8,6 @@ path = "**"
 SPDX-FileCopyrightText = "2026 Eike Landin"
 SPDX-License-Identifier = "ISC"
 
-[[annotations]]
-path = "patches/thread-stream@4.2.0.patch"
-SPDX-FileCopyrightText = ["2021 Matteo Collina", "2026 Eike Landin"]
-SPDX-License-Identifier = "MIT"
-
-# Keeps the notice MIT under the ISC of `**`; the file's own copyright line already wins.
-[[annotations]]
-path = "packages/ui/notices/react-remove-scroll-bar.txt"
-SPDX-FileCopyrightText = "2025 Anton Korzunov"
-SPDX-License-Identifier = "MIT"
-
-# Both files hold text REUSE reads as a copyright notice (elkjs's notice, and the pattern that finds it), not their own.
-[[annotations]]
-path = ["packages/ui/test/editor.spec.ts", "packages/ui/vite.config.ts"]
-precedence = "override"
-SPDX-FileCopyrightText = "2026 Eike Landin"
-SPDX-License-Identifier = "ISC"
-
 # The CedarLoom name and logos are not under the code license: LICENSES/LicenseRef-Brand.txt, the brand repository's
 # own text. The site serves copies from web/public.
 [[annotations]]
@@ -34,9 +16,3 @@ precedence = "override"
 SPDX-FileCopyrightText = "2026 CedarLoom contributors"
 SPDX-License-Identifier = "LicenseRef-Brand"
 
-# Mantine's mantine-form skill, vendored unchanged: its own LICENSE's holder, not this repository's.
-[[annotations]]
-path = "packages/packs/bundled/cedarloom.mantine/skills/mantine-form/**"
-precedence = "override"
-SPDX-FileCopyrightText = "2026 Mantine"
-SPDX-License-Identifier = "MIT"

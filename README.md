@@ -58,12 +58,10 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 
 The role guard refuses merges, releases and pushes to the default branch in every session without `CEDARLOOM_ROLE=coordinator` in its environment, your own sessions included. Start only the coordinator's session with it, for example `CEDARLOOM_ROLE=coordinator claude` ([The plugins](docs/plugins.md)).
 
-What each skill reads and writes: [Skills](docs/skills.md). Hooks and plugin settings: [The plugins](docs/plugins.md). How the coordinator's rules are split between policy, skills and worker rules: [Coordinator workflow](docs/coordinator-workflow.md).
-
 ## Typical flow
 
 1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without Orca. Update with the commands under [Update](#update).
-2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](docs/coordinator-workflow.md)). The coordinator starts nothing until that file is on the default branch.
+2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](plugins/cl-orchestration/skills/orchestrating-projects/policy.md)). The coordinator starts nothing until that file is on the default branch.
 3. Per task, without Orca:
    - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
    - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
@@ -112,7 +110,7 @@ The command-line tool and the browser app are planned for 0.2.
 
 - [The plugins](docs/plugins.md): the hooks, their settings and their limits
 - [Skills](docs/skills.md): what each skill does, who starts it and what it writes
-- [Coordinator workflow](docs/coordinator-workflow.md) and [restart-safe coordinator](docs/restart-safe-coordinator.md)
+- [Restart-safe coordinator](docs/restart-safe-coordinator.md): keeping one coordinator run through usage limits and restarts
 - [Stack](docs/stack.md): the components CedarLoom works with and why
 - [How to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
 

@@ -330,17 +330,47 @@ test('role guard: a command reaches the queue or the window files through a cd, 
   ];
   for (const command of denied) assert.equal(decision(command, { cwd: session, env }), 'deny', command);
   for (const command of denied.slice(0, 2)) assert.equal(decision(command, { cwd: session, env, role: 'coordinator' }), 'deny', command);
-  assert.equal(decision('cd .cedarloom\\questions; Set-Content project-1.md x', { tool: 'PowerShell', cwd: session, env }), 'deny');
+  // PowerShell decodes with its own escape, and the backslash separates folders.
+  for (const command of ['cd .cedarloom\\questions; Set-Content project-1.md x', 'Add-Content .cedarloom\\runs\\..\\questions\\project-1.md x', 'Set-Location .cedarloom; Add-Content questions\\project-1.md x']) {
+    assert.equal(decision(command, { tool: 'PowerShell', cwd: session, env }), 'deny', command);
+  }
+  // A command with more cds than the guard follows.
+  assert.equal(decision(`${Array.from({ length: 64 }, (_, i) => `cd d${i}`).join(' && ')} && ls`, { cwd: session, env }), 'deny');
   // A session whose folder is the queue writes there with any path.
   assert.equal(decision("sed -i 's/open/answered/' project-1.md", { cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
+  assert.equal(decision('/bin/sh /tmp/answer.sh', { cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
   assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: 'project-1.md', content: 'x' }, cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
   // A session started with the command would hold the flag, in any role.
+  const versioned = ['npx -y @anthropic-ai/claude-code@latest -p "/cl-workflow:questions"', 'npx @anthropic-ai/claude-code@2.1.300 -p /questions', 'pnpm dlx @anthropic-ai/claude-code@latest -p /questions'];
   for (const role of [undefined, 'coordinator']) {
     assert.equal(decision('claude -p "/cl-workflow:questions"', { cwd: session, env, role }), 'deny', role);
     assert.equal(decision("echo '/questions' | claude -p", { cwd: session, env, role }), 'deny', role);
+    // npx names the package with a version, and a Windows npm install starts claude through a script file.
+    for (const command of versioned) assert.equal(decision(command, { cwd: session, env, role }), 'deny', `${role}: ${command}`);
+    for (const command of ['claude.cmd -p /questions', 'claude.ps1 -p /questions', 'claude.bat -p /questions']) assert.equal(decision(command, { tool: 'PowerShell', cwd: session, env, role }), 'deny', `${role}: ${command}`);
   }
-  // Names that only look alike pass.
-  for (const command of ['cd docs && echo x > questions.md', 'grep -rn /cl-workflow:questions plugins', 'cat .cedarloom/questions-old/a.md']) assert.equal(decision(command, { cwd: session, env }), 'none', command);
+  // Names that only look alike pass, as do wildcard pairs, cd chains and prose that reach neither folder.
+  const alike = [
+    'cd docs && echo x > questions.md',
+    'grep -rn /cl-workflow:questions plugins',
+    'cat .cedarloom/questions-old/a.md',
+    'grep -n "/questions" CLAUDE.md',
+    'grep -rn "/cl-workflow:questions" plugins/cl-workflow/hooks/claude-code.json',
+    'ls */*',
+    'du -sh */*',
+    'ls plugins/*/*',
+    'cat packages/*/*/package.json',
+    'rm -rf dist/*/*',
+    'for d in */*; do echo $d; done',
+    "find . -path '*/*' -name x",
+    'npx prettier --check "**/*"',
+    'npx eslint "src/**/*"',
+    "cat > docs/setup.md <<'EOF'\nRun cd web before npm ci.\nThen cd .. and start again.\nUse cd packages/ui for the UI tests.\nEOF",
+    Array.from({ length: 6 }, (_, i) => `cd p${i} && make && cd ..`).join(' && '),
+    'cd a && cd b && cd c && cd d && cd e && cd f && cd g && ls',
+  ];
+  for (const command of alike) assert.equal(decision(command, { cwd: session, env }), 'none', command);
+  assert.equal(decision('Get-ChildItem *\\*', { tool: 'PowerShell', cwd: session, env }), 'none');
 });
 
 test('role guard: every path field of the edit tools is read, resolved from the session folder', () => {
