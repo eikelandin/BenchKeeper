@@ -34,9 +34,9 @@
     "name": "mattpocock/skills",
     "by": "Matt Pocock",
     "url": "https://github.com/mattpocock/skills",
-    "role": "the workflow owner: his skills run the phases of standard and deep work when installed (grilling, spec and tickets, tdd, code review, pull request)",
+    "role": "an add-on: when installed, his skills may run a workflow step in more detail (bug diagnosis, a test first, prototypes, interface design) under the floor and gates of the workflow skill, which is complete without them",
     "evidence": [
-      "plugins/cedarloom/library/library.json",
+      "plugins/cedarloom/skills/workflow/SKILL.md",
       "plugins/cedarloom/skills/workflow/software.md#steps"
     ]
   },
