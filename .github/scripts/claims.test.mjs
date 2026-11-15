@@ -13,7 +13,7 @@ test('every claim in facts.json has evidence that resolves', () => {
   assert.deepEqual(check(facts), []);
 });
 test('evidence kinds that pass', () => {
-  for (const e of ['docs/setup.md#accounts', 'docs/automations.md', 'app/test/cli.test.mjs', ['docs/setup.md', 'app/package.json']]) {
+  for (const e of ['docs/setup.md#accounts', 'docs/releasing.md', 'app/test/cli.test.mjs', ['docs/setup.md', 'app/package.json']]) {
     assert.deepEqual(check(part(e)), [], String(e));
   }
   assert.deepEqual(check(tool(['https://example.org/tool/docs', 'docs/stack.md#recommended-tools-optional'])), []);

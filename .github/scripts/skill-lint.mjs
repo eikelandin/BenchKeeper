@@ -1,4 +1,4 @@
-// Structural checks for BenchKeeper's own skills (plugin skills, own library skills, the bundled packs' skills) and the plugin's agents.
+// Structural checks for BenchKeeper's own skills (plugin skills and the bundled packs' skills) and the plugin's agents.
 // Usage: node .github/scripts/skill-lint.mjs [skill folders...]   (default: every own skill and agent), exit 1 on any error.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -144,8 +144,7 @@ function packSkills() {
 }
 
 export function ownSkills() {
-  const dirs = [...pluginParts('skills'), ...pluginParts('library')];
-  const own = dirs.flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
+  const own = pluginParts('skills').flatMap((d) => readdirSync(d).map((n) => join(d, n)).filter((p) => statSync(p).isDirectory()));
   return [...own, ...packSkills().filter((dir) => !VENDORED.includes(dir))];
 }
 

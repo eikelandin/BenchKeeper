@@ -4,7 +4,7 @@
 
 What BenchKeeper installs, where it writes and how to update or undo it. The plugin features that do not need the app (status band, terminal questions, role guard, coordinator context rotation) are in [The plugins](plugins.md).
 
-Terms: a **depth** is how much process the `workflow` skill gives a task (quick, standard or deep). A **pack** is a named set of skills and plugins you choose per machine or project ([packs](../plugins/cl-setup/library/README.md#packs)). The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
+Terms: a **depth** is how much process the `workflow` skill gives a task (quick, standard or deep). A **pack** is a named set of skills and plugins you choose per machine or project. The **doctor** is the app's read-only check of the machine against the setup: rules that differ, missing plugins and tools, settings that turn features off (`benchkeeper doctor`). The **ledger** is the app's record of each run, which `history` lists and `undo` reverses.
 
 ## Prerequisites
 
@@ -30,7 +30,7 @@ Three levels, from the smallest: the BenchKeeper plugin ships no rule file and n
 <!-- generated:levels -->
 | Level | Contains | Writes | Command |
 |---|---|---|---|
-| Lite | the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `operating-cedarloom-app`, `reviewing-rules`, `audit`, `improve` and `debloat` skills | nothing outside the plugin install, besides the app's run record for undo | `npx @cedarloom/app@6.27.0 apply --level lite` |
+| Lite | the BenchKeeper plugin: the `workflow`, `ask`, `questions`, `setting-up-projects`, `maintaining-repos`, `orchestrating-projects`, `reviewing-rules`, `audit`, `improve` and `debloat` skills | nothing outside the plugin install, besides the app's run record for undo | `npx @cedarloom/app@6.27.0 apply --level lite` |
 | Standard | lite plus the local project block: `CLAUDE.local.md`, `AGENTS.override.md` and the git exclude list | local files in each project you run `projects apply` in | `npx @cedarloom/app@6.27.0 apply --level standard && npx @cedarloom/app@6.27.0 projects apply` |
 | Full | standard plus the global rules, Claude Code and Codex settings, packs and the app | global rule files, settings and packs | `npx @cedarloom/app@6.27.0 apply --level full` |
 <!-- /generated:levels -->
@@ -116,7 +116,7 @@ Lite level, plugin only: `npx @cedarloom/app@6.27.0 apply --level lite`, or by h
    npx @cedarloom/app@6.27.0 projects apply --agents claude,codex
    ```
 
-   - Options: `--agents` names the agents the repository uses; `--pack <id>` adds [library packs](../plugins/cl-setup/library/README.md#packs); `--tier` sets the default tier; `--env` says where the agent runs.
+   - Options: `--agents` names the agents the repository uses; `--pack <id>` adds library packs; `--tier` sets the default tier; `--env` says where the agent runs.
    - It writes a block (the repository rules of `rules/project.md`; where commands run, default tier, skill pointers), the packs' skills from the default branch of their source, and `.cedarloom-app/state.json`, whose answers later runs reuse.
    - By default the setup stays on this machine: the block goes into `CLAUDE.local.md` (which imports `AGENTS.md`) and `AGENTS.override.md` (Codex reads it instead of `AGENTS.md`, so the app's block there also holds the text of `AGENTS.md`, rebuilt on each apply; your lines outside the block stay). Every other file the app writes is listed in `.git/info/exclude`, so only the coordinator's two files below land in the repository.
    - `--share` commits the setup instead: the block in `AGENTS.md` and `CLAUDE.md` with `@AGENTS.md`. Your own `AGENTS.md` text, `docs/agents/` and `.devcontainer/` stay committed either way.
