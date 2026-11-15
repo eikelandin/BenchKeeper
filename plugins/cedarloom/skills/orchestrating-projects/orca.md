@@ -1,10 +1,11 @@
 # Orca commands
 
-Orca is the runner this skill drives. `ORCA` stands for the executable the session resolved and used for `ORCA skills get orchestration`; substitute it, do not run `ORCA` literally. Load that guide first: it is the version-matched source for the commands and states below. This file maps the skill's steps onto them; [Scheduled runs](#scheduled-runs) also holds the rules of a scheduled run for any runner. Prefer `--json`.
+Orca is the runner this skill drives. `ORCA` stands for the executable the session resolved and used for `ORCA skills get orchestration`; substitute it, do not run `ORCA` literally. Load that guide first: it is the version-matched source for every command and state, and it wins where this file differs. This file holds only what the guide leaves to the caller: the launch settings, how the skill's outcomes, waits, dialogs and cleanup map onto Orca, and the host limit. Prefer `--json`.
 
 Contents:
 
 - [Start the run](#start-the-run)
+- [Acknowledgement](#acknowledgement)
 - [Worker reports](#worker-reports)
 - [Questions](#questions)
 - [Watch](#watch)
@@ -16,38 +17,54 @@ Contents:
 
 ## Start the run
 
+`ORCA orchestration run-create --objective "issue work: <project names>" --json` once, then one start per worker, a batch being one worker.
+
+A Claude Code worker starts in a terminal of its own, so that its launch carries the settings below; `worker-start` has no flag for them, and its `--model` and `--effort` do not combine with `--terminal`:
+
 ```text
-ORCA orchestration run-create --objective "issue work: <project names>" --json
-ORCA orchestration worker-start --spec-file <filled spec file> --worktree new-top-level --repo path:<project path> --base-branch <default branch> --name <number>-<slug> --agent <claude|codex> --model "<model>" --effort <effort> --keep-open --json
+ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
+ORCA terminal create --worktree path:<worktree path> --title <number>-<slug> --command "env CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --autocompact 200k --model '<model>' --effort <effort>" --json
+ORCA terminal wait --terminal <terminal> --for tui-idle --timeout-ms 60000 --json
+ORCA orchestration worker-start --spec-file <filled spec file> --terminal <terminal> --worktree path:<worktree path> --keep-open --json
 ```
 
-One `worker-start` per worker, a batch being one worker:
+A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled spec file> --worktree new-top-level --repo path:<project path> --base-branch <default branch> --name <number>-<slug> --agent codex --model "<model>" --effort <effort> --keep-open --json`.
 
-- No permission-bypass flag, in `--extra-agent-args` or elsewhere.
+- `--autocompact 200k` caps the worker's context at 200,000 tokens before it compacts, and `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` turns off the next-prompt suggestions no one reads in a worker terminal. `env` sets the variable in any login shell.
+- No permission-bypass flag anywhere in the launch.
 - Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so issue text is never read by the shell.
-- `--model` and `--effort` take the model and effort of the spec's `Agent:` line, the model in quotes as the reader printed it. Leave out what that line gives as the agent default, and `--effort` whenever `--model` is left out (it needs `--model`).
-- Orca hands the model id to the agent as it is. When `worker-start` refuses the model, start without `--model` and `--effort` and say so in the report (unverified: that Orca accepts a Claude Code alias such as `opus` there).
-- `--name` takes the first issue of a batch.
-- `--keep-open` keeps the worker's terminal after its report, so that a follow-up reaches the session that did the work while its pull request is in review or merge: a settled worker that is not kept open is released by Orca itself (`autoReleaseAt` in `worker-show`). `worker-release` ends the keep-open ([Clean up](#clean-up)). A worker started without the flag can be kept open later with `ORCA orchestration worker-keep-open --dispatch <dispatch id> --json`.
-- Keep the returned dispatch id and task id per worker with its project, issues and branch names (the spec's `<type>/<number>-<slug>`); every later command takes the dispatch id. `<branch>`, `<default branch>` and `<owner/repo>` in this file are the names of that spec.
-- `worker-show` gives the worktree path.
+- The model and effort are those of the spec's `Agent:` line, the model as the reader printed it, inside single quotes in the terminal command. Leave out what that line gives as the agent default, and the effort whenever the model is left out.
+- The worker takes its task only once its agent reached its idle prompt. A `terminal wait` that times out or ends in another state starts no worker: read its screen once (`ORCA terminal read --terminal <terminal> --screen --json`). Such a start has a worktree and a terminal but no dispatch, so neither `worker-list` nor [Clean up](#clean-up) sees them:
+  - A dialog there (a trust question, a login) is the owner's ([SKILL.md](SKILL.md#rules)). Write the issue, the terminal handle and the worktree path into the handoff file's `## Open`, list it for the owner, and count it as a working worker ([Host limit](#host-limit)) until the owner acts.
+  - Anything else is a failed start ([SKILL.md](SKILL.md#outcomes)). Close the terminal (`ORCA terminal close --terminal <terminal> --json`); the one retry runs in that worktree with a new terminal, from `terminal create` on, and makes no second worktree.
+- `<number>-<slug>` takes the first issue of a batch, for the worktree, the terminal title and `--name`. `worktree create` prints the worktree path; for a Codex worker, `worker-show` gives it.
+- When the agent refuses the model, start without `--model` and `--effort` and say so in the report.
+- `--repo path:<project path>` is one of the selectors Orca's help lists (`id:`, `name:`, `path:`).
+- `--keep-open` keeps the worker's terminal after its report, so that a follow-up reaches the session that did the work while its pull request is in review or merge. `worker-release` ends it ([Clean up](#clean-up)).
+- Keep the returned dispatch id and task id per worker with its project, issues, worktree path and branch names (the spec's `<type>/<number>-<slug>`); every later command takes the dispatch id. `<branch>`, `<default branch>` and `<owner/repo>` in this file are the names of that spec.
 - A non-zero exit means no worker: read `failedStage` and `residualResources` before trying again.
 
-Branch check before each `worker-start`, for the branch of each issue: `git -C <project path> ls-remote --heads origin <branch>`, `git -C <project path> worktree list` and `gh pr list -R <owner/repo> --head <branch> --state open --json number,isCrossRepository`, where a row with `isCrossRepository` true does not count: anyone can open a pull request from a fork under that branch name. When one shows the branch and its worker is still held in this run, send the follow-up to it instead of starting another:
+A follow-up to a worker still held in this run ([SKILL.md](SKILL.md#loop), step 3) goes as a message, its text in a file:
 
 ```text
 ORCA orchestration send --to dispatch:<dispatch id> --subject "Follow-up" --body "$(cat <follow-up file>)" --json
 ```
 
-A worker on `fable` that already reported gets no follow-up: release it and start a fresh worker on the branch ([SKILL.md](SKILL.md#rules)). By Orca's guide, any other worker that already reported gets the follow-up as a task of its own and settles it with another `worker_done`; the receipt of `send` says which case it was. Such a follow-up counts like a start ([Host limit](#host-limit)).
+A worker on `fable` that already reported gets no follow-up: release it and start a fresh worker on the branch ([SKILL.md](SKILL.md#rules)). Such a follow-up counts like a start ([Host limit](#host-limit)).
 
-Acknowledgement: the worker's first heartbeat. A missing one sends no mail, so a Claude Code coordinator creates a one-shot session cron (`recurring: false`) two minutes after starting workers, whose prompt runs this check. With no heartbeat within 60 seconds, read `worker-read` once; when it shows no agent turn, `worker-stop` it and start one replacement. A retry takes the task in place of the spec and inherits no other option, so it repeats them, in the stopped worker's worktree (its path is in `worker-show`):
+## Acknowledgement
+
+The acknowledgement is the worker's first heartbeat. A missing one sends no mail, so the coordinator sees it at the timer's wake-up ([Watch](#watch)). Orca's rule holds: silence, a startup timeout or `unverifiable` liveness proves nothing and authorizes no stop or retry.
+
+- **Still starting**: `worker-show --full` reports the start not ready yet, or the terminal shows the agent loading or working. Keep waiting; it is no miss.
+- **Held at a dialog**: `worker-show --full` reports an `observation.agentWait`, or the terminal shows a dialog. It is the owner's, except a permission dialog with `permissionPrompts` `decline` ([A permission dialog](#a-permission-dialog)).
+- **A miss**: at two wake-ups at least 10 minutes apart, `worker-read --source terminal` shows the agent idle at an empty prompt and `worker-read` shows no turn on the task. Then `worker-stop` it. Only when the stop is confirmed, retry once in its worktree, with a new terminal made as at the start:
 
 ```text
-ORCA orchestration worker-start --task <task id> --retry-of <dispatch id> --worktree path:<worktree path> --agent <claude|codex> --model "<model>" --effort <effort> --keep-open --json
+ORCA orchestration worker-start --task <task id> --retry-of <dispatch id> --worktree path:<worktree path> --terminal <new terminal> --keep-open --json
 ```
 
-These flags are from Orca's help (unverified: that the retry then runs in that worktree, not tried). A second miss goes to the owner.
+A Codex retry takes `--agent codex` and its `--model` and `--effort` in place of `--terminal`. A `stop_unknown`, a refused retry and a second miss go to the owner (unverified: the retry, not tried in a live run).
 
 ## Worker reports
 
@@ -78,36 +95,26 @@ The answer's sources are the default branch's: the policy as the reader prints i
 
 ## Watch
 
-```text
-ORCA orchestration check --types "worker_done,escalation,question,status" --json
-ORCA orchestration check --wait --types "worker_done,escalation,question,status" --timeout-ms <stallMinutes / 2 in ms, at least 60000> --json
-ORCA orchestration worker-list --run <run_id> --json --full
-ORCA orchestration worker-show --dispatch <dispatch id> --json
-ORCA orchestration worker-read --dispatch <dispatch id> --limit 50 --json
-gh pr list -R <owner/repo> --head <branch> --state merged --json number,title,mergedAt
-```
-
-Orca wakes the coordinator when mail arrives, a `worker_done`, an `escalation` or a `question`, whatever its agent. A `status` message wakes it too: its terminal is told "You have 1 orchestration message" (unverified: observed, not in Orca's documentation). So the next wake-up reads a `status` message at the latest.
+The mail types are `worker_done,escalation,question,status`. Orca wakes the coordinator when mail arrives, a `worker_done`, an `escalation` or a `question`, whatever its agent. A `status` message wakes it too: its terminal is told "You have 1 orchestration message" (unverified: observed, not in Orca's documentation).
 
 How the coordinator waits, by its agent:
 
 - **Any agent.** The coordinator never polls, but for the foreground wait of an agent with no background wake (below), and never runs `check --wait` in the background: a background wait keeps a task alive at every turn end, so the plugin never clears an idle coordinator.
-- **Claude Code.** End the turn after starting or messaging workers. At run start, create one recurring session cron (`CronCreate`), every `stallMinutes` / 2 on minutes off the hour (`3-59/10 * * * *` for a `stallMinutes` of 20), whose prompt names the run id and runs the wake-up checks, so a silent worker is seen without mail.
+- **Claude Code.** End the turn after starting or messaging workers. At run start, create one recurring session cron (`CronCreate`) every 10 minutes on minutes off the hour (`3-59/10 * * * *`). Its prompt names the run id and the absolute path of this file, and lists the four wake-up checks below, so a wake runs them without reading a file and a silent worker is seen without mail.
   - The cron fires only while the session is idle and survives `/clear`.
   - It expires after 7 days, and an expired cron cannot wake the session, so name its expiry date in the report of each wake and replace it before then.
   - To replace it: at the first wake within 2 days of that date, or when `CronList` no longer shows it, `CronDelete` it and create it again as at run start, with the same schedule and a new expiry date. A run that only waits for new issues (`keepRunning`) then keeps waking with no owner restart.
   - Delete it (`CronDelete`) when the run closes.
   - Without session crons (`CronCreate` missing, or `CLAUDE_CODE_DISABLE_CRON` set), wait as an agent with no background wake does.
-- **An agent with no background wake** (wake mode `unsupported` in BenchKeeper's agent registry, for example Codex). It has no such cron: it runs the `check --wait` in the foreground with a timeout of `stallMinutes` / 2, never looped faster than once a minute, and runs the wake-up checks when it returns.
-- **A waker terminal** (a second terminal that waits and then wakes this session) is opt-in, and only for an agent whose wake mode in that registry is `waker`.
+- **An agent with no background wake** (Codex, and Claude Code without session crons). It runs `check --wait` for those types with `--timeout-ms 600000` in the foreground, never looped faster than once a minute, and runs the wake-up checks when it returns.
 
 A wait's deadline ([SKILL.md](SKILL.md#waiting)) is checked at a wake: it is a point to report at and ends no run.
 
 At each wake-up, including an empty one, run these in this order; a wake-up that skips them lets a failed or finished worker go unseen:
 
-1. `worker-list` for state, with `--full` because the concise rows carry no `projection`.
-2. `gh pr list` for merged PRs.
-3. The stall check.
+1. `worker-list --run <run id>` for state, with `--full` because the concise rows carry no `projection`.
+2. `gh pr list -R <owner/repo> --head <branch> --state merged --json number,title,mergedAt` for merged PRs.
+3. The stall check, and the [acknowledgement](#acknowledgement) of each worker that has none yet.
 4. The next step of each pull request that waits for its checks or its default-branch watch ([review-and-merge.md](review-and-merge.md#merge)).
 
 For a row whose `projection.attention.requiresAction` is true:
@@ -117,13 +124,7 @@ For a row whose `projection.attention.requiresAction` is true:
 
 Acknowledge a delivery only after its outcome is handled (`check --ack <delivery_id>`).
 
-Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done`. Then:
-
-```text
-ORCA orchestration worker-stop --dispatch <dispatch id> --json
-```
-
-and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
+Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done`. Then `worker-stop` it and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
 
 ## A permission dialog
 
@@ -197,44 +198,19 @@ The worktree:
 - `ORCA worktree rm` also tries to delete the checked-out local branch (Orca keeps it when it predates the worktree or its changes are not provably merged). Run it only with `deleteMergedBranch` true, and while `git -C <worktree path> branch --show-current` prints a branch of the spec whose pull request is merged: a batch's worktree holds one of several.
 - Never remove a blocked worker's worktree.
 - In the other cases (no merge allowed, `deleteMergedBranch` false, another or an unmerged branch checked out), remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch (unverified: whether Orca's worktree list then drops the entry).
-
-Delete a merged branch's remote ref separately, when `deleteMergedBranch` allows it, and only while it still points at the merged head:
-
-```text
-gh pr view <n> -R <owner/repo> --json state,headRefOid
-gh api repos/<owner>/<repo>/git/ref/heads/<branch> --jq .object.sha
-gh api -X DELETE repos/<owner>/<repo>/git/refs/heads/<branch>
-```
-
-`state` must be `MERGED` and the ref read must print that `headRefOid`; otherwise the branch stays and the report names it, unless the branch is already gone (GitHub deletes head branches itself where the repository says so). A commit pushed between the read and the delete goes with the branch. Not a `git push --force-with-lease`, which would close that gap: the guard hook denies it as a force push, and it runs the `pre-push` hook of the git directory workers share.
-
-A batch's other merged branches are checked out nowhere once the worktree is gone. With `deleteMergedBranch`, delete each local one only while it still is the head of its merged pull request `<n>`, so that no commit is lost:
-
-```text
-gh pr view <n> -R <owner/repo> --json state,headRefOid
-git -C <project path> rev-parse refs/heads/<branch>
-git -C <project path> branch -D <branch>
-```
-
-`state` must be `MERGED` and `rev-parse` must print that `headRefOid`; otherwise the branch stays and the report names it. `-D`, because a squash merge leaves the branch unmerged for git.
+- The remote branch and a batch's other local branches: [SKILL.md](SKILL.md#clean-up), step 3.
 
 Before the coordinator turn ends, `ORCA orchestration worker-list --run <run id> --terminal-state reclaimable --json` returns no worker. The same list with `--terminal-state retained` shows the kept-open workers ([Host limit](#host-limit)): each settled one in it (`outcome` other than `in_progress`) has a pull request in review or merge, or a terminal a person typed in. Every other settled worker is released, retained or removed above. `worker-release` removes no worktree, so a worktree still listed by `ORCA worktree list` after its worker settled is the step above not run.
 
 ## Host limit
 
-The limit is machine-wide, and `worker-list` covers one run (the bound one unless `--run` is given). Count the rows whose `outcome` is `in_progress` in every run that `ORCA orchestration run-list` shows, before every `worker-start`: a kept-open worker's terminal state is `retained` also while it works (observed with Orca 1.4.254), so that state does not tell the working ones.
+The limit is machine-wide, and `worker-list` covers one run (the bound one unless `--run` is given). Count the rows whose `outcome` is `in_progress` in every run that `ORCA orchestration run-list` shows, before every start: a kept-open worker's terminal state is `retained` also while it works (observed with Orca 1.4.254), so that state does not tell the working ones. A start held at a dialog in the handoff file's `## Open` ([Start the run](#start-the-run)) counts as working too.
 
-A follow-up puts a worker that already reported back to work, so it counts like a start for `hostWorkerLimit` and `workersPerProject`: count before that `send` too. When a cap is full the follow-up waits, and no `worker-start` in that project (for `hostWorkerLimit`: on the machine) comes before its `send` ([SKILL.md](SKILL.md#loop), step 5): otherwise steady new issues keep the slot, and the pull request never merges. Count each worker with a follow-up it has not answered yet as working, whatever its row says (unverified: whether such a worker's row shows `in_progress` again).
+A follow-up puts a worker that already reported back to work, so it counts like a start for `hostWorkerLimit` and `workersPerProject`: count before that `send` too. When a cap is full the follow-up waits, and no start in that project (for `hostWorkerLimit`: on the machine) comes before its `send` ([SKILL.md](SKILL.md#loop), step 5): otherwise steady new issues keep the slot, and the pull request never merges. Count each worker with a follow-up it has not answered yet as working, whatever its row says (unverified: whether such a worker's row shows `in_progress` again).
 
 ## Scheduled runs
 
-What a scheduled run needs, with any runner:
-
-- Pick, the caps (`workersPerProject`, `hostWorkerLimit`), merge by `merge.*` and one fix worker per failing head commit of a worker's PR are deterministic checks: a script decides them, not a model session. The script takes the policy from the reader ([SKILL.md](SKILL.md#policy)).
-- A scheduled session starts only after its precheck exits 0, and never while a session of the same schedule is alive. The sample [precheck.mjs](precheck.mjs) (`node precheck.mjs <project paths>`) exits 0 when a project has an issue to pick and prints which; it starts and merges nothing.
-- An unattended run starts each worker in a disposable worktree.
-
-With Orca:
+The rules of a scheduled run for any runner: [recurring-runs.md](recurring-runs.md). With Orca:
 
 ```text
 ORCA automations create --name <name> --trigger <cron> --provider <claude|codex> --repo path:<coordinator project> --precheck "node <skill folder>/precheck.mjs <project paths>" --prompt "<the skill invocation>" --json
@@ -242,6 +218,5 @@ ORCA automations runs --id <automation id> --limit 5 --json
 ```
 
 - The precheck's exit 0 starts the run; any other exit records a skipped run (`status` `skipped_precheck`).
-- To see why it starts nothing in a project, run `node <skill folder>/policy.mjs <project path>`: it prints the effective policy, or with exit 1 the policy's errors.
-- Without `--workspace`, Orca makes a new worktree per run, which is the disposable worktree an unattended run needs. Leave out `--reuse-session`.
+- Without `--workspace`, Orca makes a new worktree per run, which is the disposable worktree an unattended run needs.
 - One live session per automation: the scheduled session first lists `automations runs` and ends at once when an earlier run of the same automation still has a live terminal. Tell a live run by `terminalPtyId` and the terminal's state, not by `status` (unverified: which `status` values mean a run is still going).

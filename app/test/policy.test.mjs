@@ -26,7 +26,7 @@ const DEFAULTS = {
   issues: { repository: null, labels: [] },
   minPlugin: null,
   models: {
-    worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, full: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
+    worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, deep: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
     phases: {},
     sensitive: { plan: { model: 'fable', effort: 'high' }, review: { model: 'fable', effort: 'high' }, independent: { model: 'fable', effort: 'high' }, security: { model: 'fable', effort: 'xhigh' } },
   },
@@ -91,9 +91,9 @@ test('policy: minPlugin newer than the plugin gives no policy, and versions comp
   assert.equal(effective({ minPlugin: '6.9.0' }, '6.10.0').policy.minPlugin, '6.9.0');
 });
 
-test('policy: models.worker replaces the model of every tier and keeps the tier\'s effort; phases hold only what the file names', () => {
+test('policy: models.worker replaces the model of every depth and keeps the depth\'s effort; phases hold only what the file names', () => {
   assert.deepEqual(effective({ models: { '//': 'note', worker: { model: 'fable' }, phases: { '//': 'note', review: { model: 'inherit', effort: 'max' } } } }, '6.26.0').policy.models, {
-    worker: { quick: { model: 'fable', effort: 'high' }, standard: { model: 'fable', effort: 'high' }, full: { model: 'fable', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
+    worker: { quick: { model: 'fable', effort: 'high' }, standard: { model: 'fable', effort: 'high' }, deep: { model: 'fable', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
     phases: { review: { model: 'inherit', effort: 'max' } },
     sensitive: DEFAULTS.models.sensitive,
   });
