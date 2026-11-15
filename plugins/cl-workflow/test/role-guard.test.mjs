@@ -341,9 +341,13 @@ test('role guard: a command reaches the queue or the window files through a cd, 
   assert.equal(decision('/bin/sh /tmp/answer.sh', { cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
   assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: 'project-1.md', content: 'x' }, cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
   // A session started with the command would hold the flag, in any role.
+  const versioned = ['npx -y @anthropic-ai/claude-code@latest -p "/cl-workflow:questions"', 'npx @anthropic-ai/claude-code@2.1.300 -p /questions', 'pnpm dlx @anthropic-ai/claude-code@latest -p /questions'];
   for (const role of [undefined, 'coordinator']) {
     assert.equal(decision('claude -p "/cl-workflow:questions"', { cwd: session, env, role }), 'deny', role);
     assert.equal(decision("echo '/questions' | claude -p", { cwd: session, env, role }), 'deny', role);
+    // npx names the package with a version, and a Windows npm install starts claude through a script file.
+    for (const command of versioned) assert.equal(decision(command, { cwd: session, env, role }), 'deny', `${role}: ${command}`);
+    for (const command of ['claude.cmd -p /questions', 'claude.ps1 -p /questions', 'claude.bat -p /questions']) assert.equal(decision(command, { tool: 'PowerShell', cwd: session, env, role }), 'deny', `${role}: ${command}`);
   }
   // Names that only look alike pass, as do wildcard pairs, cd chains and prose that reach neither folder.
   const alike = [

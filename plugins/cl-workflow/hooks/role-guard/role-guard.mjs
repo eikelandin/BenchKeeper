@@ -127,6 +127,8 @@ function commands(source, powershell, nested = false) {
 }
 
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
+// A launcher also goes by its package with a version (npx @anthropic-ai/claude-code@latest) and, on Windows, by its script file (claude.cmd).
+const launcher = (word) => program(word).replace(/@[^@]*$/, '').replace(/\.(cmd|ps1|bat)$/, '');
 
 const GIT = gitProgram();
 // Without git every query fails: no tag, no branch and no remote's default branch is known, so every push is denied.
@@ -399,7 +401,7 @@ function queue({ tool_name: tool, tool_input: toolInput, agent_id: agent }, cwd)
     texts = [cmd, ...parsed.flatMap(({ words, targets }) => [...words, ...targets])];
     paths = reached(parsed, cwd);
     if (!paths) return `a command with more than ${MAX_FOLDERS} folders to follow, which may name the local question queue (.cedarloom/questions/),`;
-    if (QUESTIONS.test(texts.join('\n')) && parsed.some(({ words }) => words.some((word) => LAUNCHERS.has(program(word))))) {
+    if (QUESTIONS.test(texts.join('\n')) && parsed.some(({ words }) => words.some((word) => LAUNCHERS.has(launcher(word))))) {
       return 'a session started with /cl-workflow:questions, which could write into the local question queue (.cedarloom/questions/),';
     }
   }
