@@ -1,2 +1,0 @@
-# CedarLoom packages: LF on every platform, so generated documents compare equal on Windows.
-/packages/** text=auto eol=lf

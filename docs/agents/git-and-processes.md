@@ -13,7 +13,7 @@ Read this before changing code that runs git or another program. Each item names
 
 ## Git
 
-- **The caller's `GIT_*` variables** point git at another repository (`GIT_DIR` is set when CedarLoom runs inside a hook) or add configuration: drop them, and turn off prompts so git fails instead of waiting (`childEnv` in [policy.mjs](../../plugins/cl-orchestration/skills/orchestrating-projects/policy.mjs)).
+- **The caller's `GIT_*` variables** point git at another repository (`GIT_DIR` is set when a plugin script runs inside a git hook) or add configuration: drop them, and turn off prompts so git fails instead of waiting (`childEnv` in [policy.mjs](../../plugins/cl-orchestration/skills/orchestrating-projects/policy.mjs)).
 - **Configuration of the repository or the user** can run hooks, an fsmonitor, maintenance or any transport, and a server can offer bundles or stall a transfer. `-c` flags win over every configuration file; they also check every object and end a stalled transfer. Hooks defined as `hook.<name>` (git 2.54) run even when `core.hooksPath` points at the null device: turn each off through `GIT_CONFIG_*`.
 - **Text from git, a server or another program** shown in a terminal can move the cursor or rewrite a line: escape control and bidirectional characters first.
 

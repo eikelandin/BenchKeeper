@@ -1,13 +1,8 @@
-# Version updates for the `uses:` pins (SHA plus version comment) and the npm packages of the site, .github/pnpm and
-# .github/codex.
+# Version updates for the `uses:` pins (SHA plus version comment) and the npm packages of the site.
 # Not covered, bumped by hand: the actionlint image digest in checks.yml, node-version (checks and pages workflows) and
-# the Node image and pnpm of .devcontainer/Dockerfile, which follow NODE_VERSION of cedarloom.yml and .github/pnpm (Node 26;
-# BenchKeeper's own workflows stay on Node 22). Each version update waits until the release is 3
+# the Node image of .devcontainer/Dockerfile. Each version update waits until the release is 3
 # days old (cooldown): a release withdrawn within that time never reaches a version-update pull request. Security updates
-# are not delayed (the cooldown applies to version updates only), so they can name a newer release. The CedarLoom packages (pnpm workspace at
-# the root) pin typos and Node 26 in .github/workflows/cedarloom.yml, bumped by hand; this file updates their pnpm in .github/pnpm
-# and the Schemathesis of their api job in .github/schemathesis (pip-compile with hashes), and the Codex CLI of their test job
-# in .github/codex.
+# are not delayed (the cooldown applies to version updates only), so they can name a newer release.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -19,9 +14,9 @@ updates:
     groups:
       actions:
         patterns: ['*']
-  # @playwright/test is in no group of /web and /: the dev container installs the same version's browser, and
-  # the version pins check fails until the two package files and .devcontainer/Dockerfile agree. Its own pull
-  # requests say a release is out; raise it by hand in one pull request, which closes them.
+  # @playwright/test is in no group: the dev container installs the same version's browser, and the version pins check
+  # fails until web/package.json and .devcontainer/Dockerfile agree. Its own pull request says a release is out; raise
+  # both by hand in one pull request, which closes it.
   - package-ecosystem: npm
     directory: /web
     schedule:
@@ -32,39 +27,3 @@ updates:
       web:
         update-types: [minor, patch]
         exclude-patterns: ['@playwright/test']
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
-    # Every @mantine/* version update, majors included, comes as one pull request, so the @mantine/* packages keep one
-    # version. cedarloom excludes them: Dependabot puts a dependency in its most specific group, and a group without
-    # patterns outranks a wildcard pattern (pattern_specificity_calculator.rb of dependabot-core). Before merging the
-    # mantine pull request, copy skills/mantine-form of https://github.com/mantinedev/skills anew into
-    # packages/packs/bundled/cedarloom.mantine/skills/mantine-form, update the commit its manifest entry names and
-    # raise the pack's version.
-    groups:
-      mantine:
-        patterns: ['@mantine/*']
-      cedarloom:
-        update-types: [minor, patch]
-        exclude-patterns: ['@mantine/*', '@playwright/test']
-  - package-ecosystem: npm
-    directory: /.github/pnpm
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
-  - package-ecosystem: npm
-    directory: /.github/codex
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
-  - package-ecosystem: pip
-    directory: /.github/schemathesis
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 3
