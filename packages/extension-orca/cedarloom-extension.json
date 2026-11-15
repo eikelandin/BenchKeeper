@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "name": "Orca",
   "description": "Whether Orca, the multi-agent IDE, is installed and running, and the Orca skills Claude Code lacks.",
-  "license": "MIT",
+  "license": "ISC",
   "api": "1.0",
   "runtime": { "kind": "node", "entry": "main.mjs" },
   "capabilities": {

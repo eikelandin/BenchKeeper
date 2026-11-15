@@ -6,6 +6,6 @@
     "name": "eikelandin",
     "url": "https://github.com/eikelandin"
   },
-  "license": "MIT",
+  "license": "ISC",
   "skills": "./skills/"
 }

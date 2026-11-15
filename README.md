@@ -92,4 +92,4 @@ The command-line tool and the browser app are planned for 0.2.
 
 ## License
 
-The code is under the [MIT license](LICENSE). The CedarLoom name and logos are not: see [their terms](LICENSES/LicenseRef-Brand.txt). [`REUSE.toml`](REUSE.toml) maps every file to its license.
+The code and documentation are under the [ISC license](LICENSE). Copied third-party material keeps its own license. The CedarLoom name and logos are not: see [their terms](LICENSES/LicenseRef-Brand.txt). [`REUSE.toml`](REUSE.toml) maps every file to its license.

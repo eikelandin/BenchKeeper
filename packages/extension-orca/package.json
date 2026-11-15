@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "CedarLoom's own Orca extension, cedarloom.orca: whether Orca is installed and running, for the doctor and cedarloom orca status. The reference example of the extension SDK.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/orca.ts"

@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "CedarLoom's packs: the bundled cedarloom.core pack with its rules, templates and profile presets, cedarloom.mantine with the Mantine skills, and cedarloom.orca with Orca's worktree files.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

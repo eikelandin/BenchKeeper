@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The GitHub adapter of CedarLoom's work items: the tracker port on the hub's issues through GitHub's REST API.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

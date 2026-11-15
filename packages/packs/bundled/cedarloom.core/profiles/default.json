@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "The CedarLoom way",
   "description": "Claude Code with the CedarLoom and Ponytail plugins and CedarLoom's rules; a hub repository for issues and owner questions; project rules, gates and the dev container command.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "extends": [
     {
