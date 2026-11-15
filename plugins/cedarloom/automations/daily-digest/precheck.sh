@@ -23,6 +23,8 @@ url=$(git remote get-url origin 2>/dev/null)
 # or scheme://host[:port]/owner/name): another host's team/proj would name an unrelated GitHub repository.
 own=$(printf '%s\n' "$url" | tr A-Z a-z | sed -n -E -e 's#/*$##' -e 's#\.git$##' -e 's#^([a-z+]+://)?([^@/]+@)?([a-z0-9-]+\.)?github\.com(:[0-9]+)?[:/]([^/]+/[^/]+)$#\5#p')
 repo() { case "$1/" in */./*|*/../*) return 1 ;; esac; printf '%s\n' "$1" | grep -qxE '[A-Za-z0-9_][A-Za-z0-9_.-]*/[A-Za-z0-9_.][A-Za-z0-9_.-]*'; }
+# An origin path that is no repository name counts as another origin.
+repo "$own" || own=
 for r in $(echo "${2:-.}" | tr , ' '); do
   [ "$r" = . ] || repo "$r" || { echo "not a repository: $r" >&2; continue; }
   set --
