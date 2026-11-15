@@ -316,9 +316,12 @@ function pathOf(token) {
   return colon >= 0 && /^\d+(?:-\d+)?$/.test(t.slice(colon + 1)) ? t.slice(0, colon) : t;
 }
 
-// Link destinations as CommonMark reads them (https://spec.commonmark.org/0.31.2/#links): inside `<>` with spaces, or bare
-// with backslash escapes and balanced parentheses (one level); an inline link may close with a title in "", '' or ().
-const DESTINATION = String.raw`(?:<([^<>\n]*)>|((?:\\.|[^()\s\\]|\((?:\\.|[^()\s\\])*\))+))`;
+// Link destinations as CommonMark reads them (https://spec.commonmark.org/0.31.2/#links): inside `<>` with spaces and escapes,
+// or bare with backslash escapes and balanced parentheses (three levels, the depth the spec asks for); an inline link may
+// close with a title in "", '' or ().
+const CHAR = String.raw`\\.|[^()\s\\]`;
+const nest = (inner) => String.raw`\((?:${CHAR}${inner})*\)`;
+const DESTINATION = String.raw`(?:<((?:\\.|[^<>\n\\])*)>|(?!<)((?:${CHAR}|${nest(`|${nest(`|${nest('')}`)}`)})+))`;
 const INLINE = new RegExp(String.raw`\]\(\s*${DESTINATION}(?:\s+(?:"[^"]*"|'[^']*'|\([^()]*\)))?\s*\)`, 'g');
 const DEFINITION = new RegExp(String.raw`^ {0,3}\[(?!\^)[^\]]+\]:\s*${DESTINATION}`);
 const unescape = (s) => s.replace(/\\([!-/:-@[-`{-~])/g, '$1');

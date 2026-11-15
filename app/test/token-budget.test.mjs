@@ -130,6 +130,14 @@ test('dead references: link destinations with parentheses, escapes, angle bracke
   assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:1 link docs/guide(v3).md', 'AGENTS.md:1 link docs/gone.md']);
 });
 
+test('dead references: parentheses nested three levels and an escaped > inside angle brackets', () => {
+  const root = repo({
+    'AGENTS.md': 'See [a](docs/x(y(z(w))).md), [b](docs/gone(1(2(3))).md) and [c](<docs/gone\\>.md>).\n',
+    'docs/x(y(z(w))).md': '# X\n',
+  });
+  assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:1 link docs/gone(1(2(3))).md', 'AGENTS.md:1 link docs/gone>.md']);
+});
+
 test('check reports the change against the baseline and fails on a lost span, a dead link or a budget', () => {
   const root = repo({ 'AGENTS.md': AGENTS, 'docs/guide.md': '# Guide\n\n## Setup\n' });
   addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);

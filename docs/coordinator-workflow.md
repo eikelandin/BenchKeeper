@@ -154,7 +154,7 @@ The source run ended with a stricter delete rule: no delete command at all and n
 
 Each of these rules is wording a worker follows, not a control. The app's global `apply` refusing when an agent runs it would make the user-scope rule a control; that is proposed as work of its own.
 
-Rules that already have a home stay there: tests (`workflow/SKILL.md:98-104`), reuse, naming and comments (`rules/project.md:12-20`), secrets (`rules/global.md:1`), trusted authors and the Authority block (`spec-template.md:15`, `spec-template.md:22-27`), one report on the worker's own dispatch (`orca.md:32`, `spec-template.md:50`). The CI line of the project rules (`rules/project.md:10`) has the same `--interval 30`: `gh run watch` refreshes every 3 seconds by default (`gh run watch --help`).
+Rules that already have a home stay there: tests (`workflow/SKILL.md:97-103`), reuse, naming and comments (`rules/project.md:12-18`), secrets (`rules/global.md:1`), trusted authors and the Authority block (`spec-template.md:15`, `spec-template.md:22-27`), one report on the worker's own dispatch (`orca.md:32`, `spec-template.md:50`). The CI line of the project rules (`rules/project.md:10`) has the same `--interval 30`: `gh run watch` refreshes every 3 seconds by default (`gh run watch --help`).
 
 ### Keep running
 

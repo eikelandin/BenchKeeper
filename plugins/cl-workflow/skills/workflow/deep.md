@@ -13,7 +13,7 @@ The build drifts from the plan (another design or scope), or a result cannot be 
 
 ## Review rounds
 
-The reviewer is a fresh session that does not edit (a subagent; Claude Code: `cl-workflow:review` where available, with the model and effort of the Review phase in [software.md](software.md#phases)). A review or re-review whose context was compacted is void: split its scope into parts that together cover all of it and review each part afresh. The review counts only when every part is done and none is void. A finding whose only fix adds a layer, an option, a guard or a test for a case that cannot happen is dropped before the report.
+The reviewer is a fresh session that does not edit (a subagent; Claude Code: `cl-workflow:review` where available, with the model and effort of the Review phase in [software.md](software.md#phases)). A review or re-review whose context was compacted is void: split its scope into parts that together cover all of it and review each part afresh. The review counts only when every part is done and none is void. A finding is dropped before the report only when its only fix would add a layer, an option, a guard or a test, each for a case that cannot happen; a Blocking finding, a finding on validation where data enters, or a missing test for real logic is never dropped.
 
 Findings carry a class:
 - **Blocking**: wrong behavior, security, data loss, an acceptance row unmet.
