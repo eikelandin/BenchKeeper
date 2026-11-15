@@ -4,7 +4,7 @@ The digest is one file per day, `digests/<YYYY-MM-DD>.md` in the coordinator's w
 
 The coordinator writes it when the owner asks for one, and when the run closes and the handoff file holds decisions taken on the owner's behalf that the last digest does not list yet, before it deletes the handoff file.
 
-- Last digest: of the files `digests/<date>.md`, the one with the latest date in its name, today's included.
+- Last digest: of the files `digests/<date>.md`, the one with the latest date in its name, today's included. A file the owner names is its own last digest.
 - Start of this digest: the author time of the last digest's last commit when that file is committed and unchanged since that commit, otherwise the time it was last changed. No file: the last day.
 
 1. Read with `gh`, per repository of the run: pull requests merged since the start, open issues and pull requests that are blocked or wait for a decision of the owner (a blocking label, a question to the owner, a failing required check, a requested change), and what changed on them since the start. Leave out the digest's own items: commits with the subject `docs: daily digest` and the issue that gets the digest as a comment.
