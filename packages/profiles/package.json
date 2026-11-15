@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The CedarLoom profile: its parts turned into one plan with undo, per level.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

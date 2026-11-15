@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "Builds a CedarLoom workflow into one plugin folder that Claude Code and Codex load.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

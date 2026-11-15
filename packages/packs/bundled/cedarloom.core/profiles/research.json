@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Research",
   "description": "Core, plus MCP servers that wait for approval and get no tokens from your shell, the find-skills skill and a memory repository.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "extends": [
     {

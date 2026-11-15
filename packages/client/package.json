@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The typed client of the CedarLoom local API, generated from the server's OpenAPI document.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

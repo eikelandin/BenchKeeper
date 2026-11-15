@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Orchestration",
   "description": "Developer, plus auto memory off, a hub repository for issues and owner questions and a memory repository; in each project the machine-local hub line and the Orca worktree setup.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "extends": [
     {

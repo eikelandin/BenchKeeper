@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The guard hook of a Claude Code session's shell commands, the clean environment of CedarLoom's child processes, program lookup, and the reader of Claude Code's managed settings.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

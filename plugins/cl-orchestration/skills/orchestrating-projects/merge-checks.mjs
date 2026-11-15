@@ -7,14 +7,21 @@ import { errorLine, escaped, isMain, json, read, sh } from './policy.mjs';
 const under = (file, entry) => { const folder = entry.replace(/\/$/, ''); return file === folder || file.startsWith(`${folder}/`); };
 // One fold for the path tests: a checkout on macOS or Windows opens .Claude, a long s (U+017F) in place of an s and a decomposed accent as the files the entries name.
 const fold = (path) => path.normalize('NFKC').toUpperCase().toLowerCase();
-const named = (paths, names) => {
+// A file that can define a container by its name alone, in any folder (Container files in trial-merge.md): a container's own commands run on the host.
+const CONTAINER = /^(\.env.*|.*(dockerfile|containerfile).*|.*compose.*\.ya?ml)$/;
+// lefthook's config and its -local overlay in every format it reads: the hooks it installs run these commands on the host.
+const LEFTHOOK = /^\.?lefthook(-local)?\.(ya?ml|toml|jsonc?)$/;
+const named = (paths, names, byName = false) => {
   const entries = paths.map(fold), segments = names.map(fold);
-  return (file) => { const path = fold(file); return entries.some((entry) => under(path, entry)) || path.split('/').some((segment) => segments.includes(segment)); };
+  return (file) => {
+    const path = fold(file), parts = path.split('/');
+    return entries.some((entry) => under(path, entry)) || parts.some((segment) => segments.includes(segment)) || (byName && [CONTAINER, LEFTHOOK].some((re) => re.test(parts.at(-1))));
+  };
 };
 
-// The files that are the owner's: under a merge.ownerOnlyPaths entry, or with a merge.ownerOnlyNames entry as a path segment.
-export const ownerOnly = (policy, files) => files.filter(named(policy.merge.ownerOnlyPaths, policy.merge.ownerOnlyNames));
-export const sensitive = (policy, files) => files.filter(named([...policy.review.sensitivePaths, ...policy.riskyPaths, ...policy.merge.ownerOnlyPaths], policy.merge.ownerOnlyNames));
+// The files that are the owner's: under a merge.ownerOnlyPaths entry, with a merge.ownerOnlyNames entry as a path segment, or named like a container file or a lefthook config.
+export const ownerOnly = (policy, files) => files.filter(named(policy.merge.ownerOnlyPaths, policy.merge.ownerOnlyNames, true));
+export const sensitive = (policy, files) => files.filter(named([...policy.review.sensitivePaths, ...policy.riskyPaths, ...policy.merge.ownerOnlyPaths], policy.merge.ownerOnlyNames, true));
 export const risky = (policy, files) => files.filter(named(policy.riskyPaths, []));
 const RISKS = ['low', 'medium', 'high'];
 // A file under riskyPaths sets the impact high, so the class is at least medium (risk.md of the workflow skill), whatever class the coordinator gave.

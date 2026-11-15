@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Developer",
   "description": "Core, plus language servers, no reads of .env and login files, a prompt before workflow edits; in each project the CI gates, the sandbox, the dev container command and skill packs.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "extends": [
     {

@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Orca",
   "description": "The files a project's Orca worktrees start from; Orca installs its own skills.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "entries": {
     "templates/orca.yaml": {

@@ -3,7 +3,7 @@
   "kind": "cedarloom.export",
   "name": "CedarLoom default workflows",
   "description": "The workflows that ship with CedarLoom.",
-  "license": "MIT",
+  "license": "ISC",
   "workflows": [
     "feature"
   ]
