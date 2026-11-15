@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
-const read = (name) => readFileSync(new URL(`../../plugins/cedarloom/skills/workflow/${name}`, import.meta.url), 'utf8');
+const read = (name) => readFileSync(new URL(`../skills/workflow/${name}`, import.meta.url), 'utf8');
 const skill = read('SKILL.md');
 const software = read('software.md');
 

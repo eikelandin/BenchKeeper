@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { both, next, ownerOnly, pin, riskClass, risky, sensitive, unsafe } from '../../plugins/cedarloom/skills/orchestrating-projects/merge-checks.mjs';
-import { facts as riskFacts } from '../../plugins/cedarloom/skills/orchestrating-projects/risk-facts.mjs';
-import { initRepo } from './helpers.mjs';
+import { both, next, ownerOnly, pin, riskClass, risky, sensitive, unsafe } from '../skills/orchestrating-projects/merge-checks.mjs';
+import { facts as riskFacts } from '../skills/orchestrating-projects/risk-facts.mjs';
+import { initRepo } from './git-repo.mjs';
 
 // By code point, so that no editor or tool recomposes them: e with acute in one character, the combining acute, the long s, Escape and the line separator.
 const [E_ACUTE, ACUTE, LONG_S, ESC, LINE_SEPARATOR] = [0xe9, 0x301, 0x17f, 0x1b, 0x2028].map((code) => String.fromCodePoint(code));
@@ -105,7 +105,7 @@ test('merge checks: a file under riskyPaths raises a low class to medium and low
   assert.equal(riskClass('low', []), 'low');
 });
 
-const SCRIPT = fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects/merge-checks.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/merge-checks.mjs', import.meta.url));
 const cli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
 const folder = () => mkdtempSync(join(tmpdir(), 'bk-merge-'));
 
@@ -262,7 +262,7 @@ test('risk facts: risky files set the floor, and manifests, migrations and code 
   assert.deepEqual(riskFacts({ riskyPaths: [] }, changes.slice(-1), tracked), { lines: 2, files: 1, risky: [], floor: null, dependencies: [], migrations: [], untested: [] });
 });
 
-const FACTS = fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects/risk-facts.mjs', import.meta.url));
+const FACTS = fileURLToPath(new URL('../skills/orchestrating-projects/risk-facts.mjs', import.meta.url));
 const factsCli = (...args) => spawnSync(process.execPath, [FACTS, ...args], { encoding: 'utf8' });
 
 test('risk facts: the command line reads the diff of a clone and the policy of its origin, and exits 2 on a bad argument', () => {

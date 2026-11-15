@@ -1,6 +1,6 @@
 name: Checks
 
-# `checks` is the required check, a gate over the three parallel jobs.
+# `checks` is the required check, a gate over the parallel jobs it needs.
 on:
   push:
     branches: [main]
@@ -134,10 +134,34 @@ jobs:
       - name: Validation fixtures
         run: node --test .github/scripts/plugin-validate.test.mjs
 
+  # The plugin's scripts and hooks under Node.js alone: no app and no install.
+  plugin-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22.23.4
+      - name: Plugin tests
+        run: |
+          shopt -s failglob
+          for dir in plugins/*/test; do
+            node --import "./$dir/setup.mjs" --test "$dir"/*.test.mjs
+          done
+
   # Required check: passes when all parallel jobs pass.
   checks:
     if: always()
-    needs: [checks-core, app-ui-tests, plugin-checks]
+    needs: [checks-core, app-ui-tests, plugin-checks, plugin-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

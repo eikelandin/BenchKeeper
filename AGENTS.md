@@ -16,10 +16,13 @@ The legacy BenchKeeper app (in `app/`):
 
 The site (in `web/`): `npm ci`, `npm run build`, `npm test`.
 
+The plugins (in `plugins/*/`, Node.js alone, no install), in `sh -lc`: `for dir in plugins/*/test; do node --import "./$dir/setup.mjs" --test "$dir"/*.test.mjs || exit 1; done`.
+
 The changed-files check, for each area the change touches:
 - `packages/`: `git fetch origin main` on the host, then `pnpm --filter "...[origin/main]" --filter "!{.}" run typecheck && pnpm run lint && pnpm run format:check && pnpm run knip && pnpm run jscpd && pnpm --filter "...[origin/main]" --filter "!{.}" run test`. A change to the root configuration or `scripts/` runs `pnpm run typecheck` and `pnpm test` in full, as CI does. A change to `packages/ui` also runs `pnpm --filter @cedarloom/ui run catalog` (then `git diff --exit-code -- packages/ui/locales packages/ui/schema` on the host) and `pnpm --filter @cedarloom/ui run test:ui`.
 - `app/`: `npm run check:imports && npm run check:baselines && npm test`
 - `web/`: `npm run build && npm test`
+- `plugins/`: the plugin tests above.
 - `plugins/` and `.github/`: the scripts of the `checks-core` job in [checks.yml](.github/workflows/checks.yml) that cover the changed files.
 - CI also runs typos over the CedarLoom files ([cedarloom.yml](.github/workflows/cedarloom.yml)); it is not installed in the container.
 
