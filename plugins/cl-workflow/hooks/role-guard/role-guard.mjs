@@ -20,7 +20,7 @@ const GH_WRITES = new Map([['pr', ['merge']], ['repo', ['edit', 'rename', 'archi
 // The long flags of gh api that take a value; -i (--include) is its only short flag without one.
 const API_VALUE_FLAGS = new Set(['cache', 'field', 'header', 'hostname', 'input', 'jq', 'method', 'preview', 'raw-field', 'template']);
 // REST paths that merge, commit files, release, dispatch a workflow, write refs or change settings and security, when called with a method other than GET.
-const API_PATHS = /(^|\/)(repos\/[^/]+\/[^/?]+\/?($|\?)|orgs\/|user(\/|$))|\/(pulls\/[^/]+\/merge|merges|merge-upstream|contents|releases|dispatches|git\/(refs|tags)|branches\/[^/]+\/protection|rulesets|hooks|collaborators|invitations|keys|actions\/(permissions|secrets|variables)|environments|pages|dependabot|codespaces|code-scanning|secret-scanning|security-advisories|vulnerability-alerts|automated-security-fixes|private-vulnerability-reporting|transfer|topics)\b/;
+const API_PATHS = /(^|\/)(repos\/[^/]+\/[^/?]+\/?($|\?)|repos\/[^/]+\/[^/?]+\/(contents|merge-upstream)\b|orgs\/|user(\/|$))|\/(pulls\/[^/]+\/merge|merges|releases|dispatches|git\/(refs|tags)|branches\/[^/]+\/protection|rulesets|hooks|collaborators|invitations|keys|actions\/(permissions|secrets|variables)|environments|pages|dependabot|codespaces|code-scanning|secret-scanning|security-advisories|vulnerability-alerts|automated-security-fixes|private-vulnerability-reporting|transfer|topics)\b/;
 const MUTATIONS = /\b(mergePullRequest|mergeBranch|enablePullRequestAutoMerge|enqueuePullRequest|createCommitOnBranch|(create|update|delete)(BranchProtectionRule|RepositoryRuleset|Refs?)|updateRepository\w*|(un)?archiveRepository|dismissRepositoryVulnerabilityAlert)\b/;
 const GIT_VALUE_OPTS = new Set(['-C', '--git-dir', '--work-tree', '--namespace', '--super-prefix']);
 const CONFIG_READ = /^(--get(-all|-regexp|-urlmatch|-color|colorbool)?|-l|--list|get|list)$/;
@@ -157,11 +157,16 @@ function push(args, dir, known) {
   }
   // Without a refspec, git pushes the current branch to its push target.
   const pushTarget = positionals.length > 1 ? '' : gitLine(dir, ['rev-parse', '--abbrev-ref', '@{push}']);
-  // A push that names no remote goes where git sends it: the branch's pushRemote, remote.pushDefault, the branch's remote, else origin.
+  // A push that names no remote goes where git sends it: the branch's pushRemote, remote.pushDefault, the branch's remote,
+  // the sole remote, else origin.
   const pushRemote = () => {
     const branch = gitLine(dir, ['symbolic-ref', '--short', 'HEAD']);
     const config = (key) => gitLine(dir, ['config', '--get', key]);
-    return (branch && config(`branch.${branch}.pushRemote`)) || config('remote.pushDefault') || (branch && config(`branch.${branch}.remote`)) || 'origin';
+    const sole = () => {
+      const names = gitLine(dir, ['remote']).split('\n');
+      return names.length === 1 && names[0] ? names[0] : 'origin';
+    };
+    return (branch && config(`branch.${branch}.pushRemote`)) || config('remote.pushDefault') || (branch && config(`branch.${branch}.remote`)) || sole();
   };
   const [remote = repo ?? pushRemote(), ...specs] = positionals;
   if (specs.includes('tag')) return 'a tag push';

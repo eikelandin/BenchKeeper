@@ -127,6 +127,7 @@ const ALLOWED = [
   'gh api -H "Accept: application/vnd.github+json; charset=utf-8" repos/o/r/pulls/12/merge',
   'gh api repos/owner/repo/pulls/12/comments/3/replies -f body=Fixed',
   'gh api repos/o/r/contents/README.md',
+  'gh api repos/acme/contents/issues/123/comments -f body=done',
   'gh api graphql -f query="{ viewer { login } }"',
   'git push -u origin feat/x',
   'git push origin deps-1.2.3',
@@ -226,6 +227,16 @@ test('role guard: a push that names no remote is checked against the remote git 
     assert.equal(decision('git push', { cwd: r.dir }), 'none');
   } finally {
     rmSync(r.dir, { recursive: true, force: true });
+  }
+  // With no push settings, git pushes to the sole remote, whatever its name.
+  const sole = repo('feat/z');
+  sole.git('remote', 'add', 'upstream', develop);
+  sole.git('update-ref', 'refs/remotes/upstream/develop', 'HEAD');
+  sole.git('symbolic-ref', 'refs/remotes/upstream/HEAD', 'refs/remotes/upstream/develop');
+  try {
+    assert.equal(decision('git push', { cwd: sole.dir }), 'none');
+  } finally {
+    rmSync(sole.dir, { recursive: true, force: true });
   }
 });
 
