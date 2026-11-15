@@ -1,13 +1,14 @@
 // Usage: node policy.mjs <project path>. Prints the project's effective coordinator policy as JSON; a file the schema rejects, a minPlugin newer than this plugin or an unreadable file prints each error and exits 1, and nothing may start there. Without the file it prints the defaults, exits 0 and says so on stderr.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
+import { devNull } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const FILE = 'docs/agents/orchestration.json';
-// Pull requests on these paths are left for the owner, and a policy adds to the list and cannot shorten it: what CI runs and who reviews (.github, CODEOWNERS), and the coordinator's own rules.
-const OWNER_ONLY = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', FILE, 'docs/agents/worker-rules.md'];
-// A path with one of these names as a segment is the owner's at any depth: Claude Code also loads the skills of a .claude folder below the root, and they decide what agents may do.
-const OWNER_ONLY_NAMES = ['.claude', '.mcp.json'];
+// Pull requests on these paths are left for the owner, and a policy adds to the list and cannot shorten it: what CI runs and who reviews (.github, CODEOWNERS), the coordinator's own rules and what agents are told (docs/agents), and orca.yaml, whose scripts run on the host.
+const OWNER_ONLY = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', FILE, 'docs/agents/worker-rules.md', 'docs/agents', 'orca.yaml'];
+// A path with one of these names as a segment is the owner's at any depth: agents load nested instruction files and a .claude folder below the root, and editor, hook and container settings run commands on the host.
+const OWNER_ONLY_NAMES = ['.claude', '.mcp.json', 'AGENTS.md', 'CLAUDE.md', '.claude-plugin', '.codex', '.cursor', '.vscode', '.husky', '.githooks', '.pre-commit-config.yaml', '.devcontainer', '.devcontainer.json'];
 // A worker session's model and effort by the depth of its task, and for research. Every default effort is high: a higher one costs much more and is the owner's to ask for, in the policy.
 const DEPTHS = { quick: ['sonnet', 'high'], standard: ['opus', 'high'], deep: ['opus', 'high'], research: ['fable', 'high'] };
 // A sensitive change is planned and reviewed on the strongest model; xhigh only for the first independent review of a security or firmware-safety change (owner, 2026-11-12).
@@ -148,14 +149,38 @@ export function effective(doc, version = pluginVersion()) {
 const REF = 'refs/cedarloom/policy';
 const unreadable = (message) => ({ policy: null, errors: [{ rule: 'unreadable', path: '', message }] });
 
+// Settings of the repository's own config that send origin's fetch to another repository or make git run a command; a worker shares that config. A boolean core.fsmonitor is git's own monitor and runs nothing.
+const REDIRECTS = /^(url\..*\.(insteadof|pushinsteadof)|remote\.origin\.(uploadpack|receivepack|proxy)|core\.sshcommand|credential\..*|include(if)?\..*)$/i;
+const BOOLEAN = /^(true|false|yes|no|on|off|1|0)?$/i;
+// -z prints the scope, then the key, a line break and the value of each setting: [scope, key, value] each.
+const settings = (output) => output.split('\0').flatMap((entry, i, all) => (i % 2 ? [[all[i - 1], ...entry.split(/\n(.*)/s)]] : []));
+const OWN = ['local', 'worktree'];
+// A subsection can hold a URL with a token in it, so only the section and the name are shown.
+const redacted = (key) => escaped(key.replace(/^([^.]+)\..+\.([^.]+)$/s, '$1.*.$2'));
+const redirecting = (found) => [...new Set(found.filter(([scope, key, value = '']) => OWN.includes(scope) && (REDIRECTS.test(key) || (/^core\.fsmonitor$/i.test(key) && !BOOLEAN.test(value)))).map(([, key]) => redacted(key)))];
+// Set again for the two calls that reach the remote, as a worker could write the config between the check and the call: no hook (the fetch writes a ref, which runs reference-transaction), no ext:: command as the remote, and git's own monitor. core.sshCommand keeps the user's or system's value, else GIT_SSH, which git ranks below any core.sshCommand, quoted for the shell git runs it with.
+const pinned = (found) => {
+  const ssh = found.filter(([scope, key]) => !OWN.includes(scope) && /^core\.sshcommand$/i.test(key)).at(-1)?.[2] ?? (process.env.GIT_SSH ? `'${process.env.GIT_SSH.replaceAll("'", String.raw`'\''`)}'` : 'ssh');
+  return ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false', '-c', 'protocol.ext.allow=never', '-c', `core.sshCommand=${ssh}`];
+};
+// git keeps the first remote.origin.uploadpack it reads, and the repository's config comes before -c: only the option overrides it.
+const UPLOAD_PACK = '--upload-pack=git-upload-pack';
+
 // The effective policy of the project in dir. A project without the file gets the defaults, which start and merge nothing, and absent: true.
 export function read(dir, run = sh) {
+  let found;
+  try { found = settings(run(dir, 'git', ['config', '--show-scope', '-z', '--list'])); } catch (e) {
+    return unreadable(e.code === 'ENOENT' ? 'the folder does not exist, or git is not installed' : 'git could not list the git config here: a config file it cannot parse, or git older than 2.26');
+  }
+  const refused = redirecting(found);
+  if (refused.length) return unreadable(`the repository's own git config sets ${refused.join(', ')}, which can send the reader to another repository or run a command: remove it from the repository's git config`);
+  const pins = pinned(found);
   let commit;
   try {
     // The commit is asked of the remote and both reads name it: a worker shares this git directory and could move the reader's ref between the fetch and the read.
-    commit = /^([0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/m.exec(run(dir, 'git', ['ls-remote', 'origin', 'HEAD']))?.[1];
+    commit = /^([0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/m.exec(run(dir, 'git', [...pins, 'ls-remote', UPLOAD_PACK, 'origin', 'HEAD']))?.[1];
     // The fetch touches only the reader's ref: no submodules, and not the FETCH_HEAD a session in this worktree may rely on.
-    run(dir, 'git', ['fetch', '--quiet', '--no-tags', '--no-recurse-submodules', '--no-write-fetch-head', 'origin', `+HEAD:${REF}`]);
+    run(dir, 'git', [...pins, 'fetch', UPLOAD_PACK, '--quiet', '--no-tags', '--no-recurse-submodules', '--no-write-fetch-head', 'origin', `+HEAD:${REF}`]);
   } catch (e) {
     return unreadable(e.code === 'ENOENT' ? 'the folder does not exist, or git is not installed' : "git could not fetch origin's HEAD: no git repository here, no remote named origin, no answer from it, or no default branch there");
   }

@@ -54,7 +54,7 @@ jobs:
         run: node --test .github/scripts/pr-title.test.mjs
       - name: Renamed account
         run: node --test .github/scripts/account-name.test.mjs
-      # A plugin runs without the app: references to it and paths outside the plugin folder fail unless listed in plugin-boundary-allow.json, which a pull request may not grow.
+      # A plugin runs without the app: references to it and paths outside the plugin folder fail unless listed in plugin-boundary-allow.json, which a pull request may not grow; the text @cedarloom/app and a package runner call of cedarloom-app or benchkeeper fail even when listed.
       - name: Plugin boundary
         run: |
           node --test .github/scripts/plugin-boundary.test.mjs
