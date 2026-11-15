@@ -75,7 +75,7 @@ Manual Windows checklist, for when a machine is available (nothing below runs in
 
 The examples write `benchkeeper` for `npx @cedarloom/app@6.27.0`. A clone of the default branch runs a change that is not on npm yet ([app/README.md](../app/README.md#setup)).
 
-`plan` lists each change, file changes with their diff and commands as the command line. `apply` asks per change: `--yes` applies the default selection without questions, `--all` lists the removals and asks once whether to apply all changes, including removals (`--yes --all` without the question; neither removes a plugin BenchKeeper did not install), `--pack matt-pocock` adds Matt Pocock's skills. In the browser, the Dashboard shows the doctor findings, and Fix everything walks through the global plan, the projects you pick and the steps left by hand. Each skills CLI install in a plan runs first, on a click, in a scratch folder inside an OS sandbox, so the plan lists the files it would write without a write outside that folder (Windows has no sandbox: the preview is off unless you ask for it without one; see [docs/security.md](security.md)).
+`plan` lists each change, file changes with their diff and commands as the command line. `apply` asks per change: `--yes` applies the default selection without questions, `--all` lists the removals and asks once whether to apply all changes, including removals (`--yes --all` without the question; neither removes a plugin BenchKeeper did not install). In the browser, the Dashboard shows the doctor findings, and Fix everything walks through the global plan, the projects you pick and the steps left by hand. Each skills CLI install in a plan runs first, on a click, in a scratch folder inside an OS sandbox, so the plan lists the files it would write without a write outside that folder (Windows has no sandbox: the preview is off unless you ask for it without one; see [docs/security.md](security.md)).
 
 What a full `apply` writes (`--level lite` or `--level standard` plans the BenchKeeper plugin alone; `benchkeeper doctor` names the level it finds and what the next one adds):
 
@@ -132,7 +132,7 @@ Lite level, plugin only: `npx @cedarloom/app@6.27.0 apply --level lite`, or by h
    - Own packs: `benchkeeper packs save <id> --skill <name>...`, shared as one file with `packs export <id>` and `packs import <file>`; a pack file names library skills only.
 
    Presets start new projects with the answers of an existing one: `npx @cedarloom/app@6.27.0 presets save <id> --project <dir>` saves the answers of a set-up project (agents, environment, packs, skills, tier) under a name, and `npx @cedarloom/app@6.27.0 projects create <new-dir> --preset <id>` creates the folder, shows the setup plan, applies it and registers the folder, then recommends skills to turn off and packs to add as a second plan with nothing selected. In the app, New from preset in the Projects view does the same. `presets list` shows the saved presets.
-2. The steps that need an agent, as a recorded session: `npx @cedarloom/app@6.27.0 sessions record -- claude '/cl-setup:setting-up-projects'` (Codex: `npx @cedarloom/app@6.27.0 sessions record -- codex '$cl-setup:setting-up-projects'`) for stack skills, the commands in `AGENTS.md` and the dev container. The repository must be a Git repository: the app snapshots it before and after, records the changed files (tracked and untracked, not ignored ones) and the Claude Code or Codex transcript when it finds one, and `benchkeeper undo <run>` restores those files. With the `matt-pocock` pack you can run `/mattpocock-skills:setup-matt-pocock-skills` yourself (issue tracker, triage labels, domain docs in `docs/agents/`). In the app, the setup form shows the recorded-session line for the project with a Copy button; the app does not run it, you paste it in your own terminal.
+2. The steps that need an agent, as a recorded session: `npx @cedarloom/app@6.27.0 sessions record -- claude '/cl-setup:setting-up-projects'` (Codex: `npx @cedarloom/app@6.27.0 sessions record -- codex '$cl-setup:setting-up-projects'`) for stack skills, the commands in `AGENTS.md` and the dev container. The repository must be a Git repository: the app snapshots it before and after, records the changed files (tracked and untracked, not ignored ones) and the Claude Code or Codex transcript when it finds one, and `benchkeeper undo <run>` restores those files. In the app, the setup form shows the recorded-session line for the project with a Copy button; the app does not run it, you paste it in your own terminal.
 3. Commit the result.
 
 Where the agent runs (`--env`):
@@ -232,7 +232,7 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
     - `benchkeeper undo <run>` puts back the account's `plugins/installed_plugins.json` and `plugins/known_marketplaces.json` (not the older version's files: Claude Code may prune them later, which leaves restored metadata that names a missing version).
   - A running session keeps the version it loaded: start a new one.
   - A marketplace added at another ref, for example the default branch, stays there: the app never moves or removes it, since removing a marketplace uninstalls its plugins and deletes their options and data in Claude Code.
-  - The app does not move Ponytail's marketplace or Codex's `mattpocock` marketplace: an earlier setup added them at a tag, and a marketplace keeps its stored ref, so the agent's update stays on that tag. Claude Code's Matt Pocock plugin comes from the official marketplace, which has no ref to move.
+  - The app does not move Ponytail's marketplace: an earlier setup added it at a tag, and a marketplace keeps its stored ref, so the agent's update stays on that tag.
   - To follow the default branch, remove the marketplace and add it again. Removing a marketplace deletes its plugins' options and data in Claude Code, so only do this if you accept that.
 
     Ponytail in Claude Code:
@@ -250,14 +250,6 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
     codex plugin marketplace add DietrichGebert/ponytail
     codex plugin add ponytail@ponytail
     ```
-
-    Matt Pocock in Codex:
-
-    ```sh
-    codex plugin marketplace remove mattpocock
-    codex plugin marketplace add mattpocock/skills
-    codex plugin add mattpocock-skills@mattpocock
-    ```
 - Projects:
   - `benchkeeper projects add <dir>` (or `projects scan <root>` to find them) registers projects set up by the app.
   - `benchkeeper projects update [dir..]` lists each project's changes and asks once. It takes every registered project, or only the registered ones named. In the browser: Projects, Dashboard > Fix everything, or Dashboard > Set up > Set up projects, for local setups.
@@ -271,7 +263,7 @@ The Accounts view of the app does the same with fewer steps. Add Claude Code acc
     - `remove` to unregister;
     - `remove --setup` to take BenchKeeper's setup out of a project and keep it registered: every file is listed first, a local setup is one run you can undo, a shared one a commit on the local branch `chore/remove-agent-setup` for you to push.
   - Plugin installs and agent sessions are not part of it: run `apply` and the recorded sessions yourself.
-- Matt Pocock's skills update through their marketplaces. So does Ponytail's: the app adds its marketplace without a ref and leaves an installed Ponytail, at any version or commit, to the agent's own update.
+- Ponytail updates through its marketplace: the app adds it without a ref and leaves an installed Ponytail, at any version or commit, to the agent's own update.
 - Repository skills (library and stack) come from the default branch of their source; `skills-lock.json` records their content, the project's state file the commit installed. `benchkeeper skills list --check` and "Check for updates" on a project's Installs tab ask each source for its newest commit, `skills update` brings the outdated ones to it. A repository with many skills counts as moved when any file in it changed, so a skill can show outdated without a change of its own. `/cl-setup:maintaining-repos` proposes bumps for pins in docs and scripts.
 
 ## Sessions board
@@ -286,7 +278,7 @@ Per Claude Code and Codex session on this machine, the board shows:
   - group: subagents ran, their count is shown
   - Orca worker: a dispatched Orca worker, with the run id from the `Orca run:` line of the worker-spec template
   - single: none of these
-- the setup installed at the time (BenchKeeper version, Matt Pocock's skills, Ponytail, packs)
+- the setup installed at the time (BenchKeeper version, Ponytail, packs)
 - the skills used, the last test run, pull request links (without their state) and time
 - tokens and the API-equivalent cost: for Claude Code as its transcript records it, for Codex estimated from its token counts and OpenAI's API prices, marked estimated, models without a published price left out
 

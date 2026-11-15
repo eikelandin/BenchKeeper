@@ -24,7 +24,7 @@ Target: $ARGUMENTS (Codex: the text after the skill name), as in [audit](../audi
 
 1. Findings. Use the audit of this target from this conversation. No audit, or the files changed since: run the [audit](../audit/SKILL.md) steps first.
 2. Write one diff per `rewrite`, `move` and `add` finding, numbered like the finding, in the order of the report.
-   - Rewrite: the smallest change of wording that removes the pattern. Keep the author's terms. For agent instructions, a writing-for-agents skill, when one is installed (such as `mattpocock-skills:writing-for-agents`), guides the wording; the rules here win where they differ.
+   - Rewrite: the smallest change of wording that removes the pattern. Keep the author's terms. For agent instructions, a writing-for-agents skill, when one is installed, guides the wording; the rules here win where they differ.
    - Move: the text moves unchanged. Name the destination (a path-scoped rule, a skill, a linked doc, a tool's config). The old place keeps at most a one-line pointer.
    - Add: only what the finding shows is missing. Facts come from the repository, cited with `file:line`, not from memory.
    - Code: the change keeps the behavior. Name the tests that cover it.
