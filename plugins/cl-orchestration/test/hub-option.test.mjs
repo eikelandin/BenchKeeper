@@ -5,8 +5,8 @@ import { test } from 'node:test';
 const root = new URL('../', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('.claude-plugin/plugin.json', root), 'utf8'));
 
-// Claude Code fills `${user_config.KEY}` in with this plugin's own options, never cl-workflow's, and only in a
-// skill's body: approvals.md, which the coordinator reads as a file, must leave the hub to SKILL.md.
+// Claude Code fills `${user_config.KEY}` in only in a skill's body, and the plugins reference names no other plugin's
+// options there: approvals.md, which the coordinator reads as a file, must leave the hub to SKILL.md.
 test('options: every one the skills read is declared here, and read only in a SKILL.md body', () => {
   const reads = [];
   for (const file of readdirSync(new URL('skills/', root), { recursive: true }).filter((f) => f.endsWith('.md'))) {
@@ -17,7 +17,9 @@ test('options: every one the skills read is declared here, and read only in a SK
   for (const read of reads) assert.ok(manifest.userConfig[read.split(' ')[1]], read);
 });
 
-test('hub: a fresh install has no hub, so approvals go to the project tracker', () => {
-  const { type, default: value, required } = manifest.userConfig.hub;
-  assert.deepEqual({ type, value, required }, { type: 'string', value: '', required: undefined });
+// A compaction re-attaches only the first 5,000 tokens of an invoked skill; 15,000 bytes is that at 3 bytes per token.
+test('hub: the coordinator still has the hub after a compaction', () => {
+  const skill = readFileSync(new URL('skills/orchestrating-projects/SKILL.md', root), 'utf8');
+  const at = Buffer.byteLength(skill.slice(0, skill.indexOf('${user_config.hub}')), 'utf8');
+  assert.ok(at > 0 && at < 15000, `the hub rule starts at byte ${at}`);
 });

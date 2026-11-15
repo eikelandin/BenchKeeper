@@ -15,7 +15,7 @@ Run `node <skill folder>/approval.mjs <file>` from your working directory until 
 
 ## Where it goes
 
-1. **The hub.** `<hub>` is the hub repository that [SKILL.md](SKILL.md#owner-decisions) reads from the plugin option `hub`, and nothing else.
+1. **The hub.** `<hub>` is the hub repository as [SKILL.md](SKILL.md#names) reads it, and nothing else.
 2. **No hub set**: the project's tracker, `issues.repository`, else `<owner/repo>`.
 3. **Never a public repository.** An approval names the plan, the models, the cost and the owner-only paths. For the repository of step 1 or 2, `gh repo view <repository> --json visibility --jq .visibility` must print `PRIVATE` or `INTERNAL`. On `PUBLIC`, or when the command fails, file nothing: the approval's text goes into the report, with the reason.
 
