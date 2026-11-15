@@ -1,6 +1,6 @@
 # Knowledge base
 
-What earlier passes learned about this project, so a repeated pass skips finished work. It is derived from the repository and rebuildable: a lost or cleared base costs time, never correctness. The owner reads it in the files of the folder that [Where](#where) names and clears it by deleting that folder.
+What earlier passes learned about this project, so a repeated pass skips finished work. It is derived from the repository and rebuildable: a lost or cleared base costs time, never correctness. The owner reads it in the files of the folder that [Where](#where) names and clears it by deleting that folder. Before deleting, run `test -L .cedarloom`: when `.cedarloom` is a link, stop and remove nothing, since a recursive delete would follow it out of the repository.
 
 ## Where
 

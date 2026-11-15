@@ -42,8 +42,8 @@ For `container` and `host-agent`, follow [devcontainer.md](devcontainer.md). Oth
 The block is the text [project-rules.md](project-rules.md) describes, between a line `<!-- cedarloom start -->` and a line `<!-- cedarloom end -->`. Its text is the file's, never edited by hand; the repository's own rules go outside it.
 
 - Shared: in `AGENTS.md`, committed, where the repository has no `AGENTS.md` or its `AGENTS.md` holds the block, or the user picks "the whole block, committed" in [AGENTS.md and CLAUDE.md](#4-agentsmd-and-claudemd).
-- Local, otherwise: in `CLAUDE.local.md`, when Claude Code is selected. It starts with `@AGENTS.md` unless `CLAUDE.md` already imports it, and gets a line in `$(git rev-parse --git-path info/exclude)` unless `git check-ignore -q CLAUDE.local.md` succeeds. A local setup gives Codex no block: say so in the report.
-- An existing block: change only the text between its markers. A block the app wrote counts as the block in every step and is replaced in its place: between `<!-- benchkeeper:project start -->` and `<!-- benchkeeper:project end -->` (app releases), or between `<!-- cedarloom-app:project start -->` and `<!-- cedarloom-app:project end -->` (later app builds).
+- Local, otherwise: in `CLAUDE.local.md`, when Claude Code is selected. It starts with `@AGENTS.md` unless `CLAUDE.md` already imports it, and gets a line in `$(git rev-parse --git-path info/exclude)` unless `git check-ignore -q CLAUDE.local.md` succeeds. An exclude line does not ignore a tracked file: when `git ls-files --error-unmatch CLAUDE.local.md` succeeds, write nothing and ask the user how to proceed. A local setup gives Codex no block: say so in the report.
+- An existing CedarLoom block: change only the text between its markers. A block the app wrote counts as the block in every step and is replaced in its place, markers included, by the CedarLoom block: from `<!-- benchkeeper:project start -->` through `<!-- benchkeeper:project end -->` (app releases), or from `<!-- cedarloom-app:project start -->` through `<!-- cedarloom-app:project end -->` (later app builds).
 
 ## 4. AGENTS.md and CLAUDE.md
 
