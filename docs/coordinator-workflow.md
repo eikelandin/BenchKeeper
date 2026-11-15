@@ -34,6 +34,8 @@ A path entry names a file or a folder, relative to the repository root, and cove
 | `review.depth` | the level of Claude Code's `/code-review` for a routine change: `low`, `medium`, `high` or `xhigh` | `high` | `high` |
 | `review.sensitiveDepth` | that level for a sensitive change, which also gets a security review | `high` | `xhigh` |
 | `review.sensitivePaths` | paths that make a change sensitive, besides the built-in classes | none | per project |
+| `riskyPaths` | paths whose change has high impact: the risk class is at least medium and the change sensitive (`skills/workflow/risk.md`) | none | none |
+| `merge.autoMergeMax` | the highest risk class the coordinator merges, `low` or `medium`; a high class is always the owner's | `medium` | none |
 | `merge.mode` | `strict` or `disjoint` (see [Merge](#merge)) | `strict` | `disjoint` |
 | `merge.additivePaths` | paths the pull request and the default branch may both have changed in `disjoint` mode | none | registries and generated schemas |
 | `merge.ownerOnlyPaths` | further paths whose pull requests are left for the owner, besides the built-in ones ([Owner-only](#owner-only)) | none | none |

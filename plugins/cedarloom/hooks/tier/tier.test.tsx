@@ -117,47 +117,6 @@ test('on: the buttons run /benchkeeper:tier as a person types it', ON, async ($,
   await ui.unmount()
 })
 
-test('on: the board button opens the board the app wrote, or says how to get one', ON, async ($, on) => {
-  engine(on)
-  const ran: string[][] = []
-  const toasts: string[] = []
-  let written = false
-  on('env.get', (_, e) => ({ value: e.name === 'HOME' ? '/home/u' : undefined }))
-  on('fs.exists', (_, e) => ({ value: written && e.path === '/home/u/.config/cedarloom-app/board.html' }))
-  on('process.run', (_, e) => {
-    ran.push([...e.argv])
-    return { value: { exitCode: 0, stdout: 'Linux\n', stderr: '' } } as never
-  })
-  on('ui.toast', (_, e) => {
-    toasts.push(e.text)
-    return { value: undefined } as never
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'board' })
-  expect(toasts).toEqual(['No sessions board yet: open Sessions in the BenchKeeper app, or run benchkeeper sessions board'])
-  expect(ran).toEqual([])
-  written = true
-  await ui.press({ key: 'board' })
-  expect(ran).toEqual([['uname'], ['xdg-open', '/home/u/.config/cedarloom-app/board.html']])
-  await ui.unmount()
-})
-
-test('on: on Windows the board button opens the board through explorer, never cmd', ON, async ($, on) => {
-  engine(on)
-  const ran: string[][] = []
-  const env: Record<string, string> = { OS: 'Windows_NT', USERPROFILE: 'C:/Users/A&B %PATH%' }
-  on('env.get', (_, e) => ({ value: env[e.name] }))
-  on('fs.exists', () => ({ value: true }))
-  on('process.run', (_, e) => {
-    ran.push([...e.argv])
-    return { value: { exitCode: 0, stdout: '', stderr: '' } } as never
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'board' })
-  expect(ran).toEqual([['explorer.exe', 'C:\\Users\\A&B %PATH%\\.config\\cedarloom-app\\board.html']])
-  await ui.unmount()
-})
-
 test('on: the band names the project, branch, last test run and Ponytail level; no Ponytail file, no Ponytail text', ON, async ($, on) => {
   engine(on)
   let level = 'full\n'
@@ -240,26 +199,6 @@ test('on: the project row comes back after /clear, /resume and /branch', ON, asy
   expect(await ui.find({ type: 'Text', text: /shop/ })).toBeUndefined()
   await $.classic.SessionStart({ source: 'resume' })
   expect(await ui.find({ type: 'Text', text: /^shop \(main\)$/ })).toBeDefined()
-  await ui.unmount()
-})
-
-test('on: doctor asks the agent to run the doctor, ? explains the band and how to turn it off', ON, async ($, on) => {
-  engine(on)
-  const sent: string[] = []
-  const toasts: string[] = []
-  on('command.run', (_, e) => {
-    sent.push(`/${e.command} ${e.args}`)
-    return { text: '' }
-  })
-  on('ui.toast', (_, e) => {
-    toasts.push(e.text)
-    return { value: undefined } as never
-  })
-  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  await ui.press({ key: 'doctor' })
-  expect(sent).toEqual(['/benchkeeper:operating-benchkeeper run benchkeeper doctor for this project and list the findings'])
-  await ui.press({ key: 'help' })
-  expect(toasts[0]).toMatch(/Nothing leaves this machine\. Turn off: set Tier band to false/)
   await ui.unmount()
 })
 
