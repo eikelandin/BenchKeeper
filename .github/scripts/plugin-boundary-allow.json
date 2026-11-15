@@ -24,6 +24,6 @@
   "plugins/cedarloom/skills/operating-cedarloom-app/SKILL.md": ["app-package", "app-path", "app-state"],
   "plugins/cedarloom/skills/orchestrating-projects/recurring-runs.md": ["app-package"],
   "plugins/cedarloom/skills/orchestrating-projects/spec-template.md": ["app-state"],
-  "plugins/cedarloom/skills/reviewing-rules/SKILL.md": ["app-path", "app-state"],
+  "plugins/cedarloom/skills/reviewing-rules/SKILL.md": ["app-state"],
   "plugins/cedarloom/skills/setting-up-projects/SKILL.md": ["app-package", "app-path", "app-state"]
 }

@@ -16,14 +16,16 @@ export const REFERENCES = {
   'app-state': /cedarloom-app|CEDARLOOM_APP|\bminApp\b/i,
 };
 
-const CODE = /\.(?:[cm]?js|[cm]?ts|tsx)$/;
-// Specifiers of import and export statements (at the start of a statement, so a string that says "from 'x'" is none), dynamic import and require.
-const STATIC = /^[ \t]*(?:import|export)\b[^'";]*\bfrom[ \t]*(['"])([^'"\n]+)\1/gm;
-const DYNAMIC = /\b(?:import[ \t]*(?:\([ \t]*)?|require\([ \t]*)(['"])([^'"\n]+)\1/g;
+const CODE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
+// Specifiers of import and export statements (at the start of a line or after `;`, so a string that says "from 'x'" is none), dynamic import and require.
+const STATIC = /(?:^|;)[ \t]*(?:import|export)\b[^'";]*\bfrom[ \t]*(['"])([^'"\n]+)\1/gmd;
+const DYNAMIC = /\b(?:import[ \t]*(?:\([ \t]*)?|require\([ \t]*)(['"])([^'"\n]+)\1/gd;
+// Comments and strings, which hold text but no statement; a template literal counts as a string.
+const LITERALS = /\/\/[^\n]*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\[\s\S]|[^`\\])*`/g;
 // What Claude Code supplies to a plugin's mods besides Node's built-ins.
 const PROVIDED = /^(?:node:|claude-code(?:\/|$))/;
 // A path that climbs from the file's folder, in any file: a plugin is installed as its folder alone.
-const PARENT = /(?<![\w./-])(?:\.\/)?(?:\.\.\/)+[^\s'"`)\]]*/g;
+const PARENT = /(?<![\w./-])(?:[\w.-]+\/)*\.\.\/[^\s'"`)\]]*/g;
 const ABOVE_ROOT = /CLAUDE_PLUGIN_ROOT\}?\/\.\.(?![\w.])/;
 // A hook file of the plugin, and the command prefix of a hook matcher such as `^name:(ask|questions)$`.
 const HOOKS = /^plugins\/[^/]+\/hooks\/[^/]+\.json$/;
@@ -49,6 +51,11 @@ function matchers(value) {
   return Object.entries(value).flatMap(([key, entry]) => (key === 'matcher' && typeof entry === 'string' ? [entry] : matchers(entry)));
 }
 
+// The text with comments and the inside of strings blanked to spaces and underscores of the same length, so a match position indexes the original.
+function blanked(text) {
+  return text.replace(LITERALS, (token) => (/^['"`]/.test(token) ? token[0] + token.slice(1, -1).replace(/[^\n]/g, '_') + token.at(-1) : token.replace(/[^\n]/g, ' ')));
+}
+
 // Rule names that match in `text` of the file `path` (relative to the repository root), `plugin` being the plugin's folder and `name` its manifest name.
 export function offences(path, text, plugin, name) {
   const found = new Set(Object.keys(REFERENCES).filter((rule) => [REFERENCES[rule]].flat().some((pattern) => pattern.test(text))));
@@ -58,7 +65,9 @@ export function offences(path, text, plugin, name) {
   };
   if (ABOVE_ROOT.test(text) || [...text.matchAll(PARENT)].some(([spec]) => outside(spec))) found.add('import-outside');
   if (CODE.test(path)) {
-    for (const [, , spec] of [...text.matchAll(STATIC), ...text.matchAll(DYNAMIC)]) {
+    const code = blanked(text);
+    for (const { indices } of [...code.matchAll(STATIC), ...code.matchAll(DYNAMIC)]) {
+      const spec = text.slice(...indices[2]);
       if (spec.startsWith('.') ? outside(spec) : !PROVIDED.test(spec)) found.add('import-outside');
     }
   }

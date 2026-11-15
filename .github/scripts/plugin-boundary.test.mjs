@@ -42,6 +42,8 @@ test('a path that climbs out of the plugin is found in a file of any kind', () =
   assert.deepEqual(names('a.json', '{"command": "node ${CLAUDE_PLUGIN_ROOT}/../x/hook.mjs"}'), ['import-outside']);
   assert.deepEqual(names('x/a.mjs', "const cli = resolve(here, '../../../x/cli.mjs');"), ['import-outside']);
   assert.deepEqual(names('x/a.mjs', 'const m = await import(`../../../${name}.mjs`);'), ['import-outside']);
+  assert.deepEqual(names('a.md', '[guide](docs/../../two/guide.md)'), ['import-outside']);
+  assert.deepEqual(names('a.md', '[guide](docs/a/../b/guide.md)'), []);
   assert.deepEqual(names('x/y/a.md', 'See [the library](../../library/README.md) and ${CLAUDE_PLUGIN_ROOT}/hooks/a.mjs.'), []);
 });
 
@@ -58,6 +60,10 @@ test('imports must stay inside the plugin or name a Node built-in or the Claude 
   );
   assert.deepEqual(names('x/a.mjs', 'console.log("copy from \'cache\' failed"); // see from \'x\''), []);
   assert.deepEqual(names('x/a.mjs', "export {\n  x,\n} from 'left-pad';"), ['import-outside']);
+  assert.deepEqual(names('view.jsx', "import x from 'left-pad';"), ['import-outside']);
+  assert.deepEqual(names('a.mjs', "import fs from 'node:fs'; import x from 'left-pad';"), ['import-outside']);
+  assert.deepEqual(names('a.mjs', 'const message = "import \'cache\' failed"; // require(\'x\')\n/* import \'y\' */ const t = `import \'z\'`;'), []);
+  assert.deepEqual(names('a.mjs', "const m = await import(/* chunk */ 'left-pad');"), ['import-outside']);
 });
 
 test('a difference is named for a new reference and for an allow entry that no longer matches', () => {
