@@ -23,7 +23,7 @@ A Claude Code worker starts in a terminal of its own, so that its launch carries
 
 ```text
 ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
-ORCA terminal create --worktree path:<worktree path> --title <number>-<slug> --command "env CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --autocompact 200k --model '<model>' --effort <effort>" --json
+ORCA terminal create --worktree path:<worktree path> --title <number>-<slug> --command "env -u CEDARLOOM_ROLE CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false claude --autocompact 200k --model '<model>' --effort <effort>" --json
 ORCA terminal wait --terminal <terminal> --for tui-idle --timeout-ms 60000 --json
 ORCA orchestration worker-start --spec-file <filled spec file> --terminal <terminal> --worktree path:<worktree path> --keep-open --json
 ```
