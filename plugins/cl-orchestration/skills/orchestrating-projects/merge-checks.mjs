@@ -9,15 +9,17 @@ const under = (file, entry) => { const folder = entry.replace(/\/$/, ''); return
 const fold = (path) => path.normalize('NFKC').toUpperCase().toLowerCase();
 // A file that can define a container by its name alone, in any folder (Container files in trial-merge.md): a container's own commands run on the host.
 const CONTAINER = /^(\.env.*|.*(dockerfile|containerfile).*|.*compose.*\.ya?ml)$/;
-const named = (paths, names, containers = false) => {
+// lefthook's config and its -local overlay in every format it reads: the hooks it installs run these commands on the host.
+const LEFTHOOK = /^\.?lefthook(-local)?\.(ya?ml|toml|jsonc?)$/;
+const named = (paths, names, byName = false) => {
   const entries = paths.map(fold), segments = names.map(fold);
   return (file) => {
     const path = fold(file), parts = path.split('/');
-    return entries.some((entry) => under(path, entry)) || parts.some((segment) => segments.includes(segment)) || (containers && CONTAINER.test(parts.at(-1)));
+    return entries.some((entry) => under(path, entry)) || parts.some((segment) => segments.includes(segment)) || (byName && [CONTAINER, LEFTHOOK].some((re) => re.test(parts.at(-1))));
   };
 };
 
-// The files that are the owner's: under a merge.ownerOnlyPaths entry, with a merge.ownerOnlyNames entry as a path segment, or named like a container file.
+// The files that are the owner's: under a merge.ownerOnlyPaths entry, with a merge.ownerOnlyNames entry as a path segment, or named like a container file or a lefthook config.
 export const ownerOnly = (policy, files) => files.filter(named(policy.merge.ownerOnlyPaths, policy.merge.ownerOnlyNames, true));
 export const sensitive = (policy, files) => files.filter(named([...policy.review.sensitivePaths, ...policy.riskyPaths, ...policy.merge.ownerOnlyPaths], policy.merge.ownerOnlyNames, true));
 export const risky = (policy, files) => files.filter(named(policy.riskyPaths, []));

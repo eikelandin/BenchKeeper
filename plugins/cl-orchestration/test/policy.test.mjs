@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { effective, read, validate } from '../skills/orchestrating-projects/policy.mjs';
+import { effective, read, sh, validate } from '../skills/orchestrating-projects/policy.mjs';
 import { initRepo } from './git-repo.mjs';
 
 const BUILT_IN = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', 'docs/agents/orchestration.json', 'docs/agents/worker-rules.md', 'docs/agents', 'orca.yaml'];
@@ -15,7 +15,7 @@ const DEFAULTS = {
   workersPerProject: 1,
   hostWorkerLimit: 2,
   stallMinutes: 20,
-  merge: { allowed: false, requiredChecks: [], mode: 'strict', autoMergeMax: 'medium', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json', 'AGENTS.md', 'CLAUDE.md', '.claude-plugin', '.codex', '.cursor', '.vscode', '.husky', '.devcontainer', '.devcontainer.json'] },
+  merge: { allowed: false, requiredChecks: [], mode: 'strict', autoMergeMax: 'medium', additivePaths: [], ownerOnlyPaths: BUILT_IN, ownerOnlyNames: ['.claude', '.mcp.json', 'AGENTS.md', 'CLAUDE.md', '.claude-plugin', '.codex', '.cursor', '.vscode', '.husky', '.githooks', '.pre-commit-config.yaml', '.devcontainer', '.devcontainer.json'] },
   closeIssue: false,
   deleteMergedBranch: false,
   issuesPerWorker: 1,
@@ -189,13 +189,13 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
   assert.equal(read('/p', remote('{ "startLabel": "go" }', calls)).policy.startLabel, 'go');
   // No name that the remote or the local origin/HEAD chooses is part of a command.
   // The two calls that reach the remote set again what the repository's config could make run instead of git.
-  const pinned = 'git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c protocol.ext.allow=never -c remote.origin.uploadpack=git-upload-pack -c core.sshCommand=ssh';
-  assert.ok(calls.includes(`${pinned} ls-remote origin HEAD`));
-  assert.ok(calls.some((call) => call.startsWith(`${pinned} fetch `) && call.endsWith(' origin +HEAD:refs/cedarloom/policy')));
+  const pinned = 'git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c protocol.ext.allow=never -c core.sshCommand=ssh';
+  assert.ok(calls.includes(`${pinned} ls-remote --upload-pack=git-upload-pack origin HEAD`));
+  assert.ok(calls.some((call) => call.startsWith(`${pinned} fetch --upload-pack=git-upload-pack `) && call.endsWith(' origin +HEAD:refs/cedarloom/policy')));
   // The user's own ssh command stays: only the repository's is refused.
   const own = [];
   read('/p', bare((dir, cmd, args) => (args[0] === 'config' ? 'system\0core.sshcommand\nssh -4\0global\0core.sshcommand\nssh -i key\0' : remote('{}')(dir, cmd, args)), own));
-  assert.ok(own.some((call) => call.endsWith(' -c core.sshCommand=ssh -i key ls-remote origin HEAD')));
+  assert.ok(own.some((call) => call.endsWith(' -c core.sshCommand=ssh -i key ls-remote --upload-pack=git-upload-pack origin HEAD')));
   assert.ok(calls.includes(`git show ${HEAD}:docs/agents/orchestration.json`));
   // A worker that moves the reader's ref after the fetch changes nothing: the read names the remote's commit, not the ref.
   const moved = read('/p', bare((dir, cmd, args) => {
@@ -264,9 +264,10 @@ test('policy: a repository whose own git config redirects origin or runs a comma
   }
   // git's own file system monitor runs no command of the repository.
   assert.equal(read(project()('core.fsmonitor', 'true')).policy.startLabel, 'go');
-  // The fetch writes the reader's ref, and no hook of the shared git directory runs for it.
-  const hooked = project()('user.name', 't');
-  writeFileSync(join(hooked, '.git', 'hooks', 'reference-transaction'), `#!/bin/sh\ntouch '${marker}'\n`, { mode: 0o755 });
+  // The fetch writes the reader's ref, and no hook of the shared git directory runs for it. The repository's own core.hooksPath, which the check allows, also overrides one of the user's config.
+  const hooks = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+  writeFileSync(join(hooks, 'reference-transaction'), `#!/bin/sh\ntouch '${marker}'\n`, { mode: 0o755 });
+  const hooked = project()('core.hooksPath', hooks);
   assert.equal(read(hooked).policy.startLabel, 'go');
   assert.equal(existsSync(marker), false, 'reference-transaction');
   // An ext:: remote is a command, which git runs only where the config allows it.
@@ -274,6 +275,22 @@ test('policy: a repository whose own git config redirects origin or runs a comma
   origin.git('-C', ext, 'remote', 'set-url', 'origin', `ext::sh -c touch% ${marker}`);
   assert.equal(read(ext).policy, null);
   assert.equal(existsSync(marker), false, 'ext');
+  // A worker writes the config after the check and before the calls that reach the remote.
+  const racing = (...config) => (dir, cmd, args) => { const out = sh(dir, cmd, args); if (args[0] === 'config') origin.git('-C', dir, 'config', ...config); return out; };
+  const raced = project()('user.name', 't');
+  assert.equal(read(raced, racing('remote.origin.uploadpack', `touch '${marker}'; git-upload-pack`)).policy.startLabel, 'go');
+  assert.equal(existsSync(marker), false, 'remote.origin.uploadpack');
+  // With GIT_SSH set, the user's ssh program still beats a core.sshCommand of the repository: git ranks any core.sshCommand above GIT_SSH.
+  const tools = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), "it's tools");
+  mkdirSync(tools);
+  writeFileSync(join(tools, 'ssh'), '#!/bin/sh\ntouch "$(dirname "$0")/used"\nexit 1\n', { mode: 0o755 });
+  const viaSsh = project()('user.name', 't');
+  origin.git('-C', viaSsh, 'remote', 'set-url', 'origin', 'ssh://example.invalid/policy.git');
+  const before = process.env.GIT_SSH;
+  process.env.GIT_SSH = join(tools, 'ssh');
+  try { assert.equal(read(viaSsh, racing('core.sshCommand', `touch '${marker}'; ssh`)).policy, null); } finally { if (before === undefined) delete process.env.GIT_SSH; else process.env.GIT_SSH = before; }
+  assert.equal(existsSync(marker), false, 'core.sshCommand');
+  assert.equal(existsSync(join(tools, 'used')), true, 'GIT_SSH');
 });
 
 test('policy: the command line prints the policy of the default branch and exits 0, or names each error and exits 1', () => {

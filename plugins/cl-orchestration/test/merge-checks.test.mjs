@@ -30,8 +30,8 @@ test('merge checks: an owner-only file is one under a path entry or with a name 
 
 test('merge checks: by default, the files that instruct agents, configure editors and hooks, or define a container are the owner\'s', () => {
   const { policy } = effective({});
-  const owners = ['AGENTS.md', 'pkg/CLAUDE.md', 'docs/agents/x.md', 'orca.yaml', '.devcontainer/devcontainer.json', '.devcontainer.json', 'web/.devcontainer.json', '.vscode/tasks.json', '.husky/pre-commit', '.codex/config.toml', '.cursor/rules/x.mdc', '.claude-plugin/plugin.json', 'Dockerfile', 'docker/Dockerfile.dev', 'app.containerfile', 'compose.yaml', 'docker-compose.override.yml', '.env.local', '.envrc'];
-  const others = ['README.md', 'src/compose.ts', 'docs/compose.md', 'src/environment.ts', 'docs/agentsx.md', 'docs/AGENTS-guide.md'];
+  const owners = ['AGENTS.md', 'pkg/CLAUDE.md', 'docs/agents/x.md', 'orca.yaml', '.devcontainer/devcontainer.json', '.devcontainer.json', 'web/.devcontainer.json', '.vscode/tasks.json', '.husky/pre-commit', '.githooks/pre-push', 'pkg/.pre-commit-config.yaml', 'lefthook.yml', '.config/lefthook-local.toml', '.lefthook.jsonc', '.codex/config.toml', '.cursor/rules/x.mdc', '.claude-plugin/plugin.json', 'Dockerfile', 'docker/Dockerfile.dev', 'app.containerfile', 'compose.yaml', 'docker-compose.override.yml', '.env.local', '.envrc'];
+  const others = ['README.md', 'src/compose.ts', 'docs/compose.md', 'src/environment.ts', 'docs/agentsx.md', 'docs/AGENTS-guide.md', 'docs/lefthook.md'];
   assert.deepEqual(ownerOnly(policy, [...others, ...owners]), owners);
   assert.equal(next({ ownerOnlyFiles: ownerOnly(policy, ['AGENTS.md']), risk: 'medium', autoMergeMax: 'medium', pin: 'reviewed', allowed: true, upToDate: true, mode: 'strict' }), 'owner');
 });
