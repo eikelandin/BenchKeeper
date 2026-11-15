@@ -16,12 +16,12 @@ const GH_VALUE_FLAGS = new Set(['-R', '--repo', '--hostname', '-b', '--body', '-
 // Per gh command, the verbs that only read: every other verb is denied.
 const GH_READS = new Map([['auth', []], ['release', ['list', 'view', 'download', 'verify', 'verify-asset']], ['secret', ['list']], ['variable', ['list', 'get']]]);
 // Per gh command, the verbs that are denied.
-const GH_WRITES = new Map([['pr', ['merge']], ['repo', ['edit', 'rename', 'archive', 'unarchive', 'delete', 'deploy-key']], ['workflow', ['run', 'enable', 'disable']], ['config', ['set']], ['alias', ['set', 'import', 'delete']], ['ssh-key', ['add', 'delete']], ['gpg-key', ['add', 'delete']]]);
+const GH_WRITES = new Map([['pr', ['merge']], ['repo', ['edit', 'rename', 'archive', 'unarchive', 'delete', 'deploy-key', 'sync']], ['workflow', ['run', 'enable', 'disable']], ['config', ['set']], ['alias', ['set', 'import', 'delete']], ['ssh-key', ['add', 'delete']], ['gpg-key', ['add', 'delete']]]);
 // The long flags of gh api that take a value; -i (--include) is its only short flag without one.
 const API_VALUE_FLAGS = new Set(['cache', 'field', 'header', 'hostname', 'input', 'jq', 'method', 'preview', 'raw-field', 'template']);
-// REST paths that merge, release, dispatch a workflow, write refs or change settings and security, when called with a method other than GET.
-const API_PATHS = /(^|\/)(repos\/[^/]+\/[^/?]+\/?($|\?)|orgs\/|user(\/|$))|\/(pulls\/[^/]+\/merge|merges|releases|dispatches|git\/(refs|tags)|branches\/[^/]+\/protection|rulesets|hooks|collaborators|invitations|keys|actions\/(permissions|secrets|variables)|environments|pages|dependabot|codespaces|code-scanning|secret-scanning|security-advisories|vulnerability-alerts|automated-security-fixes|private-vulnerability-reporting|transfer|topics)\b/;
-const MUTATIONS = /\b(mergePullRequest|mergeBranch|enablePullRequestAutoMerge|enqueuePullRequest|(create|update|delete)(BranchProtectionRule|RepositoryRuleset|Refs?)|updateRepository\w*|(un)?archiveRepository|dismissRepositoryVulnerabilityAlert)\b/;
+// REST paths that merge, commit files, release, dispatch a workflow, write refs or change settings and security, when called with a method other than GET.
+const API_PATHS = /(^|\/)(repos\/[^/]+\/[^/?]+\/?($|\?)|repos\/[^/]+\/[^/?]+\/(contents|merge-upstream)\b|orgs\/|user(\/|$))|\/(pulls\/[^/]+\/merge|merges|releases|dispatches|git\/(refs|tags)|branches\/[^/]+\/protection|rulesets|hooks|collaborators|invitations|keys|actions\/(permissions|secrets|variables)|environments|pages|dependabot|codespaces|code-scanning|secret-scanning|security-advisories|vulnerability-alerts|automated-security-fixes|private-vulnerability-reporting|transfer|topics)\b/;
+const MUTATIONS = /\b(mergePullRequest|mergeBranch|enablePullRequestAutoMerge|enqueuePullRequest|createCommitOnBranch|(create|update|delete)(BranchProtectionRule|RepositoryRuleset|Refs?)|updateRepository\w*|(un)?archiveRepository|dismissRepositoryVulnerabilityAlert)\b/;
 const GIT_VALUE_OPTS = new Set(['-C', '--git-dir', '--work-tree', '--namespace', '--super-prefix']);
 const CONFIG_READ = /^(--get(-all|-regexp|-urlmatch|-color|colorbool)?|-l|--list|get|list)$/;
 const CONFIG_WRITE = /^(--(unset|unset-all|add|replace-all|rename-section|remove-section|edit)|-e|set|unset|rename-section|remove-section|edit)$/;
@@ -35,6 +35,8 @@ const DEFAULT_BRANCHES = ['main', 'master'];
 // Commands that change the folder the following commands run in, in bash and PowerShell.
 const CHANGE_DIR = new Set(['cd', 'pushd', 'popd', 'chdir', 'set-location', 'sl', 'push-location', 'pop-location']);
 const UNREAD_BRANCH = 'a push without a branch name from a folder the guard cannot read (name it: git push <remote> <branch>)';
+const GIT_DIR_PUSH = 'a push from the repository GIT_DIR or --git-dir names, which the guard does not read (push from its folder: git -C <dir> push <remote> <branch>)';
+const UNREAD_DEFAULT = 'a push to a remote whose default branch the guard cannot read (push to a remote by name whose refs/remotes/<remote>/HEAD is set: git remote set-head <remote> --auto)';
 
 // Inside double quotes bash drops a backslash only before these (https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html).
 const BASH_QUOTED_ESCAPES = '$`"\\';
@@ -106,7 +108,7 @@ function commands(source, powershell, nested = false) {
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
 
 const GIT = gitProgram();
-// Without git every query fails: no tag and no branch is known, the version names and main and master still hold, and a push names its branch.
+// Without git every query fails: no tag, no branch and no remote's default branch is known, so every push is denied.
 const gitIn = (dir, args) => (GIT ? spawnSync(GIT, ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }) : { status: 1 });
 const hasRef = (dir, ref) => gitIn(dir, ['show-ref', '--verify', '--quiet', ref]).status === 0;
 const gitLine = (dir, args) => {
@@ -134,6 +136,7 @@ function folder(dir, args) {
 // known: dir is the folder git runs in. Otherwise dir is one of the folders it may run in, and only a named branch is read.
 function push(args, dir, known) {
   const positionals = [];
+  let repo;
   for (let i = 0; i < args.length; i++) {
     const w = args[i];
     if (w === '--') {
@@ -144,17 +147,31 @@ function push(args, dir, known) {
       const name = w.slice(2).split('=')[0];
       const denied = name && PUSH_OPTIONS.find(([option]) => option.startsWith(name));
       if (denied) return denied[1];
-      if (!w.includes('=') && ['--push-option', '--receive-pack', '--exec', '--repo'].includes(w)) i++;
+      // --repo, or its prefix --rep, names the remote of a push without positionals.
+      if (name === 'rep' || name === 'repo') repo = w.includes('=') ? w.slice(w.indexOf('=') + 1) : args[i + 1];
+      if (!w.includes('=') && ['--push-option', '--receive-pack', '--exec', '--repo', '--rep'].includes(w)) i++;
     } else if (w.startsWith('-') && w.length > 1) {
       if (w.endsWith('o')) i++;
     } else positionals.push(w);
   }
-  const [remote = 'origin', ...specs] = positionals;
+  // Without a refspec, git pushes the current branch to its push target.
+  const pushTarget = positionals.length > 1 ? '' : gitLine(dir, ['rev-parse', '--abbrev-ref', '@{push}']);
+  // A push that names no remote goes where git sends it: the branch's pushRemote, remote.pushDefault, the branch's remote,
+  // the sole remote, else origin.
+  const pushRemote = () => {
+    const branch = gitLine(dir, ['symbolic-ref', '--short', 'HEAD']);
+    const config = (key) => gitLine(dir, ['config', '--get', key]);
+    const sole = () => {
+      const names = gitLine(dir, ['remote']).split('\n');
+      return names.length === 1 && names[0] ? names[0] : 'origin';
+    };
+    return (branch && config(`branch.${branch}.pushRemote`)) || config('remote.pushDefault') || (branch && config(`branch.${branch}.remote`)) || sole();
+  };
+  const [remote = repo ?? pushRemote(), ...specs] = positionals;
   if (specs.includes('tag')) return 'a tag push';
   const remoteHead = /^[\w.-]+$/.test(remote) ? gitLine(dir, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`]) : '';
   const defaults = new Set([...DEFAULT_BRANCHES, remoteHead && branchOf(remoteHead)].filter(Boolean));
-  // Without a refspec, git pushes the current branch to its push target.
-  const targets = specs.length ? [] : ['HEAD', branchOf(gitLine(dir, ['rev-parse', '--abbrev-ref', '@{push}']))];
+  const targets = specs.length ? [] : ['HEAD', branchOf(pushTarget)];
   for (const spec of specs) {
     // git resolves tags/x and heads/x as refs/tags/x and refs/heads/x.
     const [src, dst = src] = spec.replace(/^\+/, '').split(':').map((side) => side.replace(/^(tags|heads)\//, 'refs/$1/'));
@@ -167,11 +184,14 @@ function push(args, dir, known) {
     if (!current) return UNREAD_BRANCH;
     targets.push(current);
   }
+  // A URL, a path or a remote never fetched names no default branch; the same command may create the repository it pushes from.
+  if (!remoteHead) return UNREAD_DEFAULT;
   const target = targets.find((branch) => defaults.has(branch));
   return target ? `a push to the default branch ${target}` : null;
 }
 
-function git(args, cwd, known) {
+// gitDir: the command text sets GIT_DIR.
+function git(args, cwd, known, gitDir) {
   let i = 0;
   let dir = cwd;
   for (; i < args.length && args[i].startsWith('-'); i++) {
@@ -181,10 +201,13 @@ function git(args, cwd, known) {
       if (to) dir = to;
       else known = false;
     }
+    if (/^--git-dir(=|$)/.test(args[i])) gitDir = true;
     if (GIT_VALUE_OPTS.has(args[i])) i++;
   }
   const [sub, ...rest] = args.slice(i);
   if (sub === 'stash') return 'git stash';
+  // git then pushes from the repository GIT_DIR or --git-dir names, whose branches and remotes the guard does not read.
+  if (sub === 'push' && gitDir) return GIT_DIR_PUSH;
   // Only the explicit read forms pass: `git config <key>` alone reads too, but `--get` says so.
   if (sub === 'config' && !(rest.some((w) => CONFIG_READ.test(w)) && !rest.some((w) => CONFIG_WRITE.test(w)))) return 'git config';
   return sub === 'push' ? push(rest, dir, known) : null;
@@ -216,19 +239,26 @@ function apiCall(args) {
   return call;
 }
 
-function api(args, cmd) {
+// A path with each percent escape decoded, as the server may read it.
+const decoded = (path) => path.replace(/%[\da-f]{2}/gi, (escape) => String.fromCharCode(parseInt(escape.slice(1), 16)));
+
+// source: the command text and its words with quotes resolved, where a mutation split by quotes is whole.
+function api(args, source) {
   const call = apiCall(args);
-  if (call.positionals[0] === 'graphql') {
+  // A REST call to /graphql or its full URL reaches the same endpoint, its fields sent as the JSON body. The request line
+  // carries no fragment (#x), and a host may read the path in any case and with trailing slashes.
+  if (/(^|\/)graphql\/*$/i.test(decoded(call.positionals[0] ?? '').split(/[?#]/)[0] ?? '')) {
     // A query read from a file stays unseen, so it is denied.
     if (call.input || call.fields.some((v) => /^query=@/.test(v ?? ''))) return 'a gh api graphql query from a file';
-    return MUTATIONS.test(cmd) ? 'a gh api graphql mutation' : null;
+    if (MUTATIONS.test(source)) return 'a gh api graphql mutation';
   }
+  // A REST path can end in graphql as well (a repository, branch or user of that name).
   const writes = call.method ? call.method !== 'GET' : call.fields.length > 0 || call.input;
-  const path = writes && call.positionals.find((p) => API_PATHS.test(p));
+  const path = writes && call.positionals.find((p) => API_PATHS.test(p) || API_PATHS.test(decoded(p)));
   return path ? `gh api ${path}` : null;
 }
 
-function gh(args, cmd) {
+function gh(args, source) {
   const words = [];
   for (let j = 0; j < args.length; j++) {
     if (GH_VALUE_FLAGS.has(args[j])) j++;
@@ -237,7 +267,7 @@ function gh(args, cmd) {
   const [[sub, at] = [], [verb] = []] = words;
   if (GH_READS.has(sub) && !GH_READS.get(sub).includes(verb)) return `gh ${sub} ${verb ?? ''}`.trim();
   if (GH_WRITES.get(sub)?.includes(verb)) return `gh ${sub} ${verb}`;
-  return sub === 'api' ? api(args.slice(at + 1), cmd) : null;
+  return sub === 'api' ? api(args.slice(at + 1), source) : null;
 }
 
 function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
@@ -254,7 +284,11 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   // not hold where git runs: from then on git is read in every folder seen, and a push has to name its branch.
   let dir = cwd, known = true, first = changesDir(/\S*/.exec(cmd.trimStart())[0]);
   const seen = [cwd];
-  for (const { words, nested } of commands(cmd, powershell)) {
+  const parsed = commands(cmd, powershell);
+  const source = [cmd, ...parsed.flatMap((c) => c.words)].join('\n');
+  // Before the command, through env or export in bash, or $env:GIT_DIR in PowerShell.
+  const gitDir = /\bGIT_DIR\s*=/i.test(cmd);
+  for (const { words, nested } of parsed) {
     const at = words.findIndex(changesDir);
     if (at >= 0) {
       // popd and Pop-Location name no folder.
@@ -270,8 +304,8 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
       const name = program(words[j]);
       const rest = words.slice(j + 1);
       const why =
-        name === 'git' ? (known ? [dir] : seen).reduce((found, d) => found ?? git(rest, d, known), null)
-        : name === 'gh' ? gh(rest, cmd)
+        name === 'git' ? (known ? [dir] : seen).reduce((found, d) => found ?? git(rest, d, known, gitDir), null)
+        : name === 'gh' ? gh(rest, source)
         : name === 'claude' && rest.includes(BARE) ? 'a launch in bare mode, which runs no hooks'
         : null;
       if (why) return why;
@@ -280,10 +314,21 @@ function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   return null;
 }
 
-const input = JSON.parse(await text(process.stdin));
+// Exit 2 refuses the call on every Claude Code version; onFailure "block" needs 2.1.295 or later.
+const refuse = (what) => {
+  process.stderr.write(`CedarLoom role guard: ${what}, so the call is refused.\n`);
+  process.exitCode = 2;
+};
+const input = await text(process.stdin).then(JSON.parse).catch(() => null);
+if (input === null || typeof input !== 'object' || Array.isArray(input)) refuse('the hook input is no JSON object');
 // A subagent inherits the coordinator's environment, so only the coordinator's main session passes.
-if (process.env[ROLE] !== 'coordinator' || input.agent_id) {
-  const why = reason(input, typeof input.cwd === 'string' ? input.cwd : process.cwd());
+else if (process.env[ROLE] !== 'coordinator' || input.agent_id) {
+  let why = null;
+  try {
+    why = reason(input, typeof input.cwd === 'string' ? input.cwd : process.cwd());
+  } catch (error) {
+    refuse(`the guard failed (${error})`);
+  }
   if (why) {
     const line = `CedarLoom role guard: ${why} is the coordinator's step, and this session does not run as the coordinator (${ROLE}=coordinator in the main session, set by the user who starts it). Leave the step to the coordinator and name it in your report. Text that only mentions such a command goes in a file (-F, --body-file).`;
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: line } }));

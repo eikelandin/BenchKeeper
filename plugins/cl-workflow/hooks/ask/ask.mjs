@@ -25,10 +25,14 @@ const line = (now) => {
 };
 const say = (event, fields) => process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: event, ...fields } }));
 
-const input = JSON.parse(await text(process.stdin));
-const event = input.hook_event_name;
+const input = await text(process.stdin).then(JSON.parse).catch(() => null);
+const event = input?.hook_event_name;
 const now = Date.now();
-if (event === 'PreToolUse') {
+if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+  // Exit 2 refuses the question tool on every Claude Code version; onFailure "block" needs 2.1.295 or later.
+  process.stderr.write('CedarLoom ask hook: the hook input is no JSON object.\n');
+  process.exitCode = 2;
+} else if (event === 'PreToolUse') {
   if (openUntil(file, now) === null) say(event, { permissionDecision: 'deny', permissionDecisionReason: OFF });
 } else if (event === 'SessionStart') {
   // A new process or a resumed conversation starts with questions off; ended windows of earlier processes go too.
