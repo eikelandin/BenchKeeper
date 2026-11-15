@@ -98,11 +98,12 @@ const run = (argv, o = {}) => {
   if (argv[0] === 'git' && argv.includes('ls-remote')) return { code: 0, stdout: '', stderr: '' };
   if (argv[0] === 'git') { try { return { code: 0, stdout: execFileSync(GIT, argv.slice(1), { cwd: o.cwd, encoding: 'utf8', stdio: 'pipe' }), stderr: '' }; } catch (e) { return { code: e.status ?? 1, stdout: e.stdout ?? '', stderr: e.stderr ?? '' }; } }
   // The skills CLI adds a skill folder with one file: in a rehearsal's scratch home, else in the fixture home, never the real one.
-  if (argv[0] === 'npx' && argv[2] === SKILLS_SPEC) {
-    const name = argv.includes('-s') ? argv[argv.indexOf('-s') + 1] : argv[4];
+  if (argv[0] === 'npx' && argv.includes(SKILLS_SPEC)) {
+    const sub = argv.indexOf(SKILLS_SPEC) + 1;
+    const name = argv.includes('-s') ? argv[argv.indexOf('-s') + 1] : argv[sub + 1];
     const base = argv.includes('-g') ? (o.env?.HOME?.includes('bk-prerun-') ? o.env.HOME : home) : o.cwd;
     const at = join(base, '.claude/skills', name);
-    if (argv[3] === 'add') { mkdirSync(at, { recursive: true }); writeFileSync(join(at, 'SKILL.md'), `---\nname: ${name}\n---\n`); } else rmSync(at, { recursive: true, force: true });
+    if (argv[sub] === 'add') { mkdirSync(at, { recursive: true }); writeFileSync(join(at, 'SKILL.md'), `---\nname: ${name}\n---\n`); } else rmSync(at, { recursive: true, force: true });
     return { code: 0, stdout: '', stderr: '' };
   }
   if (argv[1]?.endsWith('verify.mjs')) return { code: 0, stdout: '', stderr: '' };
