@@ -19,3 +19,10 @@ test('workflow: a quick software change needs only SKILL.md', () => {
   // A risky change keeps the review before pushing in software.md, whatever depth the user picked.
   assert.match(skill, /Standard and deep, and any risky change: also \[software\.md\]/);
 });
+
+test('workflow: the depth table keeps the change-type floors', () => {
+  // The two-column rows of step 1; the steps table of step 3 has more cells.
+  const when = (depth) => skill.match(new RegExp(`^ *\\| ${depth} \\| ([^|\\n]*) \\|$`, 'm'))?.[1] ?? '';
+  assert.match(when('standard'), /at least standard: a bug,/);
+  assert.match(when('deep'), /always deep: a schema migration,/);
+});

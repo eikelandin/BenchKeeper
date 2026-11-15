@@ -34,7 +34,7 @@
     "name": "mattpocock/skills",
     "by": "Matt Pocock",
     "url": "https://github.com/mattpocock/skills",
-    "role": "the workflow owner: his skills run the phases of standard and full work when installed (grilling, spec and tickets, tdd, code review, pull request)",
+    "role": "the workflow owner: his skills run the phases of standard and deep work when installed (grilling, spec and tickets, tdd, code review, pull request)",
     "evidence": [
       "plugins/cedarloom/library/library.json",
       "plugins/cedarloom/skills/workflow/software.md#steps"
@@ -413,7 +413,7 @@
         "phase": "define",
         "sub": "plan, spec, tickets",
         "human": "approve the plan",
-        "tip": "Standard: a plan of a few lines that names the test seams. Full: the spec, terms and decisions recorded. Several sessions: one ticket per testable slice.",
+        "tip": "Standard: a plan of a few lines that names the test seams. Deep: the spec, terms and decisions recorded. Several sessions: one ticket per testable slice.",
         "text": "Standard: a plan of a few lines that names the test seams. Deep: the spec (deployment target, data storage, module boundaries, core types), with terms and decisions recorded (`domain-modeling` with Matt Pocock's skills). Work for several sessions: one ticket per independently testable slice; with his skills the agent suggests `/to-spec` and `/to-tickets` and waits for you to run them.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md",
@@ -424,7 +424,7 @@
         "name": "Build",
         "phase": "build",
         "sub": "tests where they count",
-        "tip": "Standard and full: the existing tests of the touched code, then a test first only where the test rule calls for one.",
+        "tip": "Standard and deep: the existing tests of the touched code, then a test first only where the test rule calls for one.",
         "text": "Standard and deep: the existing tests that cover the touched code run first, then a test first at the agreed seams only where the test rule calls for one (`tdd` with Matt Pocock's skills), ticket by ticket. With the Ponytail pack, Ponytail runs at its level `full`. Deep: when the build drifts from the plan, the agent stops and asks before it discards the branch and restarts.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/software.md#steps",
@@ -446,8 +446,8 @@
         "phase": "ship",
         "sub": "pr, /code-review, checks",
         "human": "you merge",
-        "tip": "Standard, full and risky: /code-review before push. Risky: /security-review. Pull request when the project uses them, checks. You merge.",
-        "text": "Standard, full and risky work: `/code-review` before `git push` (correctness), risky changes also `/security-review`. When the project uses pull requests, one with the key decisions, then its checks. Merge only on your instruction. Several tasks on one branch get one review at the end.",
+        "tip": "Standard, deep and risky: /code-review before push. Risky: /security-review. Pull request when the project uses them, checks. You merge.",
+        "text": "Standard, deep and risky work: `/code-review` before `git push` (correctness), risky changes also `/security-review`. When the project uses pull requests, one with the key decisions, then its checks. Merge only on your instruction. Several tasks on one branch get one review at the end.",
         "evidence": [
           "plugins/cedarloom/skills/workflow/SKILL.md",
           "plugins/cedarloom/skills/workflow/software.md#steps"

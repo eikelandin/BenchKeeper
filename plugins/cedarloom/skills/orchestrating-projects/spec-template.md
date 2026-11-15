@@ -7,7 +7,7 @@ Copy this file's block, replace each `<...>`, and send it as the worker's task. 
 What the lines take, policy fields as the reader prints them:
 
 - Names: `<owner/repo>` (always the project's repository), `<default branch>`, `<type>` and `<slug>` by the names rule of [SKILL.md](SKILL.md#names). `<tracker>` is `issues.repository`, or `<owner/repo>` where the policy names none.
-- `Agent:` takes `models.worker` at the depth you estimate: per issue the depth of step 1 of the workflow skill, a sensitive change ([review-and-merge.md](review-and-merge.md#sensitive-or-routine)) counting as deep, in a batch the highest. A Claude Code worker gets that model and effort; a worker on another agent only a value the policy names (the same in all four rows), else its agent's default. The estimate only chooses the model: `Depth:` stays as the block says.
+- `Agent:` takes `models.worker` at the depth you estimate: per issue the depth of step 1 of the workflow skill, or `research` for a research issue, a sensitive change ([review-and-merge.md](review-and-merge.md#sensitive-or-routine)) counting as deep, in a batch the highest. A Claude Code worker gets that model and effort; a worker on another agent only a value the policy names (the same in all four rows), else its agent's default. The estimate only chooses the model: `Depth:` stays as the block says.
 - `Review:` takes `review.depth`, or `review.sensitiveDepth` and the security review for an issue that reads as sensitive, in a batch when one of its issues does.
 - Flow takes each phase the reader prints under `models.phases`; for an issue that reads as sensitive, plan and review take `models.sensitive.plan` and `models.sensitive.review`.
 - `Worker rules:` takes two texts, each whole and unchanged.
