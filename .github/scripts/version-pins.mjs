@@ -1,7 +1,6 @@
-// Writes the current app version into the install commands of the docs (not the plugin's skill text): `npx @cedarloom/app@<version>` and the clone
-// tag `--branch app-v<version>` (older pins name `setup-v`). Other version mentions (benchmark arms, history) stay as written.
-// With --release (release.yml, on the release branch) it also sets minApp in plugins/cedarloom/content.json to that version.
-// Usage: node .github/scripts/version-pins.mjs [--check | --release]   (--check: changes nothing; exit 1 when a file differs, or when
+// Writes the plugins' version (the bundle's .claude-plugin/plugin.json) into the plugin install lines of the docs that name a release tag:
+// the marketplace ref `#cedarloom-v<version>` (Claude Code) or `@cedarloom-v<version>` (Codex). Other version mentions stay as written.
+// Usage: node .github/scripts/version-pins.mjs [--check]   (--check: changes nothing; exit 1 when a file differs, or when
 // the dev container's Playwright, pnpm or Node differs from web/, app/ and packages/ui, .github/pnpm, or NODE_VERSION of cedarloom.yml)
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -10,18 +9,11 @@ import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-// Recorded history and benchmark arms keep the versions they name; skill text under plugins/ names a range (npx -y @cedarloom/app@0.1), not an exact version.
+// Recorded history and benchmark arms keep the versions they name; text under plugins/ ships inside the release it would name.
 export const SKIP = /^(bench\/|evaluations\/|CHANGELOG\.md|app\/test\/|plugins\/)|package-lock\.json$/;
 
 export function pins(text, version) {
-  return text
-    .replace(/npx @cedarloom\/app@\d+\.\d+\.\d+/g, `npx @cedarloom/app@${version}`)
-    .replace(/--branch (setup|app)-v\d+\.\d+(\.\d+)?/g, `--branch app-v${version}`);
-}
-
-// The content of a release needs the app of that release: minApp follows the app version.
-export function minAppPin(text, version) {
-  return text.replace(/("minApp"\s*:\s*")\d+\.\d+\.\d+(")/, `$1${version}$2`);
+  return text.replace(/([#@])cedarloom-v\d+\.\d+\.\d+/g, `$1cedarloom-v${version}`);
 }
 
 // As Docker reads the file: comment lines (a whole line starting with #) dropped, then continued lines joined, so an
@@ -51,7 +43,10 @@ export function nodeDrift(dockerfile, workflow) {
 }
 
 if (isMain(import.meta.url)) {
-  const { version } = JSON.parse(readFileSync(`${root}/app/package.json`, 'utf8'));
+  // The release tag cedarloom-v<version> is the bundle's (component cedarloom), as in release.yml.
+  const { packages } = JSON.parse(readFileSync(`${root}/release-please-config.json`, 'utf8'));
+  const bundle = Object.keys(packages).find((path) => packages[path].component === 'cedarloom');
+  const { version } = JSON.parse(readFileSync(`${root}/${bundle}/.claude-plugin/plugin.json`, 'utf8'));
   const files = execFileSync('/usr/bin/git', ['ls-files', '*.md', '*.json', '*.tsx'], { cwd: root, encoding: 'utf8' }).split('\n').filter((f) => f && !SKIP.test(f));
   const stale = [];
   for (const f of files) {
@@ -61,16 +56,8 @@ if (isMain(import.meta.url)) {
     stale.push(f);
     if (process.argv[2] !== '--check') writeFileSync(`${root}/${f}`, next);
   }
-  // The release branch only (--release from release.yml): on main the app version may move ahead of minApp
-  // (app/test/package.test.mjs allows it), so neither --check nor a plain run changes it.
-  if (process.argv[2] === '--release') {
-    const f = `${root}/plugins/cedarloom/content.json`;
-    const text = readFileSync(f, 'utf8');
-    const next = minAppPin(text, version);
-    if (next !== text) writeFileSync(f, next);
-  }
   if (process.argv[2] === '--check' && stale.length) {
-    console.log(`::error::install commands name another version than app/package.json (${version}) in ${stale.join(', ')}: run node .github/scripts/version-pins.mjs`);
+    console.log(`::error::plugin install lines name another release than the plugins (${version}) in ${stale.join(', ')}: run node .github/scripts/version-pins.mjs`);
     process.exit(1);
   }
   if (process.argv[2] === '--check') {

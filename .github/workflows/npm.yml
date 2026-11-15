@@ -1,7 +1,6 @@
 name: npm publish
 
-# Started by the Release workflow after the merge of a release pull request that raises the app version (its job
-# `release` waits for this run before it tags), or by the owner (Actions, npm publish, Run workflow). Publishes app/ as benchkeeper@<version> with npm
+# Started only by hand (Actions, npm publish, Run workflow): no release starts it. Publishes app/ as benchkeeper@<version> with npm
 # provenance through trusted publishing (OIDC): no token. The package's npm settings name this repository and npm.yml.
 # The run is on main, but it builds the commit of the input `sha`, the release commit that app-v<version> tags, which
 # must be on main: a rerun after later merges publishes the release, not the head of main. npm takes the provenance from
@@ -15,7 +14,7 @@ on:
         description: Version to publish, equal to app/package.json
         required: true
       sha:
-        description: Release commit to build, a full commit hash on main (the Release workflow passes the commit it tags)
+        description: Release commit to build, a full commit hash on main
         required: true
 
 permissions: {}

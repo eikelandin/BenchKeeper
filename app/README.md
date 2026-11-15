@@ -36,7 +36,7 @@ After either path, restart the agents. `npx @cedarloom/app@6.27.0 history` lists
 
 ## Setup
 
-Node.js 22 or newer, and at least one agent. Linux and macOS are tested; Windows runs only a CI smoke test (start, plan, apply with a ledger run) and is untested by the owner.
+Node.js 22 or newer, and at least one agent. Linux and macOS are tested; Windows is untested.
 
 - From npm: `npx @cedarloom/app@6.27.0 <command>`. A clone of the branch `stable` runs the latest release (each release moves it); to run a change that is not on npm yet, clone the default branch (`--branch main`).
 - From a clone: `git clone --depth 1 --branch stable https://github.com/eikelandin/BenchKeeper.git && npm ci --prefix BenchKeeper/app --omit=dev`, then `node BenchKeeper/app/bin/benchkeeper.mjs <command>`. The web UI needs a build first: `npm ci --prefix BenchKeeper/app && npm run build --prefix BenchKeeper/app`.
@@ -532,4 +532,4 @@ In the dev container:
 
 ## Release
 
-The app (this package, tag `app-v<x.y.z>`) and the plugins (`plugins/`, the content in the `cedarloom` bundle, Release `cedarloom-v<x.y.z>`) release with their own versions ([releasing](../docs/releasing.md#components)); `test/package.test.mjs` checks that the content's `minApp` is not above the app version. `npm pack` copies rules, own skills, the library catalog and eval sets into `content/` and builds the UI, so `plan` and `apply` work offline for them. After the owner merges a release pull request that raises the app version, the Release workflow starts the "npm publish" workflow (`npm.yml`) with the new version and checks the registry ([releasing](../docs/releasing.md#steps)); a release of the content alone publishes nothing to npm. A manual run of `npm.yml` (Actions, Run workflow, the version as input) is the fallback. It publishes through npm trusted publishing (no token) with provenance. The trusted publisher in the package's npm settings names this repository and `npm.yml`.
+The app does not release: a release ships the plugins only ([releasing](../docs/releasing.md)), and its last release is `app-v6.27.0`. `test/package.test.mjs` checks that the content's `minApp` is not above the app version. `npm pack` copies rules, own skills, the library catalog and eval sets into `content/` and builds the UI, so `plan` and `apply` work offline for them. A manual run of the "npm publish" workflow (`npm.yml`, Actions, Run workflow, the version and the release commit as inputs) still publishes through npm trusted publishing (no token) with provenance; no release starts it.
