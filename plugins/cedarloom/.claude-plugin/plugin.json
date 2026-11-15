@@ -1,7 +1,7 @@
 {
   "name": "cedarloom",
   "displayName": "CedarLoom",
-  "version": "6.27.0",
+  "version": "6.28.0",
   "description": "Installs the CedarLoom plugins cl-workflow, cl-setup and cl-orchestration together.",
   "author": {
     "name": "eikelandin",
@@ -10,5 +10,9 @@
   "homepage": "https://eikelandin.github.io/BenchKeeper/",
   "repository": "https://github.com/eikelandin/BenchKeeper",
   "license": "MIT",
-  "dependencies": ["cl-workflow", "cl-setup", "cl-orchestration"]
+  "dependencies": [
+    "cl-workflow",
+    "cl-setup",
+    "cl-orchestration"
+  ]
 }

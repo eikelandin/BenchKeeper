@@ -1,6 +1,6 @@
 {
   "name": "cl-setup",
-  "version": "6.27.0",
+  "version": "6.28.0",
   "description": "Preview for Codex: the skills. Sets up and maintains projects: agent instructions and dev container per repository, a maintenance pass and a review of the rules files.",
   "author": {
     "name": "eikelandin",

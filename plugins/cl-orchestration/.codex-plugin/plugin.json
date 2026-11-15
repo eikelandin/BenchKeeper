@@ -1,6 +1,6 @@
 {
   "name": "cl-orchestration",
-  "version": "6.27.0",
+  "version": "6.28.0",
   "description": "Preview for Codex: the skill, and a SessionStart hook that hands a coordinator its handoff file back after a clear or compaction. Coordinates the issues of several projects from one session.",
   "author": {
     "name": "eikelandin",

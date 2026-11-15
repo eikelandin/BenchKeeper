@@ -1,5 +1,49 @@
 # Changelog
 
+## [7.0.0](https://github.com/eikelandin/BenchKeeper/compare/app-v6.27.0...app-v7.0.0) (2026-11-15)
+
+
+### ⚠ BREAKING CHANGES
+
+* **plugin:** split into the cl-workflow, cl-setup and cl-orchestration plugins and a cedarloom bundle ([#1370](https://github.com/eikelandin/BenchKeeper/issues/1370))
+* **plugin:** a coordinator run, handoff file or knowledge base under .cedarloom-app/ is no longer found. Move .cedarloom-app/runs to .cedarloom/runs and .cedarloom-app/knowledge to .cedarloom/knowledge, and exclude both, before updating. The old ref refs/cedarloom-app/policy is unused and can be deleted.
+* **plugin:** the old /benchkeeper:* commands, benchkeeper:* skill and agent ids, the operating-benchkeeper skill and the npx benchkeeper calls in skill text are gone, with no aliases.
+* **plugin:** /benchkeeper:tier is gone, and Tier: and Default tier: lines are no longer read. Name the depth in the request, a Depth: line or a Depth minimum: line instead.
+* **plugin:** the board and doctor buttons are gone and statusStyle is no longer a plugin option; a value already in settings.json keeps working for the app's status line.
+* **plugin:** the plugin is now cedarloom@cedarloom. Remove the benchkeeper@benchkeeper plugin and the benchkeeper marketplace, then install cedarloom@cedarloom; plugin options set under pluginConfigs."benchkeeper@benchkeeper" are not read.
+* **app:** the app no longer finds .benchkeeper/, benchkeeper:* blocks or benchkeeper-guard.mjs. Remove a setup written by an earlier version with that version before switching.
+* **app:** data under the old names is not read or moved. Runs, backups, projects, accounts, own packs, presets, skills and evals in ~/.config/benchkeeper, keychain tokens under the service benchkeeper, pack, preset, profile and eval files of the old kinds, BENCHKEEPER_* variables and the status line style value benchkeeper are ignored.
+
+### Features
+
+* **app:** projects apply writes the coordinator policy and worker rules ([#1331](https://github.com/eikelandin/BenchKeeper/issues/1331)) ([7011e9f](https://github.com/eikelandin/BenchKeeper/commit/7011e9f92711b4b3647ca96e4feb8de4dee2ebed))
+* **plugin:** an owner's comment that is an option's label or letter alone answers an approval ([#1333](https://github.com/eikelandin/BenchKeeper/issues/1333)) ([2eb17fb](https://github.com/eikelandin/BenchKeeper/commit/2eb17fb6e1f953baef937739d5d1889ba2de03e4))
+* **plugin:** audit, improve and debloat skills ([#1355](https://github.com/eikelandin/BenchKeeper/issues/1355)) ([f479098](https://github.com/eikelandin/BenchKeeper/commit/f47909856053952babdcc8357d2db4792a2ca561))
+* **plugin:** facts generator for the coordinator run folder ([#1334](https://github.com/eikelandin/BenchKeeper/issues/1334)) ([70a394d](https://github.com/eikelandin/BenchKeeper/commit/70a394d9e295abefad5c584af3d5ebd018f734f4))
+* **plugin:** offer the default policy file, read the version from plugin.json, clear after settled tasks ([#1366](https://github.com/eikelandin/BenchKeeper/issues/1366)) ([d1f714f](https://github.com/eikelandin/BenchKeeper/commit/d1f714f8d5cde3183fef01c456185701a1e23ccb))
+* **plugin:** one depth per task replaces the tiers ([#1361](https://github.com/eikelandin/BenchKeeper/issues/1361)) ([82065e3](https://github.com/eikelandin/BenchKeeper/commit/82065e343da1d980d2de0147eec14063418e817c))
+* **plugin:** risk class gates start and merge ([#1367](https://github.com/eikelandin/BenchKeeper/issues/1367)) ([f84022b](https://github.com/eikelandin/BenchKeeper/commit/f84022b0bb5a783fa2912b3ad6b31d63904708ed))
+* **plugin:** sensitive-change model defaults, gather, recheck and verify agents, and the review loop rules ([#1330](https://github.com/eikelandin/BenchKeeper/issues/1330)) ([cb8ff0d](https://github.com/eikelandin/BenchKeeper/commit/cb8ff0deb4ec62cea50e6d7c6fc02986635997e8))
+* **plugin:** the workflow is complete without add-on skills, with a plan check and /cedarloom:plan ([#1368](https://github.com/eikelandin/BenchKeeper/issues/1368)) ([f7b025c](https://github.com/eikelandin/BenchKeeper/commit/f7b025c61093476a4ca83c20597d5b7ffa4956b4))
+
+
+### Bug Fixes
+
+* **plugin:** drop the band's board and doctor buttons and statusStyle ([#1359](https://github.com/eikelandin/BenchKeeper/issues/1359)) ([0810a73](https://github.com/eikelandin/BenchKeeper/commit/0810a73125117b7985140213dd151e21a526c0f1))
+* **plugin:** facts generator follow-ups from the review ([#1335](https://github.com/eikelandin/BenchKeeper/issues/1335)) ([d11e1d6](https://github.com/eikelandin/BenchKeeper/commit/d11e1d627ed0cd27b26ac9805dd3d229ea192db1))
+* **plugin:** trust only comment authors with write access ([#1354](https://github.com/eikelandin/BenchKeeper/issues/1354)) ([03ff708](https://github.com/eikelandin/BenchKeeper/commit/03ff708292ea29650fad375220a88b99c4466a08))
+* point the marketplace source and links at the renamed account ([#1351](https://github.com/eikelandin/BenchKeeper/issues/1351)) ([c0e2cd0](https://github.com/eikelandin/BenchKeeper/commit/c0e2cd03210c96ea6785f47f862bc9ef2e56e091))
+
+
+### Code Refactoring
+
+* **app:** move the app's machine names to cedarloom-app ([#1337](https://github.com/eikelandin/BenchKeeper/issues/1337)) ([efdc0a7](https://github.com/eikelandin/BenchKeeper/commit/efdc0a7c58a4ac8d4491d1b2f3b8f6642469fa9a))
+* **app:** move the project folder and markers to cedarloom-app ([#1345](https://github.com/eikelandin/BenchKeeper/issues/1345)) ([c83ea9d](https://github.com/eikelandin/BenchKeeper/commit/c83ea9dd2bdc8712ada6b3498421677596f42627))
+* **plugin:** rename skill ids, commands and app calls ([#1348](https://github.com/eikelandin/BenchKeeper/issues/1348)) ([d1fafa8](https://github.com/eikelandin/BenchKeeper/commit/d1fafa81e2e3bd6b70dbf698ff73ab8e040402ce))
+* **plugin:** rename the plugin and marketplace to cedarloom ([#1346](https://github.com/eikelandin/BenchKeeper/issues/1346)) ([7930226](https://github.com/eikelandin/BenchKeeper/commit/79302265cf078d8c7797d44ae2a18e5a34b492b3))
+* **plugin:** run folder .cedarloom and policy ref ([#1363](https://github.com/eikelandin/BenchKeeper/issues/1363)) ([4a35f4f](https://github.com/eikelandin/BenchKeeper/commit/4a35f4feac83d2faa2414b37d8285ef6f6f838c9))
+* **plugin:** split into the cl-workflow, cl-setup and cl-orchestration plugins and a cedarloom bundle ([#1370](https://github.com/eikelandin/BenchKeeper/issues/1370)) ([de54c03](https://github.com/eikelandin/BenchKeeper/commit/de54c03535affa73c3530f809800fc39075801bf))
+
 ## [6.27.0](https://github.com/eikelandin/BenchKeeper/compare/app-v6.26.0...app-v6.27.0) (2026-11-12)
 
 

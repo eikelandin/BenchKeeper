@@ -1,7 +1,7 @@
 {
   "name": "cl-setup",
   "displayName": "CedarLoom setup",
-  "version": "6.27.0",
+  "version": "6.28.0",
   "description": "Sets up and maintains projects: agent instructions and dev container per repository, a maintenance pass and a review of the rules files. Each skill starts only when you call it.",
   "author": {
     "name": "eikelandin",
