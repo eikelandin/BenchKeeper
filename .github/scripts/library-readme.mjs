@@ -1,11 +1,11 @@
-// Writes the catalog tables of plugins/cedarloom/library/README.md from library.json.
+// Writes the catalog tables of plugins/setup/library/README.md from library.json.
 // Usage: node .github/scripts/library-readme.mjs [--check]   (--check: exit 1 when the README differs)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
-const lib = resolve(dirname(fileURLToPath(import.meta.url)), '../../plugins/cedarloom/library');
+const lib = resolve(dirname(fileURLToPath(import.meta.url)), '../../plugins/setup/library');
 const START = '<!-- generated:catalog -->';
 const END = '<!-- /generated:catalog -->';
 
@@ -62,7 +62,7 @@ if (isMain(import.meta.url)) {
   const next = update(readme, manifest);
   if (process.argv[2] === '--check') {
     if (next !== readme) {
-      console.log('::error::plugins/cedarloom/library/README.md differs from library.json: run node .github/scripts/library-readme.mjs');
+      console.log('::error::plugins/setup/library/README.md differs from library.json: run node .github/scripts/library-readme.mjs');
       process.exit(1);
     }
   } else writeFileSync(`${lib}/README.md`, next);

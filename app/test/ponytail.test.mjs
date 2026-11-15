@@ -21,7 +21,7 @@ const CONFIG = '.config/ponytail/config.json';
 function machine({ band = true, ponytail = true, benchkeeper = true, flag } = {}) {
   const home = mkdtempSync(join(tmpdir(), 'bk-pony-'));
   mkdirSync(join(home, '.claude'), { recursive: true });
-  writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { ...(ponytail ? { 'ponytail@ponytail': true } : {}), ...(benchkeeper ? { 'cedarloom@cedarloom': true } : {}) }, pluginConfigs: { 'cedarloom@cedarloom': { options: { tierBand: band } } } }));
+  writeFileSync(join(home, '.claude/settings.json'), JSON.stringify({ enabledPlugins: { ...(ponytail ? { 'ponytail@ponytail': true } : {}), ...(benchkeeper ? { 'workflow@cedarloom': true } : {}) }, pluginConfigs: { 'workflow@cedarloom': { options: { tierBand: band } } } }));
   if (flag) writeFileSync(join(home, FLAG), flag);
   return context({ home, run });
 }

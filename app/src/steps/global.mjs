@@ -1,12 +1,12 @@
 // Machine setup per detected agent: rules, command rules, plugins, settings, host tools, and everything else
 // installed globally, offered for removal (destructive, off by default).
-import { readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { parse as parseToml } from 'smol-toml';
 import { accountEnv, listAccounts } from '../accounts.mjs';
-import { agent, forAgent, renderRules } from '../agents.mjs';
+import { agent, forAgent, isOwnPlugin, OWN_PLUGINS, renderRules } from '../agents.mjs';
 import { childEnv } from '../childenv.mjs';
-import { contentDir, contentRefusal, contentVersionOf, library } from '../content.mjs';
+import { contentDir, contentRefusal, contentVersionOf, library, ownSkills } from '../content.mjs';
 import { cooldownEnv, cooled } from '../cooldown.mjs';
 import { exists, hashText, inside, listDir, listFiles, readText } from '../fsx.mjs';
 import { getBlock, mergeJson, parseJson, setToml } from '../merge.mjs';
@@ -49,8 +49,12 @@ const packPlugins = (a) => library().packs.filter((p) => p.plugins?.[a]).map((p)
   const x = p.plugins[a];
   return { id: x.id, marketplace: x.id.split('@')[1], ...(x.marketplace ? { source: x.marketplace } : {}), pack: p.id };
 });
-const OWN = { id: 'cedarloom@cedarloom', marketplace: 'cedarloom', source: 'eikelandin/BenchKeeper', ref: 'stable', version: 'app', sparse: ['.claude-plugin', 'plugins'] };
-export const PLUGINS = Object.fromEntries(['claude', 'codex'].map((a) => [a, [OWN, ...packPlugins(a)]]));
+const own = (name) => ({ id: `${name}@cedarloom`, marketplace: 'cedarloom', source: 'eikelandin/BenchKeeper', ref: 'stable', version: 'app', sparse: ['.claude-plugin', 'plugins'] });
+// Claude Code installs the cedarloom bundle with the plugins it depends on; Codex installs no dependencies, so it gets each plugin.
+const OWN = { claude: [own('cedarloom')], codex: OWN_PLUGINS.map(own) };
+export const PLUGINS = Object.fromEntries(['claude', 'codex'].map((a) => [a, [...OWN[a], ...packPlugins(a)]]));
+// The own plugin whose version stands for BenchKeeper's on an agent.
+const lead = (a) => OWN[a][0];
 // The ref and version a plugin is pinned to, for this app version.
 // BenchKeeper installed the plugin a removal argv names: the newest done, not undone command of the ledger on it installs it.
 function installedByApp(ctx, [a, , , id]) {
@@ -90,7 +94,7 @@ export function localPlugins(ctx, dir) {
 // The install of the BenchKeeper plugin Claude Code runs in a project folder: the folder's own (local or project scope), else the user's.
 function ownInstall(ctx, dir) {
   try {
-    const l = JSON.parse(readText(join(ctx.home, '.claude/plugins/installed_plugins.json'))).plugins[OWN.id];
+    const l = JSON.parse(readText(join(ctx.home, '.claude/plugins/installed_plugins.json'))).plugins[lead('claude').id];
     return l.find((p) => ['local', 'project'].includes(p.scope) && p.projectPath === dir) ?? l.find((p) => p.scope === 'user');
   } catch { return undefined; }
 }
@@ -107,7 +111,7 @@ export function pluginContent(ctx, dir) {
 const SAFE_NAME = /^[A-Za-z0-9][\w.@:-]*$/;
 export const KEEP_SKILLS = ['find-skills', ...orca.SKILLS, 'synced'];
 const KEEP_MARKETPLACES = Object.fromEntries(Object.entries({ claude: ['claude-plugins-official', 'anthropic-plugin-directory'], codex: [] }).map(([a, own]) => [a, [...new Set([...PLUGINS[a].map((p) => p.marketplace), ...own])]]));
-const keepPlugin = (id, a) => PLUGINS[a].some((p) => p.id === id) || /@(anthropic-plugin-directory|openai-curated)/.test(id);
+const keepPlugin = (id, a) => PLUGINS[a].some((p) => p.id === id) || isOwnPlugin(id) || /@(anthropic-plugin-directory|openai-curated)/.test(id);
 
 // BenchKeeper adds no permission rules: Claude Code's auto mode (its defaults) decides what needs a prompt. Whatever else sits in
 // permissions.ask or in Codex's rules folder differs from that set and is offered for removal. The two push and pull request
@@ -213,7 +217,7 @@ function claudeAccounts(ctx) {
 // The BenchKeeper plugin of an agent: the installed version (null when not installed) and the one this app sets up.
 // claude also lists the registered accounts with their own installed version, and the marketplace ref when it is not stable.
 export function cedarloomPlugin(ctx, a) {
-  const p = PLUGINS[a].find((x) => x.id === 'cedarloom@cedarloom');
+  const p = lead(a);
   const available = pin(p, ctx.appVersion).version;
   const installedIn = (account) => pluginState(ctx, a, account).listed.find((x) => x.id === p.id)?.version ?? null;
   const account = (x) => {
@@ -226,7 +230,7 @@ export function cedarloomPlugin(ctx, a) {
 // The first installed BenchKeeper plugin whose content needs a newer app than this one, as a message; null when none does.
 export function installedRefusal(ctx, agents = ['claude', 'codex']) {
   for (const a of agents.filter((x) => PLUGINS[x])) {
-    const dir = pluginState(ctx, a).listed.find((p) => p.id === 'cedarloom@cedarloom')?.dir;
+    const dir = pluginState(ctx, a).listed.find((p) => p.id === lead(a).id)?.dir;
     const why = dir && contentRefusal(dir, ctx.appVersion);
     if (why) return why;
   }
@@ -343,7 +347,7 @@ export function globalPlan(env) {
   for (const a of ['claude', 'codex'].filter((x) => agents.includes(x))) {
     const { listed, markets } = pluginState(ctx, a);
     const name = agent(a).name;
-    for (const p of PLUGINS[a].filter((x) => full || x.id.startsWith('cedarloom@'))) {
+    for (const p of PLUGINS[a].filter((x) => full || !x.pack)) {
       const have = listed.find((x) => x.id === p.id && x.enabled);
       const off = !have && listed.find((x) => x.id === p.id);
       // An installed pack plugin is kept current without its pack being chosen again.
@@ -389,7 +393,7 @@ export function globalPlan(env) {
     }
     // An account folder with the plugin behind the app: the marketplace refresh and the update run with that folder only. The
     // default folder gets none (the agent's own update keeps it current); a plugin an account lacks is not installed there.
-    const own = PLUGINS[a].find((x) => x.id === 'cedarloom@cedarloom');
+    const own = lead(a);
     for (const acc of a === 'claude' ? claudeAccounts(ctx) : []) {
       const state = pluginState(ctx, a, acc);
       const have = state.listed.find((x) => x.id === own.id);
@@ -415,8 +419,7 @@ export function globalPlan(env) {
   }
   const copies = agents.filter((x) => !agent(x).plugins);
   for (const id of copies) {
-    for (const name of readdirSync(join(contentDir, 'skills'))) {
-      const src = join(contentDir, 'skills', name);
+    for (const [name, src] of ownSkills()) {
       const installUnit = unit({ id: `skill:${name}`, kind: 'skill', source: { type: 'library' }, agents: copies, scope: 'global', files: [...new Set(copies.map((x) => join(at(agent(x).global.skills), name)))], removal: 'files' });
       for (const f of listFiles(src)) {
         add(`skills:${id}`, `${agent(id).name} skill ${name}`, { kind: 'write', path: join(at(agent(id).global.skills), name, f), after: forAgent(readFileSync(join(src, f), 'utf8'), id), installUnit });
@@ -482,7 +485,7 @@ export function globalPlan(env) {
       settings: { agent: 'claude', keys: ['autoCompactWindow', 'modelSettings'] },
     }, RECOMMENDATION);
     // Offered, not preselected: the band is a choice, and a plugin's options live under its id.
-    add('settings:claude:tier-band', 'BenchKeeper status band above the prompt (optional, terminal and desktop app): project, branch, last test run, the tier of the last answer and buttons to set it for the session', { kind: 'write', path: f, edit: sets([[['pluginConfigs', 'cedarloom@cedarloom', 'options', 'tierBand'], true]]), settings: { agent: 'claude', keys: ['pluginConfigs.cedarloom@cedarloom.options.tierBand'] } }, { selected: false, optional: true });
+    add('settings:claude:tier-band', 'BenchKeeper status band above the prompt (optional, terminal and desktop app): project, branch, last test run, the tier of the last answer and buttons to set it for the session', { kind: 'write', path: f, edit: sets([[['pluginConfigs', 'workflow@cedarloom', 'options', 'tierBand'], true]]), settings: { agent: 'claude', keys: ['pluginConfigs.workflow@cedarloom.options.tierBand'] } }, { selected: false, optional: true });
   }
   if (agents.includes('codex')) {
     const f = at('.codex/config.toml');

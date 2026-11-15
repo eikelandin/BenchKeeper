@@ -2,6 +2,7 @@
 import { readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { accountChecks } from './accounts.mjs';
+import { isOwnPlugin } from './agents.mjs';
 import { automationChecks } from './automations.mjs';
 import { allowChecks } from './allow.mjs';
 import { baselineIssues } from './baseline.mjs';
@@ -75,7 +76,7 @@ export function globalDrift(ctx, agents, devcontainerCli, level) {
     if (c.outdated) return { ...issue('warning', c.step.split(':')[0], c.title, apply), tag: 'outdated' };
     // Rules the user edited are a warning, a missing rules file an error.
     if (/^rules:/.test(c.step) && readText(c.path) != null) return issue('warning', 'rules', `${c.title} differs from setup ${appVersion}`, `benchkeeper apply restores them; the optional "keep your edits" change of benchkeeper plan stops this warning`);
-    const error = /^rules:/.test(c.step) || /^plugin:\w+:cedarloom@/.test(c.step);
+    const error = /^rules:/.test(c.step) || (/^plugin:\w+:/.test(c.step) && isOwnPlugin(c.step.split(':')[2]));
     return issue(error ? 'error' : 'warning', c.step.split(':')[0], c.kind === 'command' ? `not installed: ${c.title}` : `${c.title} differs from setup ${appVersion}`, apply);
   }
 }

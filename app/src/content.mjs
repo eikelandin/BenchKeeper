@@ -1,11 +1,20 @@
-// BenchKeeper's rules, skills and library: packed into content/ for npm, read from the repository in a clone.
-import { existsSync, readFileSync } from 'node:fs';
+// BenchKeeper's rules, skills and library: packed into content/ for npm, read from the repository's plugin folders in a clone.
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packed = fileURLToPath(new URL('../content/', import.meta.url));
-export const contentDir = existsSync(packed) ? packed : fileURLToPath(new URL('../../plugins/cedarloom/', import.meta.url));
+const plugins = fileURLToPath(new URL('../../plugins/', import.meta.url));
+const isPacked = existsSync(packed);
+// The folders a part of the content lies in: content/<part> when packed, <plugin>/<part> of each plugin that has it in a clone.
+const parts = (part) => (isPacked ? [join(packed, part)] : readdirSync(plugins).map((p) => join(plugins, p, part))).filter((d) => existsSync(d));
+// The rules, eval sets, automations and content.json lie in the bundle plugin's folder in a clone.
+export const contentDir = isPacked ? packed : join(plugins, 'cedarloom/');
+// Own skill name to its folder, in the byte order readdir gives one folder.
+export const ownSkills = () => new Map(parts('skills').flatMap((d) => readdirSync(d, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => [e.name, join(d, e.name)])).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+export const libraryDir = parts('library')[0] ?? join(contentDir, 'library');
 export const appVersion = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
-export const library = () => JSON.parse(readFileSync(`${contentDir}library/library.json`, 'utf8'));
+export const library = () => JSON.parse(readFileSync(join(libraryDir, 'library.json'), 'utf8'));
 
 // content.json: { schemaVersion, contentVersion, minApp }. Content without the file (an older plugin) has no requirement.
 const content = () => { try { return JSON.parse(readFileSync(`${contentDir}content.json`, 'utf8')); } catch { return {}; } };

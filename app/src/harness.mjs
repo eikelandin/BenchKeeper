@@ -1,8 +1,7 @@
 // benchkeeper verify: deterministic checks of an installed setup, no agent session.
-import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { agent } from './agents.mjs';
-import { contentDir } from './content.mjs';
+import { ownSkills } from './content.mjs';
 import { exists, readText } from './fsx.mjs';
 import { rootOf } from './git.mjs';
 import { drift, newerPaths } from './integrity.mjs';
@@ -32,7 +31,7 @@ function pluginCheck(ctx, agents) {
     for (const p of PLUGINS[a].filter((x) => !x.pack)) if (!enabled.includes(p.id)) problems.push(`${agent(a).name}: plugin ${p.id} not enabled`);
   }
   for (const a of agents.filter((x) => !agent(x).plugins)) {
-    for (const s of readdirSync(join(contentDir, 'skills'))) if (!exists(join(ctx.home, agent(a).global.skills, s, 'SKILL.md'))) problems.push(`${agent(a).name}: skill ${s} missing`);
+    for (const s of ownSkills().keys()) if (!exists(join(ctx.home, agent(a).global.skills, s, 'SKILL.md'))) problems.push(`${agent(a).name}: skill ${s} missing`);
   }
   return check('each agent has the expected skills', problems);
 }

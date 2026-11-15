@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import { isAbsolute, join, resolve } from 'node:path';
 import { registry, skillDirs } from './agents.mjs';
-import { contentDir } from './content.mjs';
+import { contentDir, libraryDir, ownSkills } from './content.mjs';
 import { exists, readText } from './fsx.mjs';
 import { mask } from './redact.mjs';
 import { apply, preview } from './runner.mjs';
@@ -20,8 +20,9 @@ const shippedEvals = join(contentDir, 'evals');
 
 const projectId = (dir) => createHash('sha256').update(dir).digest('hex').slice(0, 8);
 export const scopeOf = (target) => ({ user: 'user', project: 'project' })[target.split('@')[1]?.split('-')[0]] ?? 'library';
-const libraryDirs = (name) => [join(contentDir, 'skills', name), join(contentDir, 'library', name)];
-export const inLibrary = (name) => libraryDirs(name).some((d) => exists(d));
+// [own skill folder or undefined, library folder]: the second one is copied into the scratch repository.
+const libraryDirs = (name) => [ownSkills().get(name), join(libraryDir, name)];
+export const inLibrary = (name) => libraryDirs(name).some((d) => d && exists(d));
 // The first agent folder of the project or the user that holds the skill. A skill installed by link (the skills CLI) is read where it lives:
 // a hash of the link would not change with the text, and a copy of the link would not resolve in the scratch repository.
 const ownDir = (ctx, name, scope, project) => {
@@ -34,7 +35,7 @@ const ownDir = (ctx, name, scope, project) => {
 export function skillSource(ctx, target, project) {
   const name = target.slice('skill:'.length).split('@')[0];
   const scope = scopeOf(target);
-  if (scope === 'library') { const dir = libraryDirs(name).find((d) => exists(d)); return dir && { dir, copy: dir === libraryDirs(name)[1] }; }
+  if (scope === 'library') { const dir = libraryDirs(name).find((d) => d && exists(d)); return dir && { dir, copy: dir === libraryDirs(name)[1] }; }
   const dir = ownDir(ctx, name, scope, project);
   return dir && { dir, copy: true };
 }

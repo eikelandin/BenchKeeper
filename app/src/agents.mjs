@@ -33,8 +33,13 @@ export function skillDirs(ids, scope, base) {
   return [...dirs].map(([dir, agents]) => ({ dir, agents }));
 }
 
+// The plugins whose skills and agents BenchKeeper sets up; each prefixes its own (workflow:ask).
+export const OWN_PLUGINS = ['workflow', 'setup', 'orchestration'];
+// The marketplace id of one of BenchKeeper's plugins or of the cedarloom bundle that installs them.
+export const isOwnPlugin = (id) => ['cedarloom', ...OWN_PLUGINS].some((p) => id === `${p}@cedarloom`);
+const OWN_PREFIX = new RegExp(`(?<![\\w-])(?:${OWN_PLUGINS.join('|')}):(?=[a-z])`, 'g');
 // Agents without plugins know BenchKeeper's skills by their bare names.
-export const forAgent = (text, id) => (agent(id).plugins ? text : text.replaceAll('cedarloom:', ''));
+export const forAgent = (text, id) => (agent(id).plugins ? text : text.replace(OWN_PREFIX, ''));
 
 // Instructions: 'file' owns the whole file, 'block' merges a marked block, 'import' is CLAUDE.md pointing at AGENTS.md.
 export function renderRules(format, current, rules) {

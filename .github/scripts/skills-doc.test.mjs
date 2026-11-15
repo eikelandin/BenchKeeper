@@ -23,9 +23,9 @@ test('the when column comes from the field, else from the description after its 
   const agent = skillEntry(skill(['name: a', 'description: "Does a. Use when b."', 'writes: "c"']));
   assert.deepEqual([agent.purpose, agent.when, agent.writes], ['Does a.', 'Use when b.', 'c']);
   assert.match(agent.start, /^the agent/);
-  const user = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'when: "On request."', 'writes: "x"']));
+  const user = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'when: "On request."', 'writes: "x"']), 'setup');
   assert.equal(user.when, 'On request.');
-  assert.match(user.start, /^you: `\/cedarloom:u`/);
+  assert.equal(user.start, 'you: `/setup:u` (Codex `$setup:u`)');
 });
 test('the first sentence ends where the earlier /^(.*?\.)(?:\s+(.*))?$/ ended it', () => {
   const FIRST = /^(.*?\.)(?:\s+(.*))?$/;
@@ -50,7 +50,7 @@ test('--check fails on a page that differs from its sources', () => {
   const tmp = realpathSync(mkdtempSync(join(tmpdir(), 'skills-doc-')));
   const dir = join(tmp, 'repo');
   try {
-    for (const p of ['.github/scripts', 'plugins/cedarloom/skills', 'plugins/cedarloom/library/library.json', 'docs/skills.md']) cpSync(join(root, p), join(dir, p), { recursive: true });
+    for (const p of ['.github/scripts', 'plugins', 'docs/skills.md']) cpSync(join(root, p), join(dir, p), { recursive: true });
     symlinkSync(dir, join(tmp, 'link'), 'dir');
     const page = join(dir, 'docs/skills.md');
     writeFileSync(page, readFileSync(page, 'utf8').replace('| Skill |', '| Skills |'));

@@ -28,8 +28,8 @@ export const boardFile = (ctx) => join(ctx.home, LEDGER, 'board.html');
 export function bandStacks(ctx) {
   const settings = json(readText(join(ctx.home, '.claude/settings.json')));
   return settings.enabledPlugins?.[PLUGIN] === true
-    && settings.enabledPlugins?.['cedarloom@cedarloom'] === true
-    && settings.pluginConfigs?.['cedarloom@cedarloom']?.options?.tierBand === true
+    && settings.enabledPlugins?.['workflow@cedarloom'] === true
+    && settings.pluginConfigs?.['workflow@cedarloom']?.options?.tierBand === true
     && readText(join(ctx.home, BAND_FLAG))?.trim() !== 'off';
 }
 

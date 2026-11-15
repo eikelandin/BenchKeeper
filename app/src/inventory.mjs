@@ -32,7 +32,7 @@ export function inventory(ctx, agents, { devcontainerCli, level = 'full' } = {})
   classify(ctx, plan, put);
   const planned = new Set(plan.map((c) => c.step));
   for (const a of ['claude', 'codex'].filter((x) => agents.includes(x))) {
-    for (const p of PLUGINS[a].filter((x) => !x.pack && (level === 'full' || x.id.startsWith('cedarloom@')))) if (!planned.has(`plugin:${a}:${p.id}`)) put(`plugin:${a}:${p.id}`, `${agent(a).name} plugin ${p.id}`, 'current');
+    for (const p of PLUGINS[a].filter((x) => !x.pack)) if (!planned.has(`plugin:${a}:${p.id}`)) put(`plugin:${a}:${p.id}`, `${agent(a).name} plugin ${p.id}`, 'current');
   }
   if (level !== 'full') return [...items.values()];
   if (containers && !planned.has('tools:devcontainer')) put('tools:devcontainer', 'Dev Containers CLI', ctx.run(['devcontainer', '--version']).code === 0 ? 'current' : 'missing');

@@ -50,10 +50,11 @@ function tool(bin, args) {
   return r.stdout;
 }
 
+// tsconfig.json is left out: each plugin with mods carries the same compiler options in a config of its own.
 function duplicated(args) {
   const out = mkdtempSync(join(tmpdir(), 'bk-jscpd-'));
   try {
-    tool('jscpd/run-jscpd.js', ['--ignore', '**/node_modules/**,**/dist/**', '--reporters', 'json', '--output', out, '--silent', ...args]);
+    tool('jscpd/run-jscpd.js', ['--ignore', '**/node_modules/**,**/dist/**,**/tsconfig.json', '--reporters', 'json', '--output', out, '--silent', ...args]);
     return JSON.parse(readFileSync(join(out, 'jscpd-report.json'), 'utf8')).statistics.total.duplicatedLines;
   } finally {
     rmSync(out, { recursive: true, force: true });

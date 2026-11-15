@@ -12,7 +12,7 @@ test('the clone tag is the app tag with three parts; older setup-v pins are rewr
 });
 
 test('files under plugins/ are not rewritten: their pins name the 0.x minor range', () => {
-  assert.ok(SKIP.test('plugins/cedarloom/skills/operating-cedarloom-app/SKILL.md'));
+  assert.ok(SKIP.test('plugins/setup/skills/operating-cedarloom-app/SKILL.md'));
   assert.ok(SKIP.test('plugins/cedarloom/content.json'));
   assert.ok(!SKIP.test('README.md'));
 });

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { render, update } from './library-readme.mjs';
 
-const lib = new URL('../../plugins/cedarloom/library/', import.meta.url);
+const lib = new URL('../../plugins/setup/library/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('library.json', lib), 'utf8'));
 
 test('README matches library.json', () => {

@@ -32,8 +32,8 @@ test('rules renderers', () => {
   assert.equal(renderRules('block', '# Mine\n', 'R'), fixture('rules-block.md'));
   assert.equal(renderRules('import', null, ''), '@AGENTS.md\n');
   assert.equal(renderRules('import', '@AGENTS.md\n\nextra\n', ''), '@AGENTS.md\n\nextra\n');
-  assert.equal(forAgent('load `cedarloom:workflow`', 'gemini'), 'load `workflow`');
-  assert.equal(forAgent('load `cedarloom:workflow`', 'claude'), 'load `cedarloom:workflow`');
+  assert.equal(forAgent('load `workflow:workflow`', 'gemini'), 'load `workflow`');
+  assert.equal(forAgent('load `workflow:workflow`', 'claude'), 'load `workflow:workflow`');
 });
 
 test('subagent renderers match the fixtures byte for byte', () => {
