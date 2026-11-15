@@ -22,11 +22,11 @@ Target: $ARGUMENTS (Codex: the text after the skill name). A path audits that fi
 
 ## Steps
 
-1. Scope. List the files of the target (`git ls-files`) and pick the lens. Read only the lens you use.
+1. Scope. From the repository root (`git rev-parse --show-toplevel`), list the files of the target (`git ls-files --cached --others --exclude-standard -- <target>`; a file named as the target counts even when git ignores it; a tracked file deleted in the working tree is left out) and pick the lens. Read only the lens you use.
    - [instructions](instructions.md): CLAUDE.md, AGENTS.md, rule files, skills, agents, commands, prompts, hook configuration.
    - [docs](docs.md): READMEs, `docs/`, guides, templates.
    - [code](code.md): source and tests.
-2. Measure (instructions and docs). From the repository root (`git rev-parse --show-toplevel`), run `node <skill folder>/../debloat/token-budget.mjs measure` and the same script with `check` (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`). Its token counts and dead references are inputs for step 4, not findings yet.
+2. Measure (instructions and docs). From the repository root, run `node <skill folder>/../debloat/token-budget.mjs measure`, for a path target with the instruction files and docs of step 1 as arguments so that its total is theirs, and the same script with `check` (Claude Code: `<skill folder>` is `${CLAUDE_SKILL_DIR}`). Its token counts and dead references are inputs for step 4, not findings yet.
 3. Read every file in scope in full, with line numbers. Do not audit from a summary or from an earlier read.
 4. Collect candidates with the patterns of the lens.
 5. Verify each candidate before it becomes a finding. Drop what fails.

@@ -121,6 +121,30 @@ test('dead references: the definition of a reference link, not a footnote', () =
   assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:3 anchor #setup']);
 });
 
+test('dead references: link destinations with parentheses, escapes, angle brackets and titles', () => {
+  const root = repo({
+    'AGENTS.md': "See [g](docs/guide(v2).md) (and [h](docs/guide(v3).md \"Title\")), [i](<docs/a (b).md>), [e](docs/guide\\(v2\\).md), [s](docs/gone.md 'Title').\n\n[r]: <docs/a (b).md>\n",
+    'docs/guide(v2).md': '# Guide\n',
+    'docs/a (b).md': '# A\n',
+  });
+  assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:1 link docs/guide(v3).md', 'AGENTS.md:1 link docs/gone.md']);
+});
+
+test('dead references: parentheses nested three levels and an escaped > inside angle brackets', () => {
+  const root = repo({
+    'AGENTS.md': 'See [a](docs/x(y(z(w))).md), [b](docs/gone(1(2(3))).md) and [c](<docs/gone\\>.md>).\n',
+    'docs/x(y(z(w))).md': '# X\n',
+  });
+  assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:1 link docs/gone(1(2(3))).md', 'AGENTS.md:1 link docs/gone>.md']);
+});
+
+test('dead references: an escaped delimiter inside a link title does not end the title', () => {
+  const root = repo({
+    'AGENTS.md': 'See [a](docs/gone-a.md "A \\"quoted\\" title"), [b](docs/gone-b.md \'It\\\'s\') and [c](docs/gone-c.md (a \\) b)).\n',
+  });
+  assert.deepEqual(deadRefs(root, loadConfig(root)).map((r) => `${r.file}:${r.line} ${r.kind} ${r.target}`), ['AGENTS.md:1 link docs/gone-a.md', 'AGENTS.md:1 link docs/gone-b.md', 'AGENTS.md:1 link docs/gone-c.md']);
+});
+
 test('check reports the change against the baseline and fails on a lost span, a dead link or a budget', () => {
   const root = repo({ 'AGENTS.md': AGENTS, 'docs/guide.md': '# Guide\n\n## Setup\n' });
   addProtected(root, loadConfig(root), ['AGENTS.md:8-9']);

@@ -34,10 +34,13 @@ The changed-files check, for each area the change touches:
 
 ## Code
 
-- Reuse before reimplementing: before you write new logic, look for code that already does it, and extend or generalize that instead of building a parallel version.
-- Don't reinvent the wheel: when a well-maintained open-source package solves the problem (recent releases, a license the project allows, a size that fits), use it instead of writing our own, and name it and the reason in the pull request. A few lines of our own still beat a new dependency.
+- Make the smallest change that does the whole task, including the callers, tests, fixtures, configuration and docs it breaks or changes. Add nothing speculative: no option, flag, layer, shim or "for later" code; name what you left out in one line of the report.
+- Reuse in this order: code the repository has (extend it, never a parallel version; abstract at the second caller, not the first), the standard library or platform, an installed dependency, a maintained package (recent releases, a license the project allows, a size that fits; name it and why in the pull request), own code. A few own lines beat a new dependency.
+- Validate where data enters (user input, files, the network, another process) and where a wrong value loses data or breaks security. Inside, trust the types, the framework and your own code: no guard or fallback for a case that cannot happen. An error you cannot handle propagates; never swallow it or hide it behind a default.
+- One job per function, module and file, named after it; never `utils`, `helpers`, `common`, `misc` or `shared`. A unit that wants such a name has two jobs: split it.
+- Keep the repository's layers: imports point down, never up. Code that gets a test takes the time, randomness and I/O it uses as parameters.
+- Remove what your change made unused. Leave other code, comments and formatting as they are; name unrelated dead code in the report.
 - Comments only where the code cannot say it: one line, the why, not the how.
-- Names: never call a file, folder or module `utils`, `helpers`, `common`, `misc` or `shared`. Name it after what it contains. A file that wants such a name has more than one job: split it.
 - UI code follows the styleguide and tokens that Pointers links. No new colors, font sizes, spacing or shadows when a token already covers the role.
 
 ## Tests

@@ -13,11 +13,11 @@ The build drifts from the plan (another design or scope), or a result cannot be 
 
 ## Review rounds
 
-The reviewer is a fresh session that does not edit (a subagent; Claude Code: `cl-workflow:review` where available, with the model and effort of the Review phase in [software.md](software.md#phases)). A review or re-review whose context was compacted is void: split its scope into parts that together cover all of it and review each part afresh. The review counts only when every part is done and none is void.
+The reviewer is a fresh session that does not edit (a subagent; Claude Code: `cl-workflow:review` where available, with the model and effort of the Review phase in [software.md](software.md#phases)). A review or re-review whose context was compacted is void: split its scope into parts that together cover all of it and review each part afresh. The review counts only when every part is done and none is void. A finding whose only fix would add a layer, an option, a guard or a test, each for a case that cannot happen, is dropped before the report; a Blocking finding, a finding on validation where data enters, or a missing test the [test rule](SKILL.md#verify) calls for is never dropped.
 
 Findings carry a class:
 - **Blocking**: wrong behavior, security, data loss, an acceptance row unmet.
-- **Important**: likely defect, or a missing test the [test rule](SKILL.md#verify) calls for.
+- **Important**: a likely defect, a missing test the [test rule](SKILL.md#verify) calls for, or code the code rules in the repository's instructions (the CedarLoom block or an `AGENTS.md` Code section) reject: a guard for a case that cannot happen, a layer or option for one user that the task does not call for, a parallel copy of existing logic, code under a new test that reaches for time, randomness or I/O directly.
 - **Minor**: style, naming. Minor findings are listed in the pull request, not fixed in a round.
 
 A review with a Blocking or Important finding is a round:

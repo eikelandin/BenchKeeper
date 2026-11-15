@@ -1,7 +1,5 @@
 # Lens: agent instructions
 
-For CLAUDE.md, AGENTS.md, rule files, skills, agents, commands, prompts and hook configuration.
-
 ## Patterns
 
 | Pattern | The text | Action |

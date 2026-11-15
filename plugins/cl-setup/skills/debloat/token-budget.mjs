@@ -316,6 +316,16 @@ function pathOf(token) {
   return colon >= 0 && /^\d+(?:-\d+)?$/.test(t.slice(colon + 1)) ? t.slice(0, colon) : t;
 }
 
+// Link destinations as CommonMark reads them (https://spec.commonmark.org/0.31.2/#links): inside `<>` with spaces and escapes,
+// or bare with backslash escapes and balanced parentheses (three levels, the depth the spec asks for); an inline link may
+// close with a title in "", '' or (), where a backslash escapes the delimiter.
+const CHAR = String.raw`\\.|[^()\s\\]`;
+const nest = (inner) => String.raw`\((?:${CHAR}${inner})*\)`;
+const DESTINATION = String.raw`(?:<((?:\\.|[^<>\n\\])*)>|(?!<)((?:${CHAR}|${nest(`|${nest(`|${nest('')}`)}`)})+))`;
+const INLINE = new RegExp(String.raw`\]\(\s*${DESTINATION}(?:\s+(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\((?:\\.|[^()\\])*\)))?\s*\)`, 'g');
+const DEFINITION = new RegExp(String.raw`^ {0,3}\[(?!\^)[^\]]+\]:\s*${DESTINATION}`);
+const unescape = (s) => s.replace(/\\([!-/:-@[-`{-~])/g, '$1');
+
 // Dead references: links, heading anchors and CLAUDE.md imports are errors; a backticked path is a warning, as that match is a heuristic.
 export function deadRefs(root, cfg, paths = scope(root, cfg)) {
   const out = [];
@@ -330,8 +340,8 @@ export function deadRefs(root, cfg, paths = scope(root, cfg)) {
       const plain = raw.replace(/`[^`]*`/g, (m) => ' '.repeat(m.length));
       const dead = (kind, target, level = 'error') => { if (!ignored(target)) out.push({ file, line, kind, target, level }); };
       // Inline links, and the definition of a reference link (`[s]: #setup`); a footnote (`[^1]:`) is no link.
-      const definition = /^ {0,3}\[(?!\^)[^\]]+\]:\s*<?([^\s>]+)>?/.exec(plain)?.[1];
-      for (const target of [...[...plain.matchAll(/\]\(\s*<?([^)\s>]+)>?(?:\s+"[^"]*")?\s*\)/g)].map((m) => m[1]), ...(definition ? [definition] : [])]) {
+      const definition = DEFINITION.exec(plain);
+      for (const target of [...plain.matchAll(INLINE), ...(definition ? [definition] : [])].map((m) => unescape(m[1] ?? m[2]))) {
         if (/^([a-z][a-z0-9+.-]*:|\/\/)/i.test(target)) continue;
         const [path, fragment] = target.split('#');
         const clean = decode(path.split('?')[0]);

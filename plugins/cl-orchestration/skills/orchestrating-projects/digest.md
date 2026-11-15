@@ -2,8 +2,6 @@
 
 The digest is one file per day, `digests/<YYYY-MM-DD>.md` in the coordinator's working directory, the date as `date +%F` prints it at the start, or the file the owner names: never a second file and never a separate issue thread.
 
-The coordinator writes it when the owner asks for one, and when the run closes and the handoff file holds decisions taken on the owner's behalf that the last digest does not list yet, before it deletes the handoff file.
-
 - Last digest: of the files `digests/<date>.md`, the one with the latest date in its name, today's included. A file the owner names is its own last digest.
 - Start of this digest: the author time of the last digest's last commit when that file is committed and unchanged since that commit, otherwise the time it was last changed. No file: the last day.
 

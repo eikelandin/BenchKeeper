@@ -8,7 +8,6 @@ writes: "The depth line `Depth: <depth> (<reason>)` and the risk line `Risk: <cl
 
 Every depth:
 - Before the first edit, state the assumptions you work from and the check that proves each step done (a test, a command, a screenshot); loop until those checks pass.
-- Neighboring code, comments and formatting stay as they are, unrelated dead code is named in the report, and what your own change left unused is removed.
 - Keep validation at trust boundaries, error handling that prevents data loss, and security checks.
 - A step here or in the playbooks that asks or waits on the user does so in the session only while the user allows terminal questions. Otherwise its questions go with your recommendations into one issue per task in the issue tracker the project names, else the report; take each recommendation that is safe and reversible (an item without one waits), and go on.
 - An installed skill may run a step of this skill or its playbooks in more detail (diagnosis, a test first, prototypes, interface design): these texts set its floor and gates and win where the two differ. Reviews, research notes and pull request text follow these playbooks.
