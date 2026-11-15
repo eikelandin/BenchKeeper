@@ -6,9 +6,9 @@ export const newer = (a, b) => { const x = a.split('.').map(Number), y = b.split
 export async function updateNotice(current, env = process.env, get = fetch) {
   if (env.CEDARLOOM_APP_NO_UPDATE_CHECK === '1' || env.CI) return null;
   try {
-    const r = await get('https://registry.npmjs.org/benchkeeper', { signal: AbortSignal.timeout(3000) });
+    const r = await get('https://registry.npmjs.org/@cedarloom%2fapp', { signal: AbortSignal.timeout(3000) });
     const { time, versions } = r.ok ? await r.json() : {};
     const version = cooled(time, Object.keys(versions ?? {})).sort((a, b) => (newer(a, b) ? 1 : -1)).at(-1);
-    return version && newer(version, current) ? `benchkeeper ${version} is available (this is ${current}): npx @cedarloom/app@${version}` : null;
+    return version && newer(version, current) ? `@cedarloom/app ${version} is available (this is ${current}): npx @cedarloom/app@${version}` : null;
   } catch { return null; }
 }

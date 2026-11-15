@@ -11,7 +11,7 @@ test('the clone tag is the app tag with three parts; older setup-v pins are rewr
   assert.equal(pins('--branch setup-v6.23.0 a, --branch setup-v6.23 b, --branch app-v6.24.0 c', '6.24.1'), '--branch app-v6.24.1 a, --branch app-v6.24.1 b, --branch app-v6.24.1 c');
 });
 
-test('files under plugins/ are not rewritten: their pins name the major', () => {
+test('files under plugins/ are not rewritten: their pins name the 0.x minor range', () => {
   assert.ok(SKIP.test('plugins/cedarloom/skills/operating-cedarloom-app/SKILL.md'));
   assert.ok(SKIP.test('plugins/cedarloom/content.json'));
   assert.ok(!SKIP.test('README.md'));
