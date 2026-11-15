@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "CedarLoom's own claude-swap extension, cedarloom.claude-swap: the user's claude-swap accounts with their usage, its switch and its auto mode, for the doctor and the cedarloom claude-swap verbs.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "exports": {
     ".": "./src/swap.ts"

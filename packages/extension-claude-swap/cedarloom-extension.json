@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "name": "claude-swap",
   "description": "The user's claude-swap: its Claude Code accounts with their usage, and its own switch and auto mode, run only once allowed.",
-  "license": "MIT",
+  "license": "ISC",
   "api": "1.0",
   "runtime": { "kind": "node", "entry": "main.mjs" },
   "capabilities": {

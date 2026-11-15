@@ -5,15 +5,34 @@ version = 1
 
 [[annotations]]
 path = "**"
-SPDX-FileCopyrightText = "2026 eikelandin"
-SPDX-License-Identifier = "MIT"
+SPDX-FileCopyrightText = "2026 Eike Landin"
+SPDX-License-Identifier = "ISC"
+
+# Documentation is CC0-1.0; the skills, rules, agents and templates that the plugin and packs ship are code.
+[[annotations]]
+path = [
+  "AGENTS.md",
+  "CHANGELOG.md",
+  "CLAUDE.md",
+  "README.md",
+  "SECURITY.md",
+  "docs/**",
+  "app/CHANGELOG.md",
+  "app/README.md",
+  "packages/README.md",
+  "packages/*/README.md",
+  "plugins/*/CHANGELOG.md",
+  "plugins/*/library/README.md",
+]
+SPDX-FileCopyrightText = "2026 Eike Landin"
+SPDX-License-Identifier = "CC0-1.0"
 
 [[annotations]]
 path = "patches/thread-stream@4.2.0.patch"
-SPDX-FileCopyrightText = ["2021 Matteo Collina", "2026 eikelandin"]
+SPDX-FileCopyrightText = ["2021 Matteo Collina", "2026 Eike Landin"]
 SPDX-License-Identifier = "MIT"
 
-# Keeps the notice MIT when `**` becomes ISC at launch; the file's own copyright line already wins.
+# Keeps the notice MIT under the ISC of `**`; the file's own copyright line already wins.
 [[annotations]]
 path = "packages/ui/notices/react-remove-scroll-bar.txt"
 SPDX-FileCopyrightText = "2025 Anton Korzunov"
@@ -23,8 +42,8 @@ SPDX-License-Identifier = "MIT"
 [[annotations]]
 path = ["packages/ui/test/editor.spec.ts", "packages/ui/vite.config.ts"]
 precedence = "override"
-SPDX-FileCopyrightText = "2026 eikelandin"
-SPDX-License-Identifier = "MIT"
+SPDX-FileCopyrightText = "2026 Eike Landin"
+SPDX-License-Identifier = "ISC"
 
 # The CedarLoom name and logos are not under the code license: LICENSES/LicenseRef-Brand.txt, the brand repository's
 # own text. The site serves copies from web/public.

@@ -8,7 +8,7 @@
   },
   "homepage": "https://eikelandin.github.io/BenchKeeper/",
   "repository": "https://github.com/eikelandin/BenchKeeper",
-  "license": "MIT",
+  "license": "ISC",
   "hooks": "./hooks/claude-code.json",
   "types": "./types/index.d.ts",
   "userConfig": {

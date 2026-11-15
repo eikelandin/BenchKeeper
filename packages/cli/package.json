@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "description": "The cedarloom and cloom commands.",
-  "license": "MIT",
+  "license": "ISC",
   "type": "module",
   "bin": {
     "cedarloom": "./src/bin.ts",

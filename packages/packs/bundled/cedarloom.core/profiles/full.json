@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "Full",
   "description": "Orchestration and research, plus the Ponytail plugin and the docs/agents files for the issue tracker, triage labels and domain docs.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "extends": [
     {

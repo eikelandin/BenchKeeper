@@ -76,4 +76,4 @@ Fix everything shows each file change as a diff and each command as its command 
 
 ## License
 
-The code is under the [MIT license](LICENSE). The CedarLoom name and logos are not: see [their terms](LICENSES/LicenseRef-Brand.txt). [`REUSE.toml`](REUSE.toml) maps every file to its license.
+The code is under the [ISC license](LICENSE), the documentation under [CC0 1.0](LICENSES/CC0-1.0.txt). The skills, rules, agents and templates that the plugin and packs ship are code. Copied third-party material keeps its own license. The CedarLoom name and logos are under neither: see [their terms](LICENSES/LicenseRef-Brand.txt). [`REUSE.toml`](REUSE.toml) maps every file to its license.

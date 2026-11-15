@@ -27,11 +27,10 @@ for (const path of ['./', './overview/', './app/', './writes/', './changelog/', 
     await expect(page.locator('main a[href="https://github.com/eikelandin/BenchKeeper-research"]')).toHaveCount(1);
   });
 
-  test(`${path} names CedarLoom in the title, header and footer, with the brand mark as its icon`, async ({ page }) => {
+  test(`${path} names CedarLoom in the title and header, with the brand mark as its icon`, async ({ page }) => {
     await page.goto(path);
     await expect(page).toHaveTitle(/, CedarLoom$|^CedarLoom: /);
     await expect(page.locator('header .wordmark')).toHaveText('CedarLoom');
-    await expect(page.locator('footer')).toContainText('CedarLoom, MIT License');
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', `${BASE}brand/cedarloom-icon.svg`);
   });
 

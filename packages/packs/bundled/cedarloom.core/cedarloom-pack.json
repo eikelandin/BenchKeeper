@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "name": "CedarLoom core",
   "description": "The rules, templates and profile presets that ship with CedarLoom.",
-  "license": "MIT",
+  "license": "ISC",
   "minApp": "0.1.0",
   "entries": {
     "rules/global.md": {

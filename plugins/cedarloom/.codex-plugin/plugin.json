@@ -8,7 +8,7 @@
   },
   "homepage": "https://eikelandin.github.io/BenchKeeper/",
   "repository": "https://github.com/eikelandin/BenchKeeper",
-  "license": "MIT",
+  "license": "ISC",
   "skills": "./skills/",
   "hooks": "./hooks/codex.json"
 }
