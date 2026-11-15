@@ -189,9 +189,13 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
   assert.equal(read('/p', remote('{ "startLabel": "go" }', calls)).policy.startLabel, 'go');
   // No name that the remote or the local origin/HEAD chooses is part of a command.
   // The two calls that reach the remote set again what the repository's config could make run instead of git.
-  const pinned = 'git -c core.fsmonitor=false -c core.sshCommand=ssh -c remote.origin.uploadpack=git-upload-pack';
+  const pinned = 'git -c core.hooksPath=/dev/null -c core.fsmonitor=false -c protocol.ext.allow=never -c remote.origin.uploadpack=git-upload-pack -c core.sshCommand=ssh';
   assert.ok(calls.includes(`${pinned} ls-remote origin HEAD`));
   assert.ok(calls.some((call) => call.startsWith(`${pinned} fetch `) && call.endsWith(' origin +HEAD:refs/cedarloom/policy')));
+  // The user's own ssh command stays: only the repository's is refused.
+  const own = [];
+  read('/p', bare((dir, cmd, args) => (args[0] === 'config' ? 'system\0core.sshcommand\nssh -4\0global\0core.sshcommand\nssh -i key\0' : remote('{}')(dir, cmd, args)), own));
+  assert.ok(own.some((call) => call.endsWith(' -c core.sshCommand=ssh -i key ls-remote origin HEAD')));
   assert.ok(calls.includes(`git show ${HEAD}:docs/agents/orchestration.json`));
   // A worker that moves the reader's ref after the fetch changes nothing: the read names the remote's commit, not the ref.
   const moved = read('/p', bare((dir, cmd, args) => {
@@ -254,10 +258,22 @@ test('policy: a repository whose own git config redirects origin or runs a comma
     const { policy, errors } = read(project()(...config));
     assert.equal(policy, null, config[0]);
     assert.deepEqual(rules(errors), [['unreadable', '']], config[0]);
+    // A rewrite base can hold a token: the message names no subsection.
+    assert.ok(!errors[0].message.includes(other.dir), config[0]);
     assert.equal(existsSync(marker), false, config[0]);
   }
   // git's own file system monitor runs no command of the repository.
   assert.equal(read(project()('core.fsmonitor', 'true')).policy.startLabel, 'go');
+  // The fetch writes the reader's ref, and no hook of the shared git directory runs for it.
+  const hooked = project()('user.name', 't');
+  writeFileSync(join(hooked, '.git', 'hooks', 'reference-transaction'), `#!/bin/sh\ntouch '${marker}'\n`, { mode: 0o755 });
+  assert.equal(read(hooked).policy.startLabel, 'go');
+  assert.equal(existsSync(marker), false, 'reference-transaction');
+  // An ext:: remote is a command, which git runs only where the config allows it.
+  const ext = project()('protocol.ext.allow', 'always');
+  origin.git('-C', ext, 'remote', 'set-url', 'origin', `ext::sh -c touch% ${marker}`);
+  assert.equal(read(ext).policy, null);
+  assert.equal(existsSync(marker), false, 'ext');
 });
 
 test('policy: the command line prints the policy of the default branch and exits 0, or names each error and exits 1', () => {

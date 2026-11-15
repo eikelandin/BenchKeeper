@@ -1,6 +1,7 @@
 // Usage: node policy.mjs <project path>. Prints the project's effective coordinator policy as JSON; a file the schema rejects, a minPlugin newer than this plugin or an unreadable file prints each error and exits 1, and nothing may start there. Without the file it prints the defaults, exits 0 and says so on stderr.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, realpathSync } from 'node:fs';
+import { devNull } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const FILE = 'docs/agents/orchestration.json';
@@ -151,25 +152,33 @@ const unreadable = (message) => ({ policy: null, errors: [{ rule: 'unreadable', 
 // Settings of the repository's own config that send origin's fetch to another repository or make git run a command; a worker shares that config. A boolean core.fsmonitor is git's own monitor and runs nothing.
 const REDIRECTS = /^(url\..*\.(insteadof|pushinsteadof)|remote\.origin\.(uploadpack|receivepack|proxy)|core\.sshcommand|credential\..*|include(if)?\..*)$/i;
 const BOOLEAN = /^(true|false|yes|no|on|off|1|0)?$/i;
-const redirecting = (output) => output.split('\0').flatMap((entry, i, all) => {
-  // -z prints the scope, then the key, a line break and the value of each setting.
-  if (i % 2 === 0 || !['local', 'worktree'].includes(all[i - 1])) return [];
-  const [key, value = ''] = entry.split(/\n(.*)/s);
-  return REDIRECTS.test(key) || (/^core\.fsmonitor$/i.test(key) && !BOOLEAN.test(value)) ? [escaped(key)] : [];
-});
-// Set again for the two calls that reach the remote: a worker could write these between the check above and the call.
-const PINNED = ['-c', 'core.fsmonitor=false', '-c', 'core.sshCommand=ssh', '-c', 'remote.origin.uploadpack=git-upload-pack'];
+// -z prints the scope, then the key, a line break and the value of each setting: [scope, key, value] each.
+const settings = (output) => output.split('\0').flatMap((entry, i, all) => (i % 2 ? [[all[i - 1], ...entry.split(/\n(.*)/s)]] : []));
+const OWN = ['local', 'worktree'];
+// A subsection can hold a URL with a token in it, so only the section and the name are shown.
+const redacted = (key) => escaped(key.replace(/^([^.]+)\..+\.([^.]+)$/s, '$1.*.$2'));
+const redirecting = (found) => [...new Set(found.filter(([scope, key, value = '']) => OWN.includes(scope) && (REDIRECTS.test(key) || (/^core\.fsmonitor$/i.test(key) && !BOOLEAN.test(value)))).map(([, key]) => redacted(key)))];
+// Set again for the two calls that reach the remote, as a worker could write the config between the check and the call: no hook (the fetch writes a ref, which runs reference-transaction), no ext:: command as the remote, and git's own programs. core.sshCommand keeps the user's or system's value.
+const pinned = (found) => {
+  const ssh = found.filter(([scope, key]) => !OWN.includes(scope) && /^core\.sshcommand$/i.test(key)).at(-1)?.[2] ?? (process.env.GIT_SSH ? null : 'ssh');
+  return ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false', '-c', 'protocol.ext.allow=never', '-c', 'remote.origin.uploadpack=git-upload-pack', ...(ssh === null ? [] : ['-c', `core.sshCommand=${ssh}`])];
+};
 
 // The effective policy of the project in dir. A project without the file gets the defaults, which start and merge nothing, and absent: true.
 export function read(dir, run = sh) {
+  let found;
+  try { found = settings(run(dir, 'git', ['config', '--show-scope', '-z', '--list'])); } catch (e) {
+    return unreadable(e.code === 'ENOENT' ? 'the folder does not exist, or git is not installed' : 'git could not list the git config here: a config file it cannot parse, or git older than 2.26');
+  }
+  const refused = redirecting(found);
+  if (refused.length) return unreadable(`the repository's own git config sets ${refused.join(', ')}, which can send the reader to another repository or run a command: remove it from the repository's git config`);
+  const pins = pinned(found);
   let commit;
   try {
-    const found = redirecting(run(dir, 'git', ['config', '--show-scope', '-z', '--list']));
-    if (found.length) return unreadable(`the repository's own git config sets ${[...new Set(found)].join(', ')}, which can send the reader to another repository or run a command: remove it from the repository's git config`);
     // The commit is asked of the remote and both reads name it: a worker shares this git directory and could move the reader's ref between the fetch and the read.
-    commit = /^([0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/m.exec(run(dir, 'git', [...PINNED, 'ls-remote', 'origin', 'HEAD']))?.[1];
+    commit = /^([0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/m.exec(run(dir, 'git', [...pins, 'ls-remote', 'origin', 'HEAD']))?.[1];
     // The fetch touches only the reader's ref: no submodules, and not the FETCH_HEAD a session in this worktree may rely on.
-    run(dir, 'git', [...PINNED, 'fetch', '--quiet', '--no-tags', '--no-recurse-submodules', '--no-write-fetch-head', 'origin', `+HEAD:${REF}`]);
+    run(dir, 'git', [...pins, 'fetch', '--quiet', '--no-tags', '--no-recurse-submodules', '--no-write-fetch-head', 'origin', `+HEAD:${REF}`]);
   } catch (e) {
     return unreadable(e.code === 'ENOENT' ? 'the folder does not exist, or git is not installed' : "git could not fetch origin's HEAD: no git repository here, no remote named origin, no answer from it, or no default branch there");
   }
