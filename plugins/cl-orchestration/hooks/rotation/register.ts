@@ -44,6 +44,17 @@ async function own($: EngineInterface) {
 }
 const slashes = (path?: string) => path?.replaceAll('\\', '/')
 
+// A program from an absolute folder of PATH, never by its bare name: Windows looks in the working folder, a project, first.
+async function program($: EngineInterface, name: string) {
+  const windows = (await $.env.get('OS')) === 'Windows_NT'
+  for (const folder of ((await $.env.get('PATH')) ?? '').split(windows ? ';' : ':')) {
+    if (!(windows ? /^[A-Za-z]:[\\/]/ : /^\//).test(folder)) continue
+    const path = `${folder.replace(/[\\/]+$/, '')}/${name}${windows ? '.exe' : ''}`
+    if ((await $.fs.stat(path, { resolve: true }).catch(() => null))?.kind === 'file') return path
+  }
+  throw new Error(`no ${name} in an absolute folder of PATH`)
+}
+
 // Whether the file is the coordinator's own, not one a repository commits or a link leads to: a regular file reached
 // through no link, in a git work tree whose .cedarloom/runs git tracks nothing in. Any git failure refuses, so a broken
 // repository or one git distrusts (another owner) never counts as untracked.
@@ -52,7 +63,7 @@ async function safe($: EngineInterface) {
     const root = await $.session.root()
     const [folder, file] = await Promise.all([$.fs.stat(root, { resolve: true }), $.fs.stat(await handoff($), { resolve: true })])
     if (file.kind !== 'file' || file.isLink || slashes(file.realPath) !== `${slashes(folder.realPath)}/${FILE}`) return false
-    const git = await $.process.run(['git', '-c', 'core.fsmonitor=false', 'ls-files', '--', RUNS], { cwd: root })
+    const git = await $.process.run([await program($, 'git'), '-c', 'core.fsmonitor=false', 'ls-files', '--', RUNS], { cwd: root })
     return git.exitCode === 0 && git.stdout === ''
   } catch {
     return false
@@ -68,7 +79,8 @@ async function drifted($: EngineInterface, text: string) {
   try {
     const root = await $.session.root()
     const since = editedAt(text) ?? (await $.fs.stat(await handoff($))).mtimeMs
-    const run = (args: string[]) => $.process.run(['git', ...args], { cwd: root })
+    const git = await program($, 'git')
+    const run = (args: string[]) => $.process.run([git, ...args], { cwd: root })
     const [top, log, status] = await Promise.all([run(TOP_ARGS), run(commitArgs(since)), run(STATUS_ARGS)])
     if (top.exitCode !== 0 || log.exitCode !== 0 || status.exitCode !== 0) return ''
     const stats = await Promise.all(changedPaths(status.stdout).map(async (path) => ({ path, stat: await $.fs.stat(`${top.stdout.trim()}/${path}`).catch(() => null) })))
@@ -97,7 +109,7 @@ const note = ($: EngineInterface, text: string) => $.session.append({ message: {
 // The completed and failed tasks of the Orca run bound to this terminal; null when Orca gives no such list.
 async function settledTasks($: EngineInterface): Promise<Settled | null> {
   try {
-    const out = await $.process.run(['orca', 'orchestration', 'task-list', '--json'], { cwd: await $.session.root() })
+    const out = await $.process.run([await program($, 'orca'), 'orchestration', 'task-list', '--json'], { cwd: await $.session.root() })
     const result = (JSON.parse(out.stdout) as { result?: { runId?: unknown; tasks?: unknown } } | null)?.result
     if (out.exitCode !== 0 || typeof result?.runId !== 'string' || !Array.isArray(result.tasks)) return null
     return { run: result.runId, count: result.tasks.filter((task: { status?: unknown } | null) => task?.status === 'completed' || task?.status === 'failed').length }
