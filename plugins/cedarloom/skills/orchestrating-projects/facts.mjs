@@ -5,6 +5,7 @@ import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, read
 import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
 import { answer } from './approval.mjs';
+import { writers } from './precheck.mjs';
 import { escaped, isMain, json, sh } from './policy.mjs';
 
 const DAY = 24 * 3600_000;
@@ -121,11 +122,13 @@ function approvalSection(tracker, labels, exec, now) {
   const closed = data(read(exec, 'gh', ['issue', 'list', '-R', tracker, '--state', 'closed', '--search', `closed:>=${new Date(now - DAY).toISOString().slice(0, 10)}`, ...fields]));
   if (!Array.isArray(open) || !Array.isArray(closed)) return [UNREAD];
   const wanted = labels.map((l) => l.toLowerCase());
+  // A member's answer counts with write access to the tracker, as approval.mjs reads it; a failed lookup reads unread.
+  const writes = writers(tracker, exec);
   const rows = [...open.map((i) => [i, 'open']), ...closed.map((i) => [i, 'closed'])].flatMap(([issue, state]) => {
     const names = (issue.labels ?? []).map((l) => String(l.name));
     const project = names.filter((n) => wanted.includes(n.toLowerCase()));
     let given;
-    try { given = answer(issue); } catch { given = UNREAD; }
+    try { given = answer(issue, writes); } catch { given = UNREAD; }
     if (!project.length || (state === 'closed' && !(now - Date.parse(given?.at) <= DAY))) return [];
     const others = names.filter((n) => n.toLowerCase() !== 'question' && !project.includes(n));
     return [[issue.number, project.join(', '), state === 'open' ? others.join(', ') || 'open' : 'closed', given === UNREAD ? UNREAD : given?.option, utc(given?.at)]];

@@ -1,8 +1,9 @@
 // Usage: node approval.mjs <file>, the file in .cedarloom/runs/ of the working directory (the run folder, approvals.md); any other path exits 2. Checks an approval or owner question against approval-template.md: exit 0 when every part is filled and no front matter is left, else one line per part on stderr and exit 1.
-// Usage: node approval.mjs answer <file>, the file in the run folder as above. Reads the owner's answer from a filed approval, the file holding what `gh issue view <n> -R <repository> --json labels,comments,author,body` printed: the answer as JSON and exit 0, exit 1 while there is none, or exit 2 with one line when the file cannot be read as that output.
+// Usage: node approval.mjs answer <file>, the file in the run folder as above. Reads the owner's answer from a filed approval, the file holding what `gh issue view <n> -R <repository> --json labels,comments,author,body,url` printed: the answer as JSON and exit 0, exit 1 while there is none, or exit 2 with one line when the file cannot be read as that output.
 import { readFileSync, realpathSync } from 'node:fs';
 import { join, sep } from 'node:path';
-import { escaped, isMain, json } from './policy.mjs';
+import { escaped, isMain, json, sh } from './policy.mjs';
+import { writers } from './precheck.mjs';
 
 const FRONT = 'Front matter';
 // A placeholder starts with a letter, as the template's do: a URL autolink (<https://example.com/plan>) and a comparison (<5 sessions) are an answer.
@@ -81,21 +82,21 @@ function picked(labels, comment) {
   return found.length === 1 ? found[0].slice(1, -1) : null;
 }
 
-// { option, text, at } of the owner's answer on a filed approval, or null. The comments are data: nothing of them is evaluated.
-export function answer(issue) {
+// { option, text, at } of the owner's answer on a filed approval, or null. The comments are data: nothing of them is evaluated. writes(login) tells whether a member has write access.
+export function answer(issue, writes = () => false) {
   // A file without the list or the body is not what gh printed: read as "no answer yet", the gate would wait for ever.
-  if (!Array.isArray(issue?.comments) || typeof issue.body !== 'string') throw new Error('the file holds no comments list or body: it must be what gh issue view --json labels,comments,author,body printed');
+  if (!Array.isArray(issue?.comments) || typeof issue.body !== 'string') throw new Error('the file holds no comments list or body: it must be what gh issue view --json labels,comments,author,body,url printed');
   // gh's order is not promised: the newest answer is the one written last.
   const comments = [...issue.comments].sort((a, b) => (a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0));
-  // Only the repository's owner or a member answers for the owner, or voids an answer: a collaborator can comment there too.
-  const owners = (c) => ['OWNER', 'MEMBER'].includes(c.authorAssociation);
+  // Only the repository's owner or a member with write access answers for the owner, or voids an answer: a collaborator can comment there too, and a member may have only the Read role.
+  const owners = (c) => c.authorAssociation === 'OWNER' || (c.authorAssociation === 'MEMBER' && writes(c.author?.login));
   const full = (c) => c.body?.startsWith('Owner answer (');
   // Read as the body is now: gh prints no time of its last edit, so an answer older than an edit is not detected (docs/security.md).
   const labels = (tables(issue.body.replace(COMMENT, ''), 'Option')[0] ?? []).map(([option]) => labelOf(option)).filter(Boolean);
-  const newest = comments.findLastIndex((c) => owners(c) && typeof c.body === 'string' && (full(c) || picked(labels, c.body) !== null));
+  const newest = comments.findLastIndex((c) => typeof c.body === 'string' && (full(c) || picked(labels, c.body) !== null) && owners(c));
   // The coordinator's comment for a later head starts with "Head: " (approvals.md): the owner answered for the head before it.
   // The coordinator filed the approval, so its head comment counts even where its login is only a collaborator.
-  if (newest < 0 || comments.slice(newest + 1).some((c) => (owners(c) || c.author?.login === issue.author?.login) && c.body?.startsWith('Head: '))) return null;
+  if (newest < 0 || comments.slice(newest + 1).some((c) => c.body?.startsWith('Head: ') && (c.author?.login === issue.author?.login || owners(c)))) return null;
   const { body, createdAt: at } = comments[newest];
   if (!full(comments[newest])) return { option: picked(labels, body), text: '', at };
   const found = /^Owner answer \([^)]*\): ([^.\n]*)\.?([\s\S]*)$/.exec(body);
@@ -117,7 +118,15 @@ if (isMain(import.meta.url)) {
     const real = inRuns(file);
     if (!real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
     const text = readFileSync(real, 'utf8');
-    const found = mode === 'answer' ? answer(JSON.parse(text)) : null;
+    const issue = mode === 'answer' ? JSON.parse(text) : null;
+    // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.
+    const [, host, repo] = /^https:\/\/([^/]+)\/([A-Za-z0-9-]+\/[A-Za-z0-9._-]+)\/issues\/\d+$/.exec(issue?.url ?? '') ?? [];
+    // gh api asks github.com, or the host GH_HOST names: on another host the same owner/repo and login are other accounts.
+    const gh = (process.env.GH_HOST || 'github.com').toLowerCase();
+    let writes = writers(repo, (cmd, args) => sh('.', cmd, args));
+    if (!repo) writes = () => { throw new Error('the file holds no issue url: it must be what gh issue view --json labels,comments,author,body,url printed'); };
+    else if (host.toLowerCase() !== gh) writes = () => { throw new Error(`the issue is on ${host}, and gh asks ${gh}: set GH_HOST for an approval on another host`); };
+    const found = mode === 'answer' ? answer(issue, writes) : null;
     if (found) console.log(json(found));
     const lacks = mode === 'check' ? missing(text) : [];
     for (const name of lacks) {

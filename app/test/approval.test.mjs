@@ -123,7 +123,8 @@ const GO = { option: 'a', text: 'Go ahead, and keep the old flag.', at: '2026-11
 const WORDS = FILLED.replace('| (a) Stream the export (Recommended) |', '| (ok) Stream the export (Recommended) |').replace('| (b) Hold |', '| (hold) Hold |');
 const ANSWERS = [
   ['an owner\'s answer is read', [said('The plan looks fine to me.', '2026-11-11T09:00:00Z', 'COLLABORATOR'), SECOND], GO],
-  ['a member\'s answer is read', [{ ...SECOND, authorAssociation: 'MEMBER' }], GO],
+  ['a member\'s answer is read when the member has write access', [{ ...SECOND, authorAssociation: 'MEMBER' }], GO, FILLED, (login) => login === 'owner'],
+  ['a member\'s answer without write access is none', [{ ...SECOND, authorAssociation: 'MEMBER' }], null, FILLED, () => false],
   ['a collaborator\'s answer is none', [{ ...SECOND, authorAssociation: 'COLLABORATOR' }], null],
   ['an answer with a head comment after it is none', [SECOND, said(HEAD, '2026-11-11T11:00:00Z')], null],
   ['a collaborator\'s head comment after an answer voids nothing', [SECOND, { ...said(HEAD, '2026-11-11T11:00:00Z', 'COLLABORATOR'), author: { login: 'stranger' } }], GO],
@@ -150,7 +151,29 @@ const ANSWERS = [
   ['free text that is no label is none', [said('a, go ahead', '2026-11-11T10:00:00Z'), said('(a', '2026-11-11T10:30:00Z'), said('Looks good', '2026-11-11T11:00:00Z')], null],
   ['an option without a full stop is cut at 200 characters', [said(`Owner answer (2026-11-11): ${'x'.repeat(300)}`, '2026-11-11T10:00:00Z')], { option: 'x'.repeat(200), text: '', at: '2026-11-11T10:00:00Z' }],
 ];
-for (const [name, comments, expected, body = FILLED] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'question' }], author: { login: 'owner' }, body, comments }), expected));
+for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'question' }], author: { login: 'owner' }, body, comments }, writes), expected));
+
+test('approval: the command line counts a member\'s answer only with write access to the repository the issue URL names', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
+  const run = (permission, issue) => {
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" > '${bin}/log'\necho '{"permission":"${permission}"}'\n`, { mode: 0o755 });
+    writeFileSync(join(dir, '.cedarloom/runs/r1/issue.json'), JSON.stringify({ body: FILLED, comments: [{ ...SECOND, authorAssociation: 'MEMBER' }], ...issue }));
+    return spawnSync(process.execPath, [script, 'answer', '.cedarloom/runs/r1/issue.json'], { cwd: dir, encoding: 'utf8', env: { ...process.env, GH_HOST: '', PATH: `${bin}:${process.env.PATH}` } });
+  };
+  const url = { url: 'https://github.com/owner/tracker/issues/12' };
+  assert.equal(run('read', url).status, 1);
+  assert.equal(readFileSync(join(bin, 'log'), 'utf8'), 'api repos/owner/tracker/collaborators/owner/permission\n');
+  assert.deepEqual(JSON.parse(run('write', url).stdout), GO);
+  // Without the URL the repository is unknown: an error, not "no answer yet".
+  assert.equal(run('write', {}).status, 2);
+  // gh asks github.com: owner/tracker there is another repository than on the issue's host.
+  writeFileSync(join(bin, 'log'), '');
+  assert.equal(run('write', { url: 'https://ghe.example.com/owner/tracker/issues/12' }).status, 2);
+  assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
+});
 
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
