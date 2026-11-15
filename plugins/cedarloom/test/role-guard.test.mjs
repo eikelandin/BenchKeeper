@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -34,10 +34,11 @@ after(() => {
   for (const dir of [trunk, feature]) rmSync(dir, { recursive: true, force: true });
 });
 
-const run = (input, role) => spawnSync(process.execPath, [HOOK], { input, env: role === undefined ? ENV : { ...ENV, CEDARLOOM_ROLE: role }, encoding: 'utf8' });
-const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, toolInput = { command } } = {}) => {
+const run = (input, role, home) =>
+  spawnSync(process.execPath, [HOOK], { input, env: { ...ENV, ...(role !== undefined && { CEDARLOOM_ROLE: role }), ...(home && { HOME: home, USERPROFILE: home }) }, encoding: 'utf8' });
+const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, home, toolInput = { command } } = {}) => {
   const input = { hook_event_name: 'PreToolUse', tool_name: tool, tool_input: toolInput, tool_use_id: 'toolu_01', cwd, ...(agent && { agent_id: agent }) };
-  const r = run(JSON.stringify(input), role);
+  const r = run(JSON.stringify(input), role, home);
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? 'none' : JSON.parse(r.stdout).hookSpecificOutput.permissionDecision;
 };
@@ -122,6 +123,39 @@ test('role guard: follows a cd to the folder git runs in', () => {
   assert.equal(decision(`cd ${feature} && git push`), 'none');
 });
 
+test('role guard: a push names its branch unless its folder is the session folder or one leading cd to an existing folder', () => {
+  const unresolved = [
+    'cd "$(git rev-parse --show-toplevel)" && git push',
+    'cd "$CLAUDE_PROJECT_DIR" && git push',
+    'cd nosuchdir; git push',
+    `pushd ${feature} && git status && popd && git push`,
+    `cd ${feature} && git status && cd - && git push`,
+    `(cd ${feature} && git status) && git push`,
+    `echo "cd ${feature}; ls" && git push`,
+    `false && cd ${feature}; git push`,
+    `cd ${feature} & git push`,
+    `true | cd ${feature}; git push`,
+    `<<EOF\ncd ${feature}\nEOF\ngit push`,
+    // The home folder of these runs is the parent of the feature repository.
+    `cd '~/${basename(feature)}'; git push`,
+    'git -C "$CLAUDE_PROJECT_DIR" push',
+    'cd "$CLAUDE_PROJECT_DIR" && git push origin HEAD',
+    'cd "$CLAUDE_PROJECT_DIR" && git push origin trunk',
+    `cd ${feature} && git status && cd - && git push origin release-candidate`,
+  ];
+  for (const command of unresolved) assert.equal(decision(command, { home: dirname(feature) }), 'deny', command);
+  for (const command of ['Set-Location $PSScriptRoot; git push', `Push-Location ${feature}; git status; Pop-Location; git push`, `{cd ${feature}}; git push`]) assert.equal(decision(command, { tool: 'PowerShell' }), 'deny', command);
+  assert.equal(decision(`{ cd ${trunk}; }; git push`, { cwd: feature }), 'deny');
+  const named = [
+    'cd "$(git rev-parse --show-toplevel)" && git push origin feat/x',
+    'cd "$CLAUDE_PROJECT_DIR" && git push -u origin feat/x',
+    `pushd ${feature} && git status && popd && git push origin feat/x`,
+    `(cd ${feature} && git push origin HEAD:feat/x)`,
+  ];
+  for (const command of named) assert.equal(decision(command), 'none', command);
+  assert.equal(decision(`Push-Location ${feature}; git status; Pop-Location; git push origin feat/x`, { tool: 'PowerShell' }), 'none');
+});
+
 test('role guard: reads the commands of Monitor and PowerShell, PowerShell with its backtick escape', () => {
   for (const tool of ['Monitor', 'PowerShell']) assert.equal(decision('gh pr merge 12 --squash', { tool }), 'deny', tool);
   const powershell = [
@@ -130,6 +164,8 @@ test('role guard: reads the commands of Monitor and PowerShell, PowerShell with 
     'C:\\tools\\gh.exe pr merge 12',
     '& "C:\\Program Files\\GitHub CLI\\gh.exe" pr merge 12',
     'Set-Location ' + trunk + '; git push',
+    'foreach ($n in 12) {gh pr merge $n}',
+    "$env:cedarloom_role='coordinator'; claude -p x",
   ];
   for (const command of powershell) assert.equal(decision(command, { tool: 'PowerShell', cwd: feature }), 'deny', command);
   assert.equal(decision('gh pr view 12 `\n  --json title', { tool: 'PowerShell' }), 'none');

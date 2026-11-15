@@ -4,7 +4,7 @@
 // It stops a session that forgets its role, not one that works around it (variables, aliases, scripts, another tool):
 // the boundary is a gh token without those rights.
 import { spawnSync } from 'node:child_process';
-import { homedir } from 'node:os';
+import { statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { gitProgram } from '../git-program.mjs';
@@ -33,7 +33,8 @@ const VERSION = /(^|[-_@])v?\d+(\.\d+)+/;
 const BARE = '--bare';
 const DEFAULT_BRANCHES = ['main', 'master'];
 // Commands that change the folder the following commands run in, in bash and PowerShell.
-const CHANGE_DIR = new Set(['cd', 'pushd', 'chdir', 'set-location', 'sl', 'push-location']);
+const CHANGE_DIR = new Set(['cd', 'pushd', 'popd', 'chdir', 'set-location', 'sl', 'push-location', 'pop-location']);
+const UNREAD_BRANCH = 'a push without a branch name from a folder the guard cannot read (name it: git push <remote> <branch>)';
 
 // Inside double quotes bash drops a backslash only before these (https://www.gnu.org/software/bash/manual/html_node/Double-Quotes.html).
 const BASH_QUOTED_ESCAPES = '$`"\\';
@@ -41,25 +42,28 @@ const BASH_QUOTED_ESCAPES = '$`"\\';
 // The commands of a shell text, each a list of words with quotes and escapes resolved, as the shell splits them: a line
 // continuation joins its lines, a quoted word stays whole, and redirections are dropped. The text of a quoted word is read again
 // as commands, so `bash -c "gh pr merge 1"` shows its gh; text that only names such a command is denied as well.
+// A command from quoted text, parentheses, backticks, a pipeline or a background job is marked nested: a folder change there
+// may not reach the commands after it.
 // PowerShell escapes and continues lines with the backtick and keeps the backslash as a plain character
 // (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_special_characters).
-function commands(source, powershell) {
+function commands(source, powershell, nested = false) {
+  /** @type {{ words: string[], nested: boolean }[]} */
   const out = [];
   const escape = powershell ? '`' : '\\';
   const s = source.replace(powershell ? /`\r?\n/g : /\\\r?\n/g, '');
-  let words = [], word = '', started = false, quoted = false, quote = null, redirect = false;
+  let words = [], word = '', started = false, quoted = false, quote = null, redirect = false, depth = 0, backticks = false;
   const endWord = () => {
     if (started) {
       if (redirect) redirect = false;
       else words.push(word);
-      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell));
+      if (quoted && /[\s;&|()`<>]/.test(word)) out.push(...commands(word, powershell, true));
     }
     word = '';
     started = quoted = false;
   };
-  const endCommand = () => {
+  const endCommand = (subshell = false) => {
     endWord();
-    if (words.length) out.push(words);
+    if (words.length) out.push({ words, nested: nested || subshell || depth > 0 || backticks });
     words = [];
     redirect = false;
   };
@@ -81,8 +85,15 @@ function commands(source, powershell) {
       endWord();
       while (/[<>&|]/.test(s[i + 1] ?? '')) i++;
       redirect = true;
-    } else if (c === '\n' || ';&|()'.includes(c) || (c === '`' && !powershell)) endCommand();
-    else if (/\s/.test(c)) endWord();
+    } else if (c === '\n' || ';&|()'.includes(c) || (c === '`' && !powershell)) {
+      // A command before a single | or & runs in a subshell: a pipeline part or a background job.
+      endCommand('|&'.includes(c) && s[i + 1] !== c);
+      if (c === '(') depth++;
+      else if (c === ')' && depth) depth--;
+      else if (c === '`') backticks = !backticks;
+    }
+    // The braces of a PowerShell script block stand next to its first and last word: {gh pr merge 1}.
+    else if (/\s/.test(c) || (powershell && '{}'.includes(c))) endWord();
     else {
       word += c;
       started = true;
@@ -95,7 +106,7 @@ function commands(source, powershell) {
 const program = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '');
 
 const GIT = gitProgram();
-// Without git every query fails: no tag and no branch is known, and the version names and main and master still hold.
+// Without git every query fails: no tag and no branch is known, the version names and main and master still hold, and a push names its branch.
 const gitIn = (dir, args) => (GIT ? spawnSync(GIT, ['-C', dir, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000 }) : { status: 1 });
 const hasRef = (dir, ref) => gitIn(dir, ['show-ref', '--verify', '--quiet', ref]).status === 0;
 const gitLine = (dir, args) => {
@@ -111,7 +122,17 @@ const isTag = (dir, name) =>
   (!!name && !name.startsWith('refs/') && name !== 'HEAD' && name !== '@' &&
     (hasRef(dir, `refs/tags/${name}`) || (!name.includes('/') && VERSION.test(name) && !hasRef(dir, `refs/heads/${name}`))));
 
-function push(args, dir) {
+// The existing folder a cd, a Set-Location or `git -C` names. A variable, a missing folder, `cd -`, a bare cd, a second
+// target and a tilde (the home folder, or in quotes a folder of that name) stay unresolved.
+function folder(dir, args) {
+  const targets = args.filter((w) => !w.startsWith('-'));
+  if (targets.length !== 1 || targets[0].startsWith('~')) return null;
+  const to = resolve(dir, targets[0]);
+  return statSync(to, { throwIfNoEntry: false })?.isDirectory() ? to : null;
+}
+
+// known: dir is the folder git runs in. Otherwise dir is one of the folders it may run in, and only a named branch is read.
+function push(args, dir, known) {
   const positionals = [];
   for (let i = 0; i < args.length; i++) {
     const w = args[i];
@@ -132,32 +153,41 @@ function push(args, dir) {
   if (specs.includes('tag')) return 'a tag push';
   const remoteHead = /^[\w.-]+$/.test(remote) ? gitLine(dir, ['symbolic-ref', '--short', `refs/remotes/${remote}/HEAD`]) : '';
   const defaults = new Set([...DEFAULT_BRANCHES, remoteHead && branchOf(remoteHead)].filter(Boolean));
-  const current = () => gitLine(dir, ['symbolic-ref', '--short', 'HEAD']);
   // Without a refspec, git pushes the current branch to its push target.
-  const targets = specs.length ? [] : [current(), branchOf(gitLine(dir, ['rev-parse', '--abbrev-ref', '@{push}']))];
+  const targets = specs.length ? [] : ['HEAD', branchOf(gitLine(dir, ['rev-parse', '--abbrev-ref', '@{push}']))];
   for (const spec of specs) {
     // git resolves tags/x and heads/x as refs/tags/x and refs/heads/x.
     const [src, dst = src] = spec.replace(/^\+/, '').split(':').map((side) => side.replace(/^(tags|heads)\//, 'refs/$1/'));
     if (isTag(dir, src) || isTag(dir, dst)) return 'a tag push';
-    targets.push(dst === 'HEAD' || dst === '@' ? current() : dst.replace(/^refs\/heads\//, ''));
+    targets.push(dst === '@' ? 'HEAD' : dst.replace(/^refs\/heads\//, ''));
+  }
+  // A push of the current branch passes only where the guard can read which branch that is.
+  if (targets.includes('HEAD')) {
+    const current = known ? gitLine(dir, ['symbolic-ref', '--short', 'HEAD']) : '';
+    if (!current) return UNREAD_BRANCH;
+    targets.push(current);
   }
   const target = targets.find((branch) => defaults.has(branch));
   return target ? `a push to the default branch ${target}` : null;
 }
 
-function git(args, cwd) {
+function git(args, cwd, known) {
   let i = 0;
   let dir = cwd;
   for (; i < args.length && args[i].startsWith('-'); i++) {
     if (/^(-c|--config-env)/.test(args[i])) return 'git -c';
-    if (args[i] === '-C') dir = resolve(dir, args[i + 1] ?? '');
+    if (args[i] === '-C') {
+      const to = folder(dir, [args[i + 1] ?? '']);
+      if (to) dir = to;
+      else known = false;
+    }
     if (GIT_VALUE_OPTS.has(args[i])) i++;
   }
   const [sub, ...rest] = args.slice(i);
   if (sub === 'stash') return 'git stash';
   // Only the explicit read forms pass: `git config <key>` alone reads too, but `--get` says so.
   if (sub === 'config' && !(rest.some((w) => CONFIG_READ.test(w)) && !rest.some((w) => CONFIG_WRITE.test(w)))) return 'git config';
-  return sub === 'push' ? push(rest, dir) : null;
+  return sub === 'push' ? push(rest, dir, known) : null;
 }
 
 // gh api's flags as gh reads them: grouped short flags (-iX PUT), values joined (-XPUT, --method=PUT) or in the next word.
@@ -210,28 +240,40 @@ function gh(args, cmd) {
   return sub === 'api' ? api(args.slice(at + 1), cmd) : null;
 }
 
-// The folder a cd or Set-Location moves to; a folder named by a variable stays unresolved, and git queries there fail.
-function changeDir(dir, args) {
-  const target = args.find((w) => !w.startsWith('-') || w === '-');
-  if (target === '-') return dir;
-  if (target === undefined) return homedir();
-  return target.startsWith('~') ? resolve(homedir(), `.${target.slice(1)}`) : resolve(dir, target);
-}
-
 function reason({ tool_name: tool, tool_input: toolInput }, cwd) {
   const cmd = toolInput?.command;
   // A Monitor call on a WebSocket runs no command.
   if (tool === 'Monitor' && cmd === undefined && toolInput?.ws) return null;
   if (typeof cmd !== 'string') return 'a command the guard cannot read';
-  // A guarded session must not start another one as the coordinator.
-  if (cmd.replace(/["'\\`]/g, '').includes(ROLE)) return `a command that names ${ROLE}`;
-  let dir = cwd;
-  for (const words of commands(cmd, tool === 'PowerShell')) {
-    if (CHANGE_DIR.has(program(words[0]))) dir = changeDir(dir, words.slice(1));
+  // A guarded session must not start another one as the coordinator; Windows reads the name in any case.
+  if (cmd.replace(/["'\\`]/g, '').toUpperCase().includes(ROLE)) return `a command that names ${ROLE}`;
+  const powershell = tool === 'PowerShell';
+  const changesDir = (w) => CHANGE_DIR.has(powershell ? w.toLowerCase() : w);
+  // The folder git runs in is known in the session's folder and after a cd to an existing folder that the command starts with.
+  // Any other folder change (later, conditional, nested, undone, unresolved, or in a comment or a here-document) may or may
+  // not hold where git runs: from then on git is read in every folder seen, and a push has to name its branch.
+  let dir = cwd, known = true, first = changesDir(/\S*/.exec(cmd.trimStart())[0]);
+  const seen = [cwd];
+  for (const { words, nested } of commands(cmd, powershell)) {
+    const at = words.findIndex(changesDir);
+    if (at >= 0) {
+      // popd and Pop-Location name no folder.
+      const to = /^pop/i.test(words[at]) ? null : folder(dir, words.slice(at + 1));
+      if (!to || nested || !first) known = false;
+      if (to) {
+        dir = to;
+        seen.push(to);
+      }
+    }
+    if (!nested) first = false;
     for (let j = 0; j < words.length; j++) {
       const name = program(words[j]);
       const rest = words.slice(j + 1);
-      const why = name === 'git' ? git(rest, dir) : name === 'gh' ? gh(rest, cmd) : name === 'claude' && rest.includes(BARE) ? 'a launch in bare mode, which runs no hooks' : null;
+      const why =
+        name === 'git' ? (known ? [dir] : seen).reduce((found, d) => found ?? git(rest, d, known), null)
+        : name === 'gh' ? gh(rest, cmd)
+        : name === 'claude' && rest.includes(BARE) ? 'a launch in bare mode, which runs no hooks'
+        : null;
       if (why) return why;
     }
   }

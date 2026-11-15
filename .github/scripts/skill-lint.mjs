@@ -112,11 +112,11 @@ export function lintAgent(file) {
 export const ownAgents = () => markdownFiles(join(root, 'plugins/cedarloom/agents'));
 
 // Hooks do not run in bare mode, the role guard's included (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
-// A line (continuations joined) whose words, split at spaces, quotes, commas and brackets, hold claude and after it --bare:
-// a command line, or a spawn or execFile call with its argument list.
+// A line (continuations joined) whose words, split at spaces, quotes, commas, brackets and shell operators, hold claude and
+// after it --bare: a command line, or a spawn or execFile call with its argument list.
 const bareLaunch = (text) =>
   text.replace(/[\\`]\r?\n/g, ' ').split('\n').some((line) => {
-    const words = line.split(/[\s'"`,()[\]{}]+/);
+    const words = line.split(/[\s'"`,()[\]{};|&<>]+/);
     const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
     return at >= 0 && words.includes('--bare', at + 1);
   });

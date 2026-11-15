@@ -86,6 +86,7 @@ test('a plugin file that starts claude with --bare fails, in a command line and 
     'timeout.sh': 'timeout 600 claude --bare -p "$PROMPT" --allowedTools "Read"\n',
     'continued.sh': 'claude -p "$PROMPT" \\\n  --bare\n',
     'continued.ps1': 'claude -p $prompt `\n  --bare\n',
+    'operator.sh': 'claude -p "$PROMPT" --bare; echo done\n',
     'spawn.mjs': "spawn('claude', ['-p', prompt, '--bare']);\n",
     'variable.mjs': "execFile(claude, ['-p', prompt, '--bare']);\n",
   };
