@@ -6,7 +6,7 @@ import { join, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isMain } from './main.mjs';
-import { lintAgent, lintSkill, ownAgents, ownSkills } from './skill-lint.mjs';
+import { bareLaunches, lintAgent, lintSkill, ownAgents, ownSkills, pluginFiles } from './skill-lint.mjs';
 
 function skill(name, { fm = `name: ${name}\ndescription: "Does a thing. Use when asked."`, body = '', yaml = 'interface:\n  display_name: "X"\n' } = {}) {
   const dir = join(mkdtempSync(join(tmpdir(), 'lint-')), name);
@@ -75,6 +75,27 @@ test('a skill naming a skills CLI version fails, inside a code block too', () =>
   for (const body of ['Run `npx -y skills@npm:skills@1.7.2 find x`.', '```sh\nnpx skills@1.8.0 add a/b\n```'])
     assert.match(lintSkill(skill('a', { body })).join(), /names a skills CLI version/);
   assert.deepEqual(lintSkill(skill('a', { body: 'Run `<skills> find x` with the line `npx @cedarloom/app@0.1 skills cli` prints.' })), []);
+});
+
+test('a plugin file that starts claude with --bare fails, in a command line and in a spawn call', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'lint-'));
+  const file = (name, body) => (writeFileSync(join(dir, name), body), join(dir, name));
+  const launches = {
+    'after.sh': 'timeout 600 claude -p "$PROMPT" --bare\n',
+    'first.sh': 'claude --bare -p "$PROMPT"\n',
+    'timeout.sh': 'timeout 600 claude --bare -p "$PROMPT" --allowedTools "Read"\n',
+    'continued.sh': 'claude -p "$PROMPT" \\\n  --bare\n',
+    'continued.ps1': 'claude -p $prompt `\n  --bare\n',
+    'operator.sh': 'claude -p "$PROMPT" --bare; echo done\n',
+    'spawn.mjs': "spawn('claude', ['-p', prompt, '--bare']);\n",
+    'variable.mjs': "execFile(claude, ['-p', prompt, '--bare']);\n",
+  };
+  for (const [name, body] of Object.entries(launches)) assert.match(bareLaunches([file(name, body)]).join(), /starts claude with --bare/, name);
+  assert.deepEqual(bareLaunches([file('ok.sh', 'claude -p "$PROMPT" --permission-mode dontAsk\ngit init --bare origin\n')]), []);
+});
+test('own plugin files start no bare session', () => {
+  assert.ok(pluginFiles().some((p) => p.endsWith(`${sep}SKILL.md`)));
+  assert.deepEqual(bareLaunches(pluginFiles()), []);
 });
 
 // isMain (main.mjs) guards the command line of every script here; this file runs in CI, so its tests are here.
