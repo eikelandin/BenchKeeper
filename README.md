@@ -51,7 +51,7 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 | Plugin | Gives you | Commands you type |
 |---|---|---|
 | `cedarloom` | The bundle: installs the three plugins below together. | none of its own |
-| `cl-workflow` | The `workflow` skill, which the agent starts before the first edit: it picks the task kind (software change, docs pass, research) and the depth (quick, standard, deep), then runs the planning, test, review and verify agents that depth needs. Hooks that keep terminal questions and plan mode off unless you allow them, a role guard that keeps merges, releases and pushes to the default branch with the coordinator, and an optional status band. | `/cl-workflow:plan <task>` settles one task and writes the plan. `/cl-workflow:ask` allows terminal questions for a while. `/cl-workflow:questions` answers open question issues in a batch. `/cl-workflow:workflow` starts the workflow by hand. |
+| `cl-workflow` | The `workflow` skill, which the agent starts before the first edit: it picks the task kind (software change, docs pass, research) and the depth (quick, standard, deep), then runs the planning, test, review and verify agents that depth needs. Hooks that keep terminal questions and plan mode off unless you allow them, a role guard that keeps merges, releases and pushes to the default branch with the coordinator, and an optional status band. | `/cl-workflow:plan <task>` settles one task and writes the plan. `/cl-workflow:ask` allows terminal questions for a while. `/cl-workflow:questions` asks you the open question issues in batches and records each answer. `/cl-workflow:workflow` starts the workflow by hand. |
 | `cl-setup` | Skills that set up and maintain a repository: agent instructions, the dev container, the coordinator's policy file, a maintenance pass and reviews of rules files and docs. Each change is a plan item you approve first. | `/cl-setup:setting-up-projects`, `/cl-setup:maintaining-repos`, `/cl-setup:reviewing-rules`, `/cl-setup:audit`, `/cl-setup:improve`, `/cl-setup:debloat` |
 | `cl-orchestration` | A coordinator that works labeled issues of several projects in parallel with worker jobs, has a fresh reviewer check each pull request, merges only where the repository's written policy allows, and resumes from a handoff file after a clear or compaction. | `/cl-orchestration:orchestrating-projects` with the project paths |
 
@@ -79,7 +79,7 @@ Removing the marketplace uninstalls every plugin installed from it. Files the sk
 
 ## Not in 0.1
 
-The command-line tool and the browser app are planned for 0.2. [Setup guide](docs/setup.md) and [Security model](docs/security.md) describe the earlier BenchKeeper app and are not part of the plugins.
+The command-line tool and the browser app are planned for 0.2.
 
 ## More
 

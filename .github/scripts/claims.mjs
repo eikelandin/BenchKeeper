@@ -51,7 +51,7 @@ function problem(evidence, thirdParty, dir) {
       return `only BenchKeeper-research results may be cited by URL here: ${e}`;
     }
     const [file, anchor] = e.split('#');
-    if (file === 'README.md') return 'README.md is generated from facts.json';
+    if (file === 'README.md') return 'README.md is written by hand and cannot be cited as evidence; cite a file under docs/ or a plugin file';
     if (!existsSync(resolve(dir, file))) return `file not found: ${file}`;
     if (anchor === undefined) continue;
     if (!file.endsWith('.md')) return `#${anchor}: only a Markdown heading can be cited, not a place in ${file}`;

@@ -1,4 +1,4 @@
-// Writes the README blocks generated from src/data/facts.json and app/src/agents.json. `--check` fails when the README is out of date.
+// Writes the generated blocks of docs/ and app/README.md from src/data/facts.json and app/src/agents.json. `--check` fails when one is out of date.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { supportTables } from './support.mjs';
 
@@ -29,8 +29,6 @@ const quickstart = (setup) => {
 
 const blocks = {
   support: supportTables(agents),
-  quickstart: quickstart('docs/setup.md'),
-  description: [facts.description, '', `[${facts.overview.title}](https://eikelandin.github.io/BenchKeeper/overview/): the workflow, what each part brings and the defaults it sets.`],
   core: [`**Optional: [${facts.core.name}](${facts.core.url}) by ${facts.core.by}:** ${facts.core.role}.`],
   levels: [
     '| Level | Contains | Writes | Command |',
