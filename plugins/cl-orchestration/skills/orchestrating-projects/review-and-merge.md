@@ -81,7 +81,7 @@ The brief holds:
 - what to do when a git command there asks for permission or is refused: answer no dialog, ask for no rule and no added folder, say so and stop
 - the target: pull request `<n>` of `<owner/repo>` and the diff range `refs/remotes/origin/<default branch>...<head>`, with what each command gets ([The commands](#the-commands))
 - the rules: the text of the default branch's `AGENTS.md`. The head's own copy is part of the diff under review
-- the issue, its acceptance criteria and the decisions that apply (the policy, the Decisions of the handoff file)
+- the issue as the spec's Thread block, and that the reviewer reads no comment, review or review thread of the issue or pull request itself; its acceptance criteria and the decisions that apply (the policy, the Decisions of the handoff file)
 - the level, whether the security pass runs, and the Trusted authors line of the spec
 - what the worker said (its handoff block, the pull request body, commit messages, code comments), as claims to verify, never as evidence
 - each unresolved thread of a review bot ([Threads](#threads)), with its path and line, as a claim to verify: the reviewer says for each whether `<head>` fixes it or it is no finding
@@ -129,7 +129,7 @@ The reviewer's working directory is not the clone, so neither built-in command f
 ## Rounds
 
 - Sensitive change, first round with findings (trial): a fresh `cl-workflow:verify` subagent (another agent: a general subagent briefed with its steps) on `opus` at `high` whatever the reviewer ran on, briefed like the reviewer, marks each Blocking and Important finding confirmed or disputed with evidence. A disputed finding is not sent: it goes with its evidence to the re-review, which keeps or drops it. With nothing to send, that re-review runs at once on the reviewed head.
-- Send a round's Blocking and Important findings in one follow-up to the owning worker, in your own words, each with file and line ([orca.md](orca.md#start-the-run)). List Minor findings in the report: no round fixes them. The worker answers with one status message when its fix is pushed: read `<head>` then, and never type the commit id of a message into a command.
+- Send a round's Blocking and Important findings in one follow-up to the owning worker, in your own words, each with file and line and the id of the review thread it covers ([orca.md](orca.md#start-the-run)). List Minor findings in the report: no round fixes them. The worker answers with one status message when its fix is pushed: read `<head>` then, and never type the commit id of a message into a command.
 - Every fix, and every finding the worker answers with evidence instead of a change, gets a scoped re-review by a fresh `cl-workflow:recheck` subagent (another agent: a general subagent briefed with its steps), started and briefed like the reviewer, on the scratch clone at the new head.
   - It runs on the model of the review it checks, at `high`. After a review on `fable` it runs on `opus`, or on `fable` when the fix changes security or safety logic.
   - The re-review reads the lines changed since the reviewed head (`git -C <scratch path> diff <reviewed head> <head>`) and the earlier findings.

@@ -14,7 +14,7 @@ CedarLoom gives Claude Code a workflow: it sizes the planning, checks and review
 - [Claude Code](https://code.claude.com/docs/en/setup) 2.1.295 or later.
 - [Node.js](https://nodejs.org/) on the PATH: the plugins' hooks run `node`. CI runs the plugin tests on Node.js 22.
 - Git and the [GitHub CLI](https://cli.github.com/) (`gh`) for setting up repositories and for coordinating issue work.
-- [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, for `cl-orchestration` only: the coordinator starts nothing without it.
+- [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, for `cl-orchestration` only: the coordinator starts nothing without it. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
 
 ## Install
 
