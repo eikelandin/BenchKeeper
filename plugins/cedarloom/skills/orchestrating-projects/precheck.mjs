@@ -11,7 +11,7 @@ const ASSOCIATED = ['MEMBER', 'COLLABORATOR'];
 export const writers = (repo, exec) => {
   const known = new Map();
   return (login) => {
-    if (typeof login !== 'string' || !/^[A-Za-z0-9-]+$/.test(login)) return false;
+    if (typeof login !== 'string' || !/^[A-Za-z0-9_-]+$/.test(login)) return false;
     if (!known.has(login)) known.set(login, ['admin', 'write'].includes(JSON.parse(exec('gh', ['api', `repos/${repo}/collaborators/${login}/permission`])).permission));
     return known.get(login);
   };

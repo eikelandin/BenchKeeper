@@ -118,9 +118,10 @@ test('precheck: reads the policy from the default branch, skips a project withou
 test('precheck: a member or collaborator counts only with write access to the tracker, and a failed lookup starts nothing', () => {
   const policy = { ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } };
   const by = (number, author_association, login) => issue(number, { author_association, user: { login }, labels: [{ name: 'agent-ready' }, { name: 'project-a' }] });
-  const issues = [by(1, 'MEMBER', 'reader'), by(2, 'COLLABORATOR', 'reader'), by(3, 'MEMBER', 'writer'), by(4, 'COLLABORATOR', 'maintainer'), by(5, 'COLLABORATOR', 'admin'), by(6, 'OWNER', 'owner')];
+  // A managed user's login ends in _<shortcode>.
+  const issues = [by(1, 'MEMBER', 'reader'), by(2, 'COLLABORATOR', 'reader'), by(3, 'MEMBER', 'writer'), by(4, 'COLLABORATOR', 'maintainer'), by(5, 'COLLABORATOR', 'admin'), by(6, 'OWNER', 'owner'), by(7, 'MEMBER', 'mona_acme')];
   // The REST API gives the maintain role as write.
-  const roles = { reader: 'read', writer: 'write', maintainer: 'write', admin: 'admin' };
+  const roles = { reader: 'read', writer: 'write', maintainer: 'write', admin: 'admin', mona_acme: 'write' };
   const asked = [];
   const run = (fails) => (dir, cmd, args) => {
     if (args[0] !== 'api') return stub(policy)(dir, cmd, args);
@@ -129,7 +130,7 @@ test('precheck: a member or collaborator counts only with write access to the tr
     if (fails) throw new Error('HTTP 502');
     return JSON.stringify({ permission: roles[args[1].split('/')[4]] });
   };
-  assert.deepEqual(check('/p', run(false), {}), [3, 4, 5, 6]);
+  assert.deepEqual(check('/p', run(false), {}), [3, 4, 5, 6, 7]);
   assert.ok(asked.includes('api repos/owner/tracker/collaborators/reader/permission'));
   assert.throws(() => check('/p', run(true), {}), /HTTP 502/);
 });

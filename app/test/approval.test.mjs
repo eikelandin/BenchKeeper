@@ -161,7 +161,7 @@ test('approval: the command line counts a member\'s answer only with write acces
   const run = (permission, issue) => {
     writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" > '${bin}/log'\necho '{"permission":"${permission}"}'\n`, { mode: 0o755 });
     writeFileSync(join(dir, '.cedarloom-app/runs/r1/issue.json'), JSON.stringify({ body: FILLED, comments: [{ ...SECOND, authorAssociation: 'MEMBER' }], ...issue }));
-    return spawnSync(process.execPath, [script, 'answer', '.cedarloom-app/runs/r1/issue.json'], { cwd: dir, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+    return spawnSync(process.execPath, [script, 'answer', '.cedarloom-app/runs/r1/issue.json'], { cwd: dir, encoding: 'utf8', env: { ...process.env, GH_HOST: '', PATH: `${bin}:${process.env.PATH}` } });
   };
   const url = { url: 'https://github.com/owner/tracker/issues/12' };
   assert.equal(run('read', url).status, 1);
@@ -169,6 +169,10 @@ test('approval: the command line counts a member\'s answer only with write acces
   assert.deepEqual(JSON.parse(run('write', url).stdout), GO);
   // Without the URL the repository is unknown: an error, not "no answer yet".
   assert.equal(run('write', {}).status, 2);
+  // gh asks github.com: owner/tracker there is another repository than on the issue's host.
+  writeFileSync(join(bin, 'log'), '');
+  assert.equal(run('write', { url: 'https://ghe.example.com/owner/tracker/issues/12' }).status, 2);
+  assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
 });
 
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {

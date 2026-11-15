@@ -120,8 +120,12 @@ if (isMain(import.meta.url)) {
     const text = readFileSync(real, 'utf8');
     const issue = mode === 'answer' ? JSON.parse(text) : null;
     // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.
-    const repo = /^https:\/\/[^/]+\/([A-Za-z0-9-]+\/[A-Za-z0-9._-]+)\/issues\/\d+$/.exec(issue?.url ?? '')?.[1];
-    const writes = repo ? writers(repo, (cmd, args) => sh('.', cmd, args)) : () => { throw new Error('the file holds no issue url: it must be what gh issue view --json labels,comments,author,body,url printed'); };
+    const [, host, repo] = /^https:\/\/([^/]+)\/([A-Za-z0-9-]+\/[A-Za-z0-9._-]+)\/issues\/\d+$/.exec(issue?.url ?? '') ?? [];
+    // gh api asks github.com, or the host GH_HOST names: on another host the same owner/repo and login are other accounts.
+    const gh = (process.env.GH_HOST || 'github.com').toLowerCase();
+    let writes = writers(repo, (cmd, args) => sh('.', cmd, args));
+    if (!repo) writes = () => { throw new Error('the file holds no issue url: it must be what gh issue view --json labels,comments,author,body,url printed'); };
+    else if (host.toLowerCase() !== gh) writes = () => { throw new Error(`the issue is on ${host}, and gh asks ${gh}: set GH_HOST for an approval on another host`); };
     const found = mode === 'answer' ? answer(issue, writes) : null;
     if (found) console.log(json(found));
     const lacks = mode === 'check' ? missing(text) : [];
