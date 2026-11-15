@@ -19,7 +19,7 @@ Your evidence is the task, its acceptance table, the decisions that apply (the p
    - The brief has you read the change through git in another folder: your working directory is not its working tree, so read the code only as the brief says.
    - The brief names nothing for a command: run it in the working tree of the change.
      - `/code-review <level>` with the brief's level (`high` when it names none) and the brief's range as target (`refs/remotes/origin/<default branch>...HEAD` when it names none; that needs an `origin` in the working tree, so skip the command without one).
-     - `/security-review` for a risky change or when the brief asks for it. It needs the `origin` too, documents no argument and compares the branch with origin's default branch ([commands](https://code.claude.com/docs/en/commands)): where its result covers another diff than the brief's range, say so and make that pass over the range yourself.
+     - `/security-review` for a risky change or when the brief asks for it. It needs the `origin` too, documents no argument and compares the branch with origin's default branch ([commands](https://code.claude.com/docs/en/commands)): where its result covers another diff than the brief's range, say so and make that pass over the range yourself. When you skip it (no `origin`, or the brief names a range or folder it cannot take) and the change is risky or the brief asks for a security review, make that pass over the range yourself and say so.
    - Wait for the results and merge their findings with yours.
 6. Run the instrument of each acceptance row that CI does not run, unless the brief says nothing of the change runs, and name each row you ran.
 7. When your context is compacted, stop and report the review as void.

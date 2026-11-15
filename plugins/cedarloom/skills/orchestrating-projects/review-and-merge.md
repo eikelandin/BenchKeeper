@@ -1,6 +1,6 @@
 # Review and merge
 
-The coordinator's steps for a worker's pull request, in this order. Policy fields are the reader's output ([SKILL.md](SKILL.md#policy)).
+The coordinator's steps for a worker's pull request, in this order. Policy fields are the reader's output ([policy.md](policy.md)).
 
 - [Scratch clone](#scratch-clone)
 - [Sensitive or routine](#sensitive-or-routine)
@@ -36,7 +36,7 @@ git -C <scratch path> fetch origin
 
 - The clone must exit 0 and `rev-parse --git-dir` must print `.git`, for a trial clone too. Run that check again in a fresh context before the first command in a clone it finds, and whenever a clone may be deleted in part. A folder without a repository of its own makes `git -C` answer from the repository above it, your working directory's: its file list and its `AGENTS.md`, with exit 0. Then stop: nothing of this file runs for that pull request, and the report names it. The verdict's script makes the same test and gives no verdict either for a scratch path that is the project's repository or that has a second worktree.
 - Clone once per pull request, and once more after a trial merge ([Merge](#merge), step 3; [trial-merge.md](trial-merge.md)), into a folder you name: the project's name, `<n>` and a counter. A fresh context finds the clones there by the run id of the handoff file. After each later read of `<head>`, run the `fetch` again: the clone then holds that head and the default branch as the remote has them.
-- **Where.** The run folder lies in your working directory, which no worker's sandbox can write. Never clone into the system's temporary folder: Claude Code lets every sandboxed command write the per-user temporary folder ([sandboxing](https://code.claude.com/docs/en/sandboxing#temporary-directories)), so a worker could put a replace ref, a hook or a setting into a clone there.
+- **Where.** The run folder lies in your working directory, which no worker's sandbox can write. Never clone into the system's temporary folder: Claude Code lets every sandboxed command write the per-user temporary folder ([sandboxing](https://code.claude.com/docs/en/sandboxing#temporary-directories)), so a worker could put a replace ref, a hook or a setting into a clone there. Clone nothing, and tell the owner, when your working directory lies in a folder that sandboxed commands may write: `/tmp` (any system), `/private/tmp` and `/var/folders` (macOS), the folders `$TMPDIR` and `CLAUDE_CODE_TMPDIR` name, or a folder in the `sandbox.filesystem.allowWrite` setting. On Linux, Claude Code's per-user temporary folder lies in `/tmp` whenever `TMPDIR` and `CLAUDE_CODE_TMPDIR` are unset ([environment variables](https://code.claude.com/docs/en/env-vars)).
 - **No file of the pull request is on disk**, so no `CLAUDE.md`, `AGENTS.md` or `.claude` of the pull request, a worker's text, exists there for Claude Code to load as instructions ([memory](https://code.claude.com/docs/en/memory#how-claude-md-files-load)):
   - `--no-checkout` leaves the clone without working files, and no step checks one out: run no `checkout`, `switch`, `restore` or `worktree` command there.
   - Every read goes through git: `git -C <scratch path> diff <range>`, `git -C <scratch path> show '<commit>:<path>'`, `git -C <scratch path> grep -n <pattern> <commit>`.
@@ -112,7 +112,7 @@ The reviewer's working directory is not the clone, so neither built-in command f
   - Any push to the branch after a review is such a fix, whoever made it, except a head whose verdict's `pin` is `clean-merges` ([Merge](#merge), step 2).
   - The head that re-review accepts is the new reviewed head.
 - A review or re-review that reports itself void counts as no review and no round: split its scope into parts that together cover all of it, and start a fresh one on each part. They count as one review: void while one part is void, and clean only when every part is.
-- A review with a Blocking or Important finding is a round. After the second round with findings, the follow-up tells the worker to rerun the phase the findings come from on a stronger model or a higher effort (`sonnet` to `opus`, `opus` to `fable`, or an effort below `high` to `high`; `xhigh` only as [SKILL.md](SKILL.md#policy) says). With no step left, the question goes to the owner at once.
+- A review with a Blocking or Important finding is a round. After the second round with findings, the follow-up tells the worker to rerun the phase the findings come from on a stronger model or a higher effort (`sonnet` to `opus`, `opus` to `fable`, or an effort below `high` to `high`; `xhigh` only as [policy.md](policy.md) says). With no step left, the question goes to the owner at once.
 - A third round with findings is a question for the owner ([SKILL.md](SKILL.md#owner-decisions)): the pull request stays a draft and is named in the report. There is no fourth round.
 
 ## Ready
