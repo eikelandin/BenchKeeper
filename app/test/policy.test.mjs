@@ -173,6 +173,16 @@ test('policy: a skill folder copied alone, as for an agent without plugins, chec
   }
 });
 
+test('policy: minPlugin is checked against the version in the plugin manifest two folders above the skill', async () => {
+  const plugin = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+  cpSync(fileURLToPath(new URL('../../plugins/cedarloom/skills/orchestrating-projects', import.meta.url)), join(plugin, 'skills', 'orchestrating-projects'), { recursive: true });
+  mkdirSync(join(plugin, '.claude-plugin'));
+  writeFileSync(join(plugin, '.claude-plugin', 'plugin.json'), '{ "name": "cedarloom", "version": "2.3.0" }');
+  const copied = await import(pathToFileURL(join(plugin, 'skills', 'orchestrating-projects', 'policy.mjs')).href);
+  assert.equal(copied.effective({ startLabel: 'go', minPlugin: '2.3.0' }).policy.minPlugin, '2.3.0');
+  assert.deepEqual(rules(copied.effective({ startLabel: 'go', minPlugin: '2.4.0' }).errors), [['range', 'minPlugin']]);
+});
+
 test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the file is read from the commit the remote names; no file means the defaults', () => {
   const calls = [];
   assert.equal(read('/p', remote('{ "startLabel": "go" }', calls)).policy.startLabel, 'go');
@@ -189,7 +199,7 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
   assert.equal(moved.policy.merge.allowed, false);
   // A remote that names no commit as its HEAD gives no policy.
   assert.deepEqual(rules(read('/p', (dir, cmd, args) => (args[0] === 'ls-tree' ? 'docs/agents/orchestration.json\n' : args[0] === 'show' ? '{ "merge": { "allowed": true } }' : '')).errors), [['unreadable', '']]);
-  assert.deepEqual(read('/p', remote(null)), { policy: DEFAULTS, errors: [] });
+  assert.deepEqual(read('/p', remote(null)), { policy: DEFAULTS, errors: [], absent: true });
 });
 
 test('policy: a fetch or a show that fails gives no policy: not the defaults, and not the file an older fetch left', () => {
