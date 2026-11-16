@@ -123,7 +123,9 @@ function approvalSection(repo, exec, now) {
   // A member's answer counts with write access to the repository, as approval.mjs reads it; a failed lookup reads unread.
   const writes = writers(repo, exec);
   const asked = new Set(open.map((i) => i.number));
-  const rows = [...open, ...recent.filter((i) => !asked.has(i.number))].flatMap((issue) => {
+  // The recent list is read after the open one: its record of an open question is the newer one, so it decides the answer.
+  const newer = new Map(recent.map((i) => [i.number, i]));
+  const rows = [...open.map((i) => newer.get(i.number) ?? i), ...recent.filter((i) => !asked.has(i.number))].flatMap((issue) => {
     let names = (issue.labels ?? []).map((l) => String(l.name));
     let given;
     try { given = answer(issue, writes); } catch { given = UNREAD; }
