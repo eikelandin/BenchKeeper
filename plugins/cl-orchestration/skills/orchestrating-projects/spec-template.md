@@ -109,6 +109,7 @@ A worker of an automatic project ([runners.md](runners.md#modes)) cannot commit,
 
 - Agent: "permission mode `dontAsk`, in the sandbox its settings file sets" in place of "permission mode the agent's default".
 - Trusted authors: the `gh api` check is the coordinator's, done for the Thread block.
+- Acknowledge: left out. No runner message command works from inside the sandbox ([runners.md](runners.md#sandbox-on)).
 - Branch: without "fetch it" and the merge of origin/<default branch>: the worker reaches no GitHub host, so the coordinator runs `git -C <project path> fetch origin` right before the start, and a merge is the coordinator's ([Commit and push](runners.md#commit-and-push)).
 - You may: "create the branch named above, stage changes to the owned paths with `git add`, resolve the conflicts of a merge the coordinator started, and run checks" in place of the rest of the line: a merge is a commit too.
 - You may not: also "commit, merge, push or run `gh`, also where the worker rules say to (a stop request: stage and report)"; "start with a flag that bypasses or skips permission prompts" stays.

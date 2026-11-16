@@ -66,11 +66,34 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
     [[join(patterned, 'wt'), file, 'registry.npmjs.org'], /main\/\.git\/worktrees\/w\*t is not an absolute path without a pattern character/],
     [['wt', file, 'registry.npmjs.org'], /^wt is not an absolute path without a pattern character/],
     [[join(base, 'sub'), file, 'registry.npmjs.org'], /not a linked worktree/],
+    // Resolved from here it is the run folder's file, but the launch would read it in the worktree.
+    [[join(base, 'wt'), 'run/settings/1-x.json', 'registry.npmjs.org'], /^run\/settings\/1-x\.json is not an absolute path/],
     ...inWorktree.map((inside) => [[join(base, 'wt'), inside, 'registry.npmjs.org'], /^the settings file must lie outside the worktree/]),
   ]) {
     const { status, stderr } = run(args, base);
     assert.equal(status, 1, args.join(' '));
     assert.match(stderr, error, args.join(' '));
     assert.equal([file, ...inWorktree].some((path) => existsSync(path)), false);
+  }
+});
+
+test('worker-settings --check: passes the file the script wrote, refuses it emptied, unparsable, without its sandbox or with a second one', () => {
+  const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  const file = join(base, 'run/settings/1-x.json');
+  const args = [join(base, 'wt'), file, 'registry.npmjs.org'];
+  assert.equal(run(args, base).status, 0);
+  const written = readFileSync(file, 'utf8');
+  const passed = run(['--check', ...args], base);
+  assert.equal(passed.status, 0, passed.stderr);
+  const withoutSandbox = JSON.parse(written);
+  delete withoutSandbox.sandbox;
+  // JSON.parse keeps the last of two equal keys; another parser may keep the first.
+  const sandboxOffFirst = `{"sandbox":{"enabled":false},${written.slice(1)}`;
+  for (const content of ['', written.slice(0, -20), JSON.stringify(withoutSandbox), sandboxOffFirst]) {
+    writeFileSync(file, content);
+    const { status, stderr } = run(['--check', ...args], base);
+    assert.equal(status, 1, JSON.stringify(content.slice(0, 40)));
+    assert.match(stderr, /is not the settings file this script writes/);
+    assert.equal(readFileSync(file, 'utf8'), content);
   }
 });
