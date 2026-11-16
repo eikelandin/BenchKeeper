@@ -7,7 +7,7 @@
     "name": "eikelandin",
     "url": "https://github.com/eikelandin"
   },
-  "homepage": "https://eikelandin.github.io/BenchKeeper/",
+  "homepage": "https://github.com/eikelandin/BenchKeeper#readme",
   "repository": "https://github.com/eikelandin/BenchKeeper",
   "license": "ISC",
   "dependencies": ["cl-workflow", "cl-setup", "cl-orchestration"]

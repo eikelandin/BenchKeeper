@@ -1,6 +1,6 @@
 # Releasing
 
-BenchKeeper releases only when the owner merges the release pull request or starts a release workflow by hand. No workflow merges that pull request or enables auto-merge on it.
+CedarLoom releases only when the owner merges the release pull request or starts a release workflow by hand. No workflow merges that pull request or enables auto-merge on it.
 
 A release ships the plugins only, and no release publishes to npm.
 
@@ -22,25 +22,14 @@ The first release is 0.1.0, set with `release-as` on each plugin in `release-ple
 4. The job `release` of the Release workflow, on that merge:
    1. tags each plugin at the version of its `.claude-plugin/plugin.json` and creates the Release `cedarloom-v<x.y.z>`;
    2. moves the branch `stable` (the ref users add the marketplace at) to the commit of that tag;
-   3. starts `.github/workflows/pages.yml`;
-   4. labels the release pull request `autorelease: tagged`, so release-please opens the next one;
-   5. starts the Release workflow once more, so release-please sees the new label even when a push during the release ran it before the label changed.
+   3. labels the release pull request `autorelease: tagged`, so release-please opens the next one;
+   4. starts the Release workflow once more, so release-please sees the new label even when a push during the release ran it before the label changed.
 
 A failed step moves nothing after it. Rerun the job after the fix: each step skips what an earlier run did. Until then release-please opens no new release pull request.
 
-Pushes to `main` right after the merge do not stop the release. The job `release` has a concurrency group per commit, so a later push never cancels the run of the release merge; its own run of the job finds no release pull request and does nothing. Only the job `release-please` shares one group: a pending one that a newer push replaces is dropped, and the newer one updates the release pull request. A release-please job that runs while the job `release` is still running finds the pending pull request and does nothing; step 5 runs it again afterwards.
-
-## Site
-
-`.github/workflows/pages.yml` builds one Pages artifact on pushes to `main`, on `release: published` and by hand:
-
-- `/BenchKeeper/`: the newest Release `cedarloom-v<x.y.z>`, built from its tag. Without one the root redirects to `/next/`.
-- `/BenchKeeper/next/`: `main` (`SITE_EDITION=next`).
-
-Both editions share one origin, so `next` stores its color scheme under its own key (`web/src/lib/edition.ts`).
+Pushes to `main` right after the merge do not stop the release. The job `release` has a concurrency group per commit, so a later push never cancels the run of the release merge; its own run of the job finds no release pull request and does nothing. Only the job `release-please` shares one group: a pending one that a newer push replaces is dropped, and the newer one updates the release pull request. A release-please job that runs while the job `release` is still running finds the pending pull request and does nothing; step 4 runs it again afterwards.
 
 ## Owner settings
 
 - A release GitHub App (variable `RELEASE_APP_CLIENT_ID`, secret `RELEASE_APP_PRIVATE_KEY`) or a token, so checks run on the release pull request. Without it the owner approves its runs.
-- The `github-pages` environment allows `main` and the release tags `cedarloom-v*`.
 - The ruleset keeps the required check names and lets the owner merge the release pull request.

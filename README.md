@@ -14,7 +14,7 @@ CedarLoom gives Claude Code a workflow: it sizes the planning, checks and review
 - [Claude Code](https://code.claude.com/docs/en/setup) 2.1.295 or later.
 - [Node.js](https://nodejs.org/) on the PATH: the plugins' hooks run `node`. CI runs the plugin tests on Node.js 22.
 - Git and the [GitHub CLI](https://cli.github.com/) (`gh`) for setting up repositories and for coordinating issue work.
-- Optional, for `cl-orchestration`: [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, to run each worker in a terminal of its own; without it, or with the [runner](plugins/cl-orchestration/skills/orchestrating-projects/runners.md) `claude-code` set, the coordinator runs its workers as background agents of its own session. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
+- For `cl-orchestration`: [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, which runs each worker in a terminal of its own; the coordinator starts workers only through Orca. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
 
 ## Install
 
@@ -57,6 +57,17 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 | `cl-orchestration` | A coordinator that works labeled issues of several projects in parallel with worker jobs, has a fresh reviewer check each pull request, merges only where the repository's written policy allows, and resumes from a handoff file after a clear or compaction. | `/cl-orchestration:orchestrating-projects` with the project paths |
 
 The role guard refuses merges, releases and pushes to the default branch in every session without `CEDARLOOM_ROLE=coordinator` in its environment, your own sessions included. Start only the coordinator's session with it, for example `CEDARLOOM_ROLE=coordinator claude` ([The plugins](docs/plugins.md)).
+
+## Optional: Ponytail
+
+[Ponytail](https://github.com/DietrichGebert/ponytail) is a separate plugin that CedarLoom does not need or install: it steers the agent to write only what the task needs, without cutting validation, error handling, security or accessibility. Install it from its own marketplace, as two separate prompts:
+
+```text
+/plugin marketplace add DietrichGebert/ponytail
+/plugin install ponytail@ponytail
+```
+
+Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugin add ponytail@ponytail`; open `/hooks`, trust its two lifecycle hooks and start a new thread.
 
 ## Typical flow
 
@@ -102,15 +113,10 @@ Repeat the second line for each installed plugin, or in a session open `/plugin`
 
 Removing the marketplace uninstalls every plugin installed from it. Files the skills wrote into your repositories stay, for example `AGENTS.md`, `docs/agents/orchestration.json` and the `.cedarloom/runs` folder: delete them yourself if you no longer want them.
 
-## Not in 0.1
-
-The command-line tool and the browser app are planned for 0.2.
-
 ## More
 
 - [The plugins](docs/plugins.md): the hooks, their settings and their limits
 - [Skills](docs/skills.md): what each skill does, who starts it and what it writes
-- [Restart-safe coordinator](docs/restart-safe-coordinator.md): keeping one coordinator run through usage limits and restarts
 - [Stack](docs/stack.md): the components CedarLoom works with and why
 - [How to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
 

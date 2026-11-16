@@ -6,5 +6,3 @@ A scheduled run starts a session only when there is work, so a tick with nothing
 - A scheduled session starts only after its precheck exits 0, and never while a session of the same schedule is alive. The sample [precheck.mjs](precheck.mjs) (arguments as in [SKILL.md](SKILL.md#loop)) exits 0 when a project has an issue to pick and prints which; it starts and merges nothing.
 - To see why it starts nothing in a project, run `node <skill folder>/policy.mjs <project path>`: it prints the effective policy, or with exit 1 the policy's errors.
 - An unattended run starts each worker in a disposable worktree.
-
-A coordinator that must outlive usage limits and restarts (one owner, a handover in two files, a loop without a model, short cycles, a watchdog): [restart-safe coordinator](https://github.com/eikelandin/BenchKeeper/blob/main/docs/restart-safe-coordinator.md).

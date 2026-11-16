@@ -8,7 +8,7 @@ The coordinator chooses once, when the run starts, and writes the name into the 
 
 1. **Run argument.** `--runner <name>` before the project paths.
 2. **Plugin option.** `runner`, as [SKILL.md](SKILL.md) reads it: empty means auto.
-3. **Auto.** orca when its Detect step answers, else claude-code when its Detect step answers, else start nothing and tell the owner that no runner answered.
+3. **Auto.** orca when its Detect step answers, else start nothing and tell the owner that no runner answered.
 
 A name counts only when plain: lower-case letters, digits and `-`, no `-` first. A runner named by the argument or the option that is not listed here, or that fails its Detect step, starts nothing: tell the owner the name and the reason. There is no fallback to another runner.
 
@@ -37,7 +37,6 @@ Each runner file has these sections, under its own headings where the file says 
 
 | Runner | File | Detect |
 | --- | --- | --- |
-| `claude-code` | [claude-code.md](claude-code.md) | the session is Claude Code with background agents and session crons |
 | `orca` | [orca.md](orca.md) | the session is Claude Code, an Orca executable is found, and `<that executable> skills get orchestration` succeeds |
 
 ## Modes
@@ -70,7 +69,6 @@ A gate holds one item for the owner while the other items go on ([Owner-only dec
 - Supervised (Orca): before each `worker-start` of a Claude Code worker, `node <skill folder>/worker-settings.mjs --supervised <worktree path>` writes the list as `<worktree path>/.claude/settings.local.json`, then the same command with `--check` before `--supervised` must exit 0. Claude Code reads that file in the folder it starts in beside the main checkout's and applies the permission rules of both ([settings](https://code.claude.com/docs/en/settings#where-claude-code-keeps-the-local-file-in-a-git-repository)). Deny rules need no workspace trust. A rule path that starts with `/` counts from the worktree, so the file names no host path. The script refuses a path that is no linked worktree and never overwrites another file there: any failure starts no worker and makes the item BLOCKED. It also lists `/.claude/settings.local.json` in the shared `.git`'s `info/exclude`, which git reads for every worktree and the main checkout, and `--check` fails without that line: `git add -A` leaves the file out, `git add -f` does not, and the spec forbids staging it ([orca.md](orca.md#start-the-run)).
 - Supervised, such a worker commits and reports, and the coordinator pushes its branch and opens its draft pull request ([Commit and push](#commit-and-push)); its spec changes as [spec-template.md](spec-template.md#supervised-claude-code-worker-on-orca) says.
 - Automatic: `worker-settings.mjs` adds the list to the settings file ([Sandbox on](#sandbox-on)), minus a rule that the template's deny list already matches (`Bash(gh *)`, `Bash(git push *)`, `WebFetch`, `.claude`). An Edit rule goes in as ask, which `dontAsk` refuses: the sandbox closes a deny rule's paths to Bash too, and so would close the shared `.git` to git.
-- `claude-code`: a worker runs in the coordinator's session with its settings, so no rule file reaches it.
 - A Bash rule matches the command as written: `git -C . push`, `gh api` and `/bin/rm` pass it ([permissions](https://code.claude.com/docs/en/permissions#bash-rule-limits)). A `WebFetch` rule names hosts to match, never hosts to leave out, and deny wins over allow, so the deny refuses every host, also one an allow rule lists. Under full access a supervised worker's Bash can still rewrite its rule file. A `Read` deny also refuses Edit and Write on that path, `.env.example` included, at any depth, and in automatic mode the sandbox closes it to Bash too ([Read and Edit](https://code.claude.com/docs/en/permissions#read-and-edit), [sandboxing](https://code.claude.com/docs/en/sandboxing#permission-rules)).
 
 ### Sandbox on
