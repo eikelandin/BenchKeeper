@@ -90,13 +90,16 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   const relativePath = run(['--supervised', 'wt'], base);
   assert.equal(relativePath.status, 1);
   assert.match(relativePath.stderr, /^wt is not an absolute path/);
-  // The main checkout, whose .git is a folder, and a mistyped path are no linked worktree.
-  for (const [folder, error] of [['main', /EISDIR/], ['no/such/wt', /ENOENT/]]) {
+  // The main checkout, whose .git is a folder, and a mistyped path are no linked worktree; a stale .git names a shared .git that is gone.
+  mkdirSync(join(base, 'stale'));
+  writeFileSync(join(base, 'stale/.git'), `gitdir: ${base}/gone/.git/worktrees/stale\n`);
+  for (const [folder, error] of [['main', /EISDIR/], ['no/such/wt', /ENOENT/], ['stale', /ENOENT/]]) {
     const { status, stderr } = run(['--supervised', join(base, folder)], base);
     assert.equal(status, 1, folder);
     assert.match(stderr, error, folder);
     assert.equal(existsSync(join(base, folder, '.claude')), false, folder);
   }
+  assert.equal(existsSync(join(base, 'gone')), false);
   // Links a repository can commit: .claude to a folder outside the worktree, the file itself to a path that does not exist yet.
   mkdirSync(join(base, 'outside'));
   for (const name of ['linked', 'dangling']) {

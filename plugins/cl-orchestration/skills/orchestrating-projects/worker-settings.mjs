@@ -1,5 +1,5 @@
 // Usage: node worker-settings.mjs <worktree path> <settings file> <domain>..., both paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match. With --supervised <worktree path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
-import { appendFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
 
@@ -19,7 +19,8 @@ const covers = (deny, rule) => deny.includes(rule) || deny.some((d) => d.startsW
 
 // In .claude/settings.local.json a rule path that starts with / counts from the session's starting folder, the worktree, so the file names no host path.
 const EXCLUDED = '/.claude/settings.local.json';
-const excluded = (exclude) => existsSync(exclude) && readFileSync(exclude, 'utf8').split('\n').includes(EXCLUDED);
+const listed = (text) => text.split('\n').includes(EXCLUDED);
+const excluded = (exclude) => existsSync(exclude) && listed(readFileSync(exclude, 'utf8'));
 
 export function supervisedSettings(rules) {
   const local = (rule) => rule.replace('(//W/', '(/');
@@ -80,6 +81,14 @@ if (isMain(import.meta.url)) {
     const text = `${JSON.stringify(settings, null, 2)}\n`;
     // A repository can commit .claude as a link, which would put the file outside the worktree.
     if (supervised && lstatSync(dirname(file), { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`${escaped(dirname(file))} is a link: not written or read`);
+    if (supervised && !check) {
+      // Only info, never the shared .git itself: a stale .git pointer fails with ENOENT before anything is written.
+      try {
+        mkdirSync(dirname(exclude));
+      } catch (e) {
+        if (e.code !== 'EEXIST') throw e;
+      }
+    }
     if (check) {
       // Claude Code loads an empty file as no settings and starts without the sandbox, and another parser may read a duplicate key otherwise than JSON.parse, so the file's text must be the one this script writes.
       if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} is not the settings file this script writes for those arguments`);
@@ -92,10 +101,15 @@ if (isMain(import.meta.url)) {
       // wx: no write through a dangling link in the worktree.
       writeFileSync(file, text, { flag: supervised ? 'wx' : 'w' });
     }
-    if (supervised && !check && !excluded(exclude)) {
-      const before = existsSync(exclude) ? readFileSync(exclude, 'utf8') : '';
-      mkdirSync(dirname(exclude), { recursive: true });
-      appendFileSync(exclude, `${before && !before.endsWith('\n') ? '\n' : ''}${EXCLUDED}\n`);
+    if (supervised && !check) {
+      // One descriptor, so the text read is the file appended to.
+      const fd = openSync(exclude, 'a+');
+      try {
+        const before = readFileSync(fd, 'utf8');
+        if (!listed(before)) appendFileSync(fd, `${before && !before.endsWith('\n') ? '\n' : ''}${EXCLUDED}\n`);
+      } finally {
+        closeSync(fd);
+      }
     }
   } catch (e) {
     console.error(e.message);
