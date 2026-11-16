@@ -29,7 +29,7 @@
     "runner": {
       "type": "string",
       "title": "Runner that starts the workers",
-      "description": "Empty by default: auto, which takes orca when it detects itself, else claude-code (background agents of the coordinator's session). claude-code or orca sets one; a set runner that fails its Detect step starts nothing. A run's --runner argument wins.",
+      "description": "Empty by default: auto, which takes orca when its Detect step answers, else starts nothing. orca sets it; a set runner that fails its Detect step starts nothing. A run's --runner argument wins.",
       "default": ""
     },
     "hub": {

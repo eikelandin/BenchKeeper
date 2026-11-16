@@ -2,7 +2,7 @@
 
 This is the spec of the issue runs this skill coordinates.
 
-Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker changes the lines that section names, and a spec for the claude-code runner leaves out the Acknowledge line ([claude-code.md](claude-code.md#start)), and a spec takes the lines its runner's Start section adds, only for the worker kind and mode that section names (such as a Role check line). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
+Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker changes the lines that section names, and a spec takes the lines its runner's Start section adds, only for the worker kind and mode that section names (such as a Role check line). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
 
 What the lines take, policy fields as the reader prints them:
 
@@ -125,7 +125,7 @@ A worker of an automatic project ([runners.md](runners.md#modes)) cannot commit,
 A spec with several issues is a batch: the issues one Pick gives one worker.
 
 - It counts as one worker for `workersPerProject` and `hostWorkerLimit`.
-- The worker sends one status message with the handoff block per issue, and one report at the end. React to each issue's outcome when its message arrives: review and merge do not wait for the batch. A runner without a message command (claude-code) gives the outcomes only in the report at the batch's end.
+- The worker sends one status message with the handoff block per issue, and one report at the end. React to each issue's outcome when its message arrives: review and merge do not wait for the batch.
 - An issue reported blocked or in need of a replan waits until the batch has ended. Start no replan, retry or other worker for it before the batch's report, and keep the worktree.
 - An issue that ended BLOCKED on an earlier issue of its batch is the exception to "once per run" ([SKILL.md](SKILL.md#loop)): once that issue's pull request is merged, whoever merged it, it counts as an issue with no outcome, and Pick takes it again, once. In a `keepRunning` run that can be long after the batch.
 - A batch that ends BLOCKED (a cause that stops every issue) is blocked for each issue it did not finish.
