@@ -140,9 +140,9 @@ async function rotate($: EngineInterface, why: string, now: number, seen: number
     const clearing = async () => {
       await $.command.run({ command: 'clear' })
       if (expired) return
-      // The prompt carries the file itself: on some versions the plugin's own prompt.submit hook does not add it here.
+      // A plugin's own prompt takes no context, and on some versions its prompt.submit hook does not see it: the text carries the file.
       const back = await handBack($)
-      const submitted = await $.prompt.submit({ text: resume(why), ...(back !== null && { context: [back] }) })
+      const submitted = await $.prompt.submit({ text: back === null ? resume(why) : `${resume(why)}\n\n${back}` })
       if (submitted.drop !== undefined) {
         cleared = true
         throw new Error(`the resume prompt was dropped: ${submitted.drop}`)

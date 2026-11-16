@@ -61,18 +61,14 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, sessionId = 's1', sto
     return { text: '' }
   })
   on('session.end', (_, e) => ({ sessionId: e.sessionId }))
-  // Records the plugin's own prompts and the context they carry, not those a test types.
-  const carried: string[] = []
+  // Records the plugin's own prompts, not those a test types.
   on('prompt.submit', (_, e) => {
-    if (e.origin.kind !== 'composer') {
-      ran.push(e.text)
-      carried.push(...(e.context ?? []))
-    }
+    if (e.origin.kind !== 'composer') ran.push(e.text)
     return drop === undefined ? { text: e.text, context: e.context } : { drop }
   })
   on('classic.Stop', () => stop)
   on('classic.PreCompact', () => ({}))
-  return { clock, session, files, mtimes, ran, id, carried }
+  return { clock, session, files, mtimes, ran, id }
 }
 const PRECOMPACT = { trigger: 'auto', custom_instructions: null } as const
 const typed = (text: string) => ({ text, wait: false, origin: { kind: 'composer' }, context: ['other'] }) as const
@@ -279,9 +275,8 @@ test('after its clear the coordinator moves the file to its new session id, gets
   e.id.value = 's2'
   await e.clock.advance(1000)
   expect(e.ran[0]).toBe('/clear')
-  expect(e.ran[1]).toContain('250000 tokens')
-  expect(e.carried.length).toBe(1)
-  const restored = e.carried[0] ?? ''
+  const restored = e.ran[1] ?? ''
+  expect(restored).toContain('250000 tokens')
   expect(restored).toContain('\nrun r1\nSession: s2\n\n## Next\nwatch #12\n')
   expect(restored).toContain('\n## Drift since this file was written (1970-01-01T00:00:01.000Z,')
   await e.clock.advance(11 * 60_000)
