@@ -2,7 +2,7 @@
 
 This is the spec of the issue runs this skill coordinates.
 
-Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker changes the lines that section names, and a spec for the claude-code runner leaves out the Acknowledge line ([claude-code.md](claude-code.md#start)), and a spec takes the lines the runner's Start adds (such as a Role check line). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
+Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker changes the lines that section names, and a spec for the claude-code runner leaves out the Acknowledge line ([claude-code.md](claude-code.md#start)), and a spec takes the lines its runner's Start section adds, only for the worker kind and mode that section names (such as a Role check line). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
 
 What the lines take, policy fields as the reader prints them:
 

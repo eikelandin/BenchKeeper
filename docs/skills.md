@@ -4,7 +4,7 @@ What each skill does, who starts it, when it runs and what it writes, so you can
 
 ## CedarLoom's skills
 
-The plugins `cl-workflow`, `cl-setup` and `cl-orchestration` ([install](../README.md#install)) bring these skills to Claude Code and Codex. A skill that "you" start never starts on its own.
+The plugins `cl-workflow`, `cl-setup`, `cl-orchestration` and `cl-orca` ([install](../README.md#install)) bring these skills to Claude Code, and all but `cl-orca` to Codex. A skill that "you" start never starts on its own.
 
 <!-- generated:skills -->
 | Skill | What it is for | Started by | When it runs | What it writes |

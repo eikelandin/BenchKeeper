@@ -1,6 +1,6 @@
 # Orca commands
 
-The `orca` runner of cl-orchestration's coordinator (`runners.md`) drives Orca. `SKILL.md`, `runners.md`, `review-and-merge.md`, `recurring-runs.md` and `spec-template.md`, `#` naming a heading in them, are files of cl-orchestration's `orchestrating-projects` skill folder, `<skill folder>` here; this file lies in the folder of the `cl-orca:runner` skill, `<runner folder>` here. `ORCA` stands for the executable the session resolved and used for `ORCA skills get orchestration`; substitute it, do not run `ORCA` literally. Load that guide first: it is the version-matched source for every command and state, and it wins where this file differs. This file holds only what the guide leaves to the caller: the launch settings, how the skill's outcomes, waits, dialogs and cleanup map onto Orca, and the host limit. Prefer `--json`.
+The `orca` runner of cl-orchestration's coordinator (`runners.md`) drives Orca. `SKILL.md`, `runners.md`, `review-and-merge.md`, `recurring-runs.md` and `spec-template.md`, `#` naming a heading in them, are files of cl-orchestration's `orchestrating-projects` skill folder, `<skill folder>` here; this file lies in the folder of the `cl-orca:runner` skill, `<runner folder>` here. `ORCA` stands for the executable the session resolved and used for `ORCA skills get orchestration`; substitute it, do not run `ORCA` literally. Load that guide first: it is the version-matched source for every command and state, and it wins where this file differs. This file holds only what the guide leaves to the caller: the launch settings, how the coordinator's outcomes, waits, dialogs and cleanup map onto Orca, and the host limit. Prefer `--json`.
 
 The sections of the runner interface (`runners.md#interface`), in this file:
 
@@ -55,7 +55,7 @@ A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled 
 - `--autocompact 200k` caps the worker's context at 200,000 tokens before it compacts, and `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` turns off the next-prompt suggestions no one reads in a worker terminal. `env` sets the variable in any login shell.
 - No permission-bypass flag anywhere in a launch. A supervised worker runs in the default permission mode, with the prompts in its terminal ([A permission dialog](#a-permission-dialog)).
 - Automatic is for a Claude Code worker only (a Codex worker of an automatic project runs supervised): write its settings file first (`runners.md#sandbox-on`), `<id>` being `<number>-<slug>`. Before each such worker, pass Automatic start (`runners.md#automatic-start`); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. A failed check or step runs the project supervised.
-- Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so the shell never parses the issue content in it. The spec carries the author filter of `spec-template.md` (its `Trusted authors:` line).
+- Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so issue text is never read by the shell.
 - The model and effort are those of the spec's `Agent:` line, the model as the reader printed it, inside single quotes. Leave out what that line gives as the agent default, and the effort whenever the model is left out.
 - An automatic worker takes its task only once its agent reached its idle prompt. A `terminal wait` that times out or ends in another state starts no worker: read its screen once (`ORCA terminal read --terminal <terminal> --screen --json`). Such a start has a worktree and a terminal but no dispatch, so neither `worker-list` nor [Clean up](#clean-up) sees them:
   - A dialog there (a trust question, a login) is the owner's (`SKILL.md#rules`). Write the issue, the terminal handle and the worktree path into the handoff file's `## Open`, list it for the owner, and count it as a working worker ([Host limit](#host-limit)) until the owner acts.
@@ -100,7 +100,7 @@ A Codex or supervised Claude Code retry takes `--agent <agent>` and its `--model
 
 ## Worker reports
 
-A worker settles with one message. The skill's outcomes map to Orca like this:
+A worker settles with one message. The outcomes (`SKILL.md#outcomes`) map to Orca like this:
 
 | Outcome | Message from the worker |
 |---|---|
