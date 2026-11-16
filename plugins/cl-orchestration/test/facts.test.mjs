@@ -57,6 +57,16 @@ test('facts: a Head comment that lands between the open and the recent read void
   assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent']);
 });
 
+test('facts: an open question rejected and closed between the open and the recent read gets no label edit and reads closed', () => {
+  const key = 'gh issue list -R octo/app --state all --search updated:>=2026-11-12 --limit 200 --json number,state,labels,comments,author,body';
+  const recent = COMMANDS[key].out.map((i) => (i.number === 41 ? { ...i, state: 'CLOSED', comments: [{ ...i.comments[0], body: 'Owner answer (2026-11-13): b. Not needed.' }] } : i));
+  const edits = [];
+  const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake({ ...COMMANDS, [key]: { out: recent } })(cmd, args); };
+  const text = facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
+  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent']);
+  assert.ok(text.includes('| 41 | closed | b | 2026-11-13T09:00Z |'));
+});
+
 test('facts costs: per merged pull request the summed job cost and the changes rounds, with totals and medians', () => {
   const found = costs({ run: RUN, repos: ['octo/app', 'octo/lib'], since: '2026-11-12', until: '2026-11-13', exec: fake(COMMANDS) });
   assert.equal(costTable(found), `| PR | Merged | Jobs | Cost (USD) | Fix rounds |

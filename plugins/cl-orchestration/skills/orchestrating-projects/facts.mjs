@@ -131,7 +131,8 @@ function approvalSection(repo, exec, now) {
     try { given = answer(issue, writes); } catch { given = UNREAD; }
     if (!asked.has(issue.number) && !(now - Date.parse(given?.at) <= DAY)) return [];
     // Every open question of the repository, so that an answer the owner commented on GitHub moves on within one run.
-    if (asked.has(issue.number) && given && given !== UNREAD) {
+    // One closed since the open read, as a rejection closes it, gets no start label.
+    if (asked.has(issue.number) && issue.state !== 'CLOSED' && given && given !== UNREAD) {
       try { names = settle(repo, issue, exec); } catch { names = [...names, 'label edit failed']; }
     }
     return [[issue.number, issue.state === 'CLOSED' ? 'closed' : names.join(', ') || 'open', given === UNREAD ? UNREAD : given?.option, utc(given?.at)]];
