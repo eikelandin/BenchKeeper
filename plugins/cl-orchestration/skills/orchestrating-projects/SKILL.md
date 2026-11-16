@@ -10,7 +10,7 @@ writes: "Specs, issue and review threads, prompts, approvals, handoff copies and
 
 This session is the coordinator. Workers do the issue work in their own worktrees, each working by the workflow skill at its depth (the Flow line of [spec-template.md](spec-template.md)); the coordinator picks, specs, watches, reviews and merges by policy ([review-and-merge.md](review-and-merge.md)), cleans up and starts the next. Orca starts and reaches the workers: its commands are in [orca.md](orca.md), and a run starts only when the start condition of [Start the run](orca.md#start-the-run) holds.
 
-Projects: $ARGUMENTS without a leading `--mode supervised` ([modes](modes.md#modes)) (Codex: the paths after the skill name). Each is a repository with a GitHub remote and an `AGENTS.md`.
+Projects: $ARGUMENTS without a leading `--mode supervised` ([modes](modes.md#modes)) (Codex: the paths after the skill name). Any other argument that starts with `--` starts no run: name it to the owner. Each is a repository with a GitHub remote and an `AGENTS.md`.
 
 ## Rules
 
