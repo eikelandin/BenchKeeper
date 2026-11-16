@@ -196,7 +196,7 @@ test('an idle Stop above 200000 tokens clears, then submits the resume prompt, o
 
 test('no clear while not idle, with no task list, in a subagent or without the file', async ($, on) => {
   const e = engine(on)
-  await $.classic.Stop({ ...IDLE, background_tasks: [{ id: 'b1', type: 'shell', status: 'running', description: 'orca orchestration check --wait' }] })
+  await $.classic.Stop({ ...IDLE, background_tasks: [{ id: 'b1', type: 'shell', status: 'running', description: 'sleep 600' }] })
   await $.classic.Stop({ stop_hook_active: false } as never)
   await $.classic.Stop({ ...IDLE, stop_hook_active: true })
   await $.classic.Stop({ ...IDLE, agent_id: 'a1' })

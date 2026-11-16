@@ -14,7 +14,7 @@ CedarLoom gives Claude Code a workflow: it sizes the planning, checks and review
 - [Claude Code](https://code.claude.com/docs/en/setup) 2.1.295 or later.
 - [Node.js](https://nodejs.org/) on the PATH: the plugins' hooks run `node`. CI runs the plugin tests on Node.js 22.
 - Git and the [GitHub CLI](https://cli.github.com/) (`gh`) for setting up repositories and for coordinating issue work.
-- Optional, for `cl-orchestration`: [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, to run each worker in a terminal of its own; without it, and with no other [runner](plugins/cl-orchestration/skills/orchestrating-projects/runners.md) set or detected, the coordinator runs its workers as background agents of its own session. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
+- Optional, for `cl-orchestration`: [Orca](https://github.com/stablyai/orca) with its `orchestration` skill and the `cl-orca` plugin, to run each worker in a terminal of its own; without them, and with no other [runner](plugins/cl-orchestration/skills/orchestrating-projects/runners.md) set or detected, the coordinator runs its workers as background agents of its own session. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
 
 ## Install
 
@@ -34,9 +34,9 @@ claude plugin marketplace add CedarLoom/cedarloom#stable
 claude plugin install cedarloom@cedarloom
 ```
 
-To install one plugin instead of the bundle, name it: `/plugin install cl-workflow@cedarloom`. `cl-orchestration` installs `cl-workflow` with it.
+To install one plugin instead of the bundle, name it: `/plugin install cl-workflow@cedarloom`. `cl-orchestration` installs `cl-workflow` with it, and `cl-orca` installs both.
 
-Codex reads the same marketplace. Codex installs no dependencies, so add each plugin you want, `cl-workflow` before `cl-orchestration`:
+Codex reads the same marketplace. In Codex, `cl-orchestration` gives the skill text and the hook that hands a coordinator its handoff file back; its coordinator starts workers only in Claude Code. `cl-orca` is for Claude Code only. Codex installs no dependencies, so add each plugin you want, `cl-workflow` before `cl-orchestration`:
 
 ```sh
 codex plugin marketplace add CedarLoom/cedarloom@stable
@@ -51,10 +51,11 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 
 | Plugin | Gives you | Commands you type |
 |---|---|---|
-| `cedarloom` | The bundle: installs the three plugins below together. | none of its own |
+| `cedarloom` | The bundle: installs the four plugins below together. | none of its own |
 | `cl-workflow` | The `workflow` skill, which the agent starts before the first edit: it picks the task kind (software change, docs pass, research) and the depth (quick, standard, deep), then runs the planning, test, review and verify agents that depth needs. Hooks that keep terminal questions and plan mode off unless you allow them, a role guard that keeps merges, releases and pushes to the default branch with the coordinator, and an optional status band. | `/cl-workflow:plan <task>` settles one task and writes the plan. `/cl-workflow:ask` allows terminal questions for a while. `/cl-workflow:questions` asks you the open question issues in batches and records each answer. `/cl-workflow:workflow` starts the workflow by hand. |
 | `cl-setup` | Skills that set up and maintain a repository: agent instructions, the dev container, the coordinator's policy file, a maintenance pass and reviews of rules files and docs. Each change is a plan item you approve first. | `/cl-setup:setting-up-projects`, `/cl-setup:maintaining-repos`, `/cl-setup:reviewing-rules`, `/cl-setup:audit`, `/cl-setup:improve`, `/cl-setup:debloat` |
 | `cl-orchestration` | A coordinator that works labeled issues of several projects in parallel with worker jobs, has a fresh reviewer check each pull request, merges only where the repository's written policy allows, and resumes from a handoff file after a clear or compaction. | `/cl-orchestration:orchestrating-projects` with the project paths |
+| `cl-orca` | The `orca` runner of the `cl-orchestration` coordinator: each worker runs in an Orca terminal with a worktree of its own. With `runner` unset, the coordinator takes it when Orca answers. | none of its own |
 
 The role guard refuses merges, releases and pushes to the default branch in every session without `CEDARLOOM_ROLE=coordinator` in its environment, your own sessions included. Start only the coordinator's session with it, for example `CEDARLOOM_ROLE=coordinator claude` ([The plugins](docs/plugins.md)).
 

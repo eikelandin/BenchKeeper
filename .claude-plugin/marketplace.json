@@ -1,12 +1,12 @@
 {
   "name": "cedarloom",
   "owner": { "name": "eikelandin", "url": "https://github.com/eikelandin" },
-  "description": "CedarLoom: the cl-workflow, cl-setup and cl-orchestration plugins for Claude Code and Codex, and the cedarloom bundle that installs all three.",
+  "description": "CedarLoom: the cl-workflow, cl-setup and cl-orchestration plugins for Claude Code and Codex, the cl-orca runner plugin for Claude Code, and the cedarloom bundle that installs all four.",
   "plugins": [
     {
       "name": "cedarloom",
       "source": "./plugins/cedarloom",
-      "description": "Installs the CedarLoom plugins cl-workflow, cl-setup and cl-orchestration together.",
+      "description": "Installs the CedarLoom plugins cl-workflow, cl-setup, cl-orchestration and cl-orca together.",
       "category": "development"
     },
     {
@@ -25,6 +25,12 @@
       "name": "cl-orchestration",
       "source": "./plugins/cl-orchestration",
       "description": "Coordinates the issues of several projects from one session: worker jobs, reviews and merge checks. Installs cl-workflow with it.",
+      "category": "development"
+    },
+    {
+      "name": "cl-orca",
+      "source": "./plugins/cl-orca",
+      "description": "Runs the workers of the cl-orchestration coordinator in Orca terminals, one worktree each. Installs cl-orchestration with it.",
       "category": "development"
     }
   ]

@@ -1,0 +1,12 @@
+{
+  "name": "cl-orca",
+  "displayName": "CedarLoom Orca runner",
+  "version": "6.27.0",
+  "description": "Runs the workers of the cl-orchestration coordinator in Orca terminals, one worktree each. Installs cl-orchestration with it.",
+  "author": {
+    "name": "eikelandin",
+    "url": "https://github.com/eikelandin"
+  },
+  "license": "ISC",
+  "dependencies": ["cl-orchestration"]
+}
