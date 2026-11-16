@@ -101,7 +101,7 @@ With the hub as `<tracker>` of a public `<owner/repo>`, the spec names no hub, h
 - You may: "name a follow-up under Next step" in place of filing one.
 - Flow: the draft pull request's body describes the change, with no issue reference.
 - Blocked, Needs replan and No change needed: what they comment on the issue goes into the report instead ([SKILL.md](SKILL.md#outcomes)).
-- Report: the handoff `Issue:` line takes the task's title.
+- Report: the handoff `Issue:` line takes the task's title. For an [automatic](#automatic-mode) worker or a [supervised Claude Code worker on Orca](#supervised-claude-code-worker-on-orca), the commit message or pull request body takes no issue reference.
 
 ## Automatic mode
 
@@ -126,11 +126,11 @@ Its rule file refuses `git push`, `gh pr create`, `gh pr comment` and the `gh is
 
 - You may: without "push those branches", "open or update one draft pull request", "reply to review threads" and the follow-up issue (name it under Next step instead); "before your next commit" in place of "before your next push".
 - You may not: also "push, or create, change or comment on a pull request or an issue, also where the worker rules say to, and in no other form (`git -C`, `gh api`)"; "start with a flag that bypasses or skips permission prompts" stays.
-- Flow, Every depth: "once the work is committed, report: the coordinator pushes the branch and opens the draft pull request with your title and body" in place of the push, pull request and checks steps.
+- Flow, Every depth: "once the work is committed, report: the coordinator pushes the branch and opens the draft pull request with your body and a title it sets from the one you propose" in place of the push, pull request and checks steps.
 - Batch: "When an issue's change is committed" in place of "When an issue's pull request is up", "commit its branch" in place of "commit and push its branch", and "fix, commit" in place of "fix, push".
 - Blocked, Needs replan, No change needed and Follow-up: the line of [Automatic mode](#automatic-mode), its refused paths those of [Worker rules](runners.md#worker-rules).
-- Follow-up: commit the fix and answer with its head commit, and with a new title or body where one was asked.
-- Report: What changed takes the branch, its head commit, and a pull request title and a body that refers to the issue as `<tracker>#<number>`, with no closing keyword.
+- Follow-up: commit the fix and answer with its head commit, and with a proposed title or a new body where one was asked.
+- Report: What changed takes the branch, its head commit, and a proposed pull request title and a body that refers to the issue as `<tracker>#<number>`, with no closing keyword.
 
 ## Batches
 

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { supervisedSettings } from '../skills/orchestrating-projects/worker-settings.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/worker-settings.mjs', import.meta.url));
 const run = (args, cwd) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd });
@@ -116,6 +117,12 @@ test('worker-settings --supervised: writes the worker rules without a host path 
     assert.equal(status, 1, folder);
     assert.match(stderr, error, folder);
     assert.deepEqual(readdirSync(join(base, 'outside')), [], folder);
+  }
+});
+
+test('worker-settings: refuses a rule file with a key besides deny or a rule that is no string', () => {
+  for (const rules of [{ deny: [], ask: ['Bash(git push *)'] }, { deny: ['Bash(git push *)', 1] }]) {
+    assert.throws(() => supervisedSettings(rules), /must hold one key, deny, with a list of rule strings/, JSON.stringify(rules));
   }
 });
 

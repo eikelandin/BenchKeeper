@@ -22,9 +22,18 @@ const EXCLUDED = '/.claude/settings.local.json';
 const listed = (text) => text.split('\n').includes(EXCLUDED);
 const excluded = (exclude) => existsSync(exclude) && listed(readFileSync(exclude, 'utf8'));
 
+// A rule under any other key, or not a string, would reach neither settings file without an error.
+function denyRules(rules) {
+  const keys = Object.keys(rules);
+  if (keys.length !== 1 || keys[0] !== 'deny' || !Array.isArray(rules.deny) || !rules.deny.every((rule) => typeof rule === 'string')) {
+    throw new Error('worker-rules.json must hold one key, deny, with a list of rule strings');
+  }
+  return rules.deny;
+}
+
 export function supervisedSettings(rules) {
   const local = (rule) => rule.replace('(//W/', '(/');
-  return { permissions: { deny: rules.deny.map(local) } };
+  return { permissions: { deny: denyRules(rules).map(local) } };
 }
 
 // In a --settings file a rule path that starts with / counts from the file's folder, so an absolute path takes a second /.
@@ -37,7 +46,7 @@ export function workerSettings(template, rules, worktree, commonDir, worktreeFol
   // The sandbox keeps a folder from being renamed, and so swapped for a copy, only where a rule names its path, and on Linux it skips a pattern rule for writes.
   const perFolder = (rule) => (rule.includes('(//C/worktrees/*/') ? [rule, ...worktreeFolders.map((name) => rule.replace('/worktrees/*/', () => `/worktrees/${name}/`))] : [rule]);
   const { permissions, sandbox } = template;
-  const added = rules.deny.filter((rule) => !covers(permissions.deny, rule));
+  const added = denyRules(rules).filter((rule) => !covers(permissions.deny, rule));
   // The sandbox closes an Edit deny's paths to Bash too, git's own writes to .git and a checkout's files included; as ask, dontAsk refuses the file tools alone.
   const fileRule = (rule) => rule.startsWith('Edit(');
   const deny = [...permissions.deny, ...added.filter((rule) => !fileRule(rule))];
