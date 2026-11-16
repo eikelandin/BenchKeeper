@@ -118,7 +118,7 @@ Removing the marketplace uninstalls every plugin installed from it. Files the sk
 - [The plugins](docs/plugins.md): the hooks, their settings and their limits
 - [Skills](docs/skills.md): what each skill does, who starts it and what it writes
 - [Stack](docs/stack.md): the components CedarLoom works with and why
-- [How to report a vulnerability](SECURITY.md). This repository takes no issues: see the [issue policy](docs/agents/issue-tracker.md).
+- [How to report a vulnerability](SECURITY.md).
 
 ## License
 

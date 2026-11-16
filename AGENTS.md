@@ -39,5 +39,5 @@ The changed-files check, for each area the change touches:
 
 ## Pointers
 
-- [docs/agents/](docs/agents/): [domain docs](docs/agents/domain.md), the [issue policy](docs/agents/issue-tracker.md) (this repository takes no issues), [triage labels](docs/agents/triage-labels.md).
+- [docs/agents/](docs/agents/): [domain docs](docs/agents/domain.md).
 - [Development](docs/development.md): workflows, checks and the dev container. [Releasing](docs/releasing.md).
