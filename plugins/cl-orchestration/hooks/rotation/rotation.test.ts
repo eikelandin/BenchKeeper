@@ -9,37 +9,35 @@ import { withStatus } from './register'
 const TOP = '/work'
 const ROOT = `${TOP}/coord`
 const PATH = `${ROOT}/.cedarloom/runs/handoff.md`
-const HANDOFF = '# Handoff\nrun r1\nTerminal: term-a\n\n## Next\nwatch #12\n'
+const HANDOFF = '# Handoff\nrun r1\nSession: s1\n\n## Next\nwatch #12\n'
 const IDLE = { stop_hook_active: false, background_tasks: [] }
-// Each test loads the plugin afresh, so its module state (running, lastEnd, noted) starts empty.
+// Each test loads the plugin afresh, a new process, so its module state (running, lastEnd, noted, owner) starts empty.
 
-type Setup = { file?: string | null; tokens?: number | null; terminal?: string; stop?: { block?: string; preventContinuation?: true }; hold?: Promise<void>; tracked?: boolean; link?: true; git?: number; slow?: Promise<void>; drop?: string; surfaces?: string[]; changed?: { log: string; status: string }; orca?: { run: string; completed: number; failed: number } }
+type Setup = { file?: string | null; tokens?: number | null; sessionId?: string; stop?: { block?: string; preventContinuation?: true }; hold?: Promise<void>; tracked?: boolean; link?: true; git?: number; slow?: Promise<void>; drop?: string; surfaces?: string[]; changed?: { log: string; status: string } }
 
-function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', stop = {}, hold, tracked = false, link, git = 0, slow, drop, surfaces = ['terminal'], changed = { log: '', status: '' }, orca }: Setup = {}) {
+function engine(on: On, { file = HANDOFF, tokens = 250000, sessionId = 's1', stop = {}, hold, tracked = false, link, git = 0, slow, drop, surfaces = ['terminal'], changed = { log: '', status: '' } }: Setup = {}) {
   const clock = mock.clock(on, { now: 3_600_000 })
   const session = mock.session(on)
   const files: Record<string, string> = file === null ? {} : { [PATH]: file }
   // The handoff file's mtime: 1000 until a write; the repository's other files were changed at 2000.
   const mtimes: Record<string, number> = {}
   const ran: string[] = []
-  mock.env(on, { ORCA_TERMINAL_HANDLE: terminal, PATH: '/usr/bin' })
+  // The session id of the moment; a test sets the new one a clear gives.
+  const id = { value: sessionId }
+  mock.env(on, { PATH: '/usr/bin' })
   on('session.root', () => ({ value: ROOT }))
+  on('session.id', () => ({ value: id.value }))
   on('session.surfaces', () => ({ value: surfaces }) as never)
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
   on('fs.stat', (_, e) => {
     if (e.path === ROOT) return { value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: ROOT } }
-    if (e.path === '/usr/bin/git' || e.path === '/usr/bin/orca') return { value: { kind: 'file', size: 0, mtimeMs: 0, isLink: false, realPath: e.path } }
+    if (e.path === '/usr/bin/git') return { value: { kind: 'file', size: 0, mtimeMs: 0, isLink: false, realPath: e.path } }
     if (e.path in files) return { value: { kind: 'file', size: 0, mtimeMs: mtimes[e.path] ?? 1000, isLink: false, realPath: link ? '/home/me/notes.md' : e.path } }
     if (e.path.startsWith(`${TOP}/`) && !e.path.startsWith(`${ROOT}/`)) return { value: { kind: 'file', size: 0, mtimeMs: 2000, isLink: false } }
     throw new Error('ENOENT')
   })
   on('process.run', async (_, e) => {
     await slow
-    // Orca's task list holds one task still waiting besides the settled ones.
-    if (e.argv[0] === '/usr/bin/orca') {
-      const tasks = orca === undefined ? [] : [{ status: 'ready' }, ...Array.from({ length: orca.completed }, () => ({ status: 'completed' })), ...Array.from({ length: orca.failed }, () => ({ status: 'failed' }))]
-      return { value: { exitCode: orca === undefined ? 1 : 0, stdout: JSON.stringify({ ok: true, result: { runId: orca?.run, tasks } }), stderr: '' } } as never
-    }
     if (e.argv[0] !== '/usr/bin/git') throw new Error(`not a program from PATH: ${e.argv[0]}`)
     // The log call lists the commits after its --since; the time is the second field of a line.
     const since = e.argv.find((arg) => arg.startsWith('--since-as-filter='))?.slice('--since-as-filter='.length)
@@ -69,7 +67,7 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, terminal = 'term-a', 
   on('classic.Stop', () => stop)
   on('classic.SessionStart', () => ({ additionalContext: ['other'] }))
   on('classic.PreCompact', () => ({}))
-  return { clock, session, files, mtimes, ran }
+  return { clock, session, files, mtimes, ran, id }
 }
 const PRECOMPACT = { trigger: 'auto', custom_instructions: null } as const
 
@@ -160,10 +158,10 @@ test('an 8,000-character file stays whole and the drift gets the room it leaves'
   expect(restored(`${file}${'x'.repeat(1000)}`, section)).not.toContain('## Drift')
 })
 
-// ceffb39c is the fingerprint of HANDOFF; a stamp with another one was written before the coordinator's last edit.
+// a54dd584 is the fingerprint of HANDOFF; a stamp with another one was written before the coordinator's last edit.
 const lax: [string, string][] = [
-  ['not at the end of the status line', 'edited: 1970-01-01T00:00:00.500Z; text: ceffb39c; more: x'],
-  ['with a malformed date', 'edited: 1970-13-01T00:00:00.500Z; text: ceffb39c'],
+  ['not at the end of the status line', 'edited: 1970-01-01T00:00:00.500Z; text: a54dd584; more: x'],
+  ['with a malformed date', 'edited: 1970-13-01T00:00:00.500Z; text: a54dd584'],
   ['whose fingerprint is not the current text, the coordinator having edited since', 'edited: 1970-01-01T00:00:00.500Z; text: 00000000'],
 ]
 for (const [name, line] of lax) {
@@ -252,52 +250,51 @@ test('a clear that never settles is given up after 15 minutes with a note and no
   expect(e.ran[2]).toContain('250000 tokens')
 })
 
-test('a clear by settled tasks that never settles keeps the count, so the next idle Stop after the gap clears again', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
-  const orca = { run: 'run-1', completed: 3, failed: 0 }
-  const e = engine(on, { tokens: 150000, orca, hold: new Promise<void>(() => {}) })
-  const stop = async () => {
-    await $.classic.Stop(IDLE)
-    await e.clock.advance(1000)
-  }
-  await stop()
-  orca.completed = 5
-  await stop()
-  expect(e.ran).toEqual(['/clear'])
-  await e.clock.advance(15 * 60_000)
-  expect(e.session.appended().map((row) => row.message.type)).toEqual(['system'])
-  await e.clock.advance(10 * 60_000)
-  await stop()
-  expect(e.ran).toEqual(['/clear', '/clear'])
-})
-
-test('the set number of tasks settled since the last clear clears an idle coordinator below the threshold; a new run counts afresh', { options: { rotateAfterTasks: 2 } }, async ($, on) => {
-  const orca = { run: 'run-1', completed: 3, failed: 0 }
-  const e = engine(on, { tokens: 150000, orca })
-  const stop = async () => {
-    await $.classic.Stop(IDLE)
-    await e.clock.advance(1000)
-  }
-  // The first read starts the count; one settled task is not enough.
-  await stop()
-  orca.completed = 4
-  await stop()
-  expect(e.ran).toEqual([])
-  orca.failed = 1
-  await clears($, e, 'after 2 settled tasks')
-  // The count starts again at the clear.
+test('after its clear the coordinator moves the file to its new session id, gets it back with the drift and keeps rotating', async ($, on) => {
+  // The coordinator wrote the file at 00:00:01 and a commit followed at 00:30; the clear stamps the file at 01:00.
+  const e = engine(on, { changed: { log: 'abc1234 1970-01-01T00:30:00+00:00 add a\n', status: '' } })
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  await clears($, e, '250000 tokens')
+  e.id.value = 's2'
+  const restored = (await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1] ?? ''
+  expect(restored).toContain('\nrun r1\nSession: s2\n\n## Next\nwatch #12\n')
+  expect(restored).toContain('\n## Drift since this file was written (1970-01-01T00:00:01.000Z,')
   await e.clock.advance(11 * 60_000)
-  orca.completed = 5
-  await stop()
-  expect(e.ran.length).toBe(2)
-  // The tasks a new run settled before its first read do not count.
-  Object.assign(orca, { run: 'run-2', completed: 9 })
-  await stop()
-  expect(e.ran.length).toBe(2)
-  orca.completed = 11
-  await stop()
+  await $.classic.Stop(IDLE)
+  await e.clock.advance(1000)
   expect(e.ran.length).toBe(4)
   expect(e.ran[2]).toBe('/clear')
-  expect(e.ran[3]).toContain('after 2 settled tasks')
+})
+
+test('with rotation off, a clear of its own still moves the file to the new session id and hands it back', { options: { rotateAtTokens: 0 } }, async ($, on) => {
+  const e = engine(on)
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  e.id.value = 's2'
+  expect((await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1]).toContain('\nrun r1\nSession: s2\n\n## Next\nwatch #12\n')
+})
+
+test('a -p run that resumed the coordinator session leaves the file alone when it clears', async ($, on) => {
+  const e = engine(on, { surfaces: [] })
+  const file = e.files[PATH]
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  e.id.value = 's2'
+  await $.classic.SessionStart({ source: 'clear' })
+  expect(e.files[PATH]).toBe(file)
+})
+
+test('a file a coordinator resumed in another process took over stays with it after this process clears', async ($, on) => {
+  const e = engine(on)
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  await clears($, e, '250000 tokens')
+  e.files[PATH] = e.files[PATH]!.replace('Session: s1', 'Session: s3')
+  const file = e.files[PATH]
+  e.id.value = 's2'
+  expect((await $.classic.SessionStart({ source: 'clear' })).additionalContext).toEqual(['other'])
+  await e.clock.advance(11 * 60_000)
+  await $.classic.Stop(IDLE)
+  await e.clock.advance(1000)
+  expect(e.ran.length).toBe(2)
+  expect(e.files[PATH]).toBe(file)
 })
 
 test('a turn that starts before the clear makes it give up, and the next idle Stop clears', async ($, on) => {
@@ -343,12 +340,12 @@ for (const [name, options, setup] of unreached) {
 }
 
 const refused: [string, Setup][] = [
-  ['names no terminal', { file: HANDOFF.replace('Terminal: term-a\n', '') }],
-  ['names another terminal', { terminal: 'term-b' }],
+  ['names no session', { file: HANDOFF.replace('Session: s1\n', '') }],
+  ['names another session in the same folder', { sessionId: 's2' }],
   ['is tracked by git', { tracked: true }],
   ['is reached through a link', { link: true }],
   ['sits where git fails', { git: 128 }],
-  ['is read by a session that draws on no surface, a -p child', { surfaces: [] }],
+  ['is read by a session that draws on no surface, a -p run', { surfaces: [] }],
 ]
 for (const [name, setup] of refused) {
   test(`a file that ${name} is not restored, stamped or cleared for`, async ($, on) => {
@@ -363,8 +360,8 @@ for (const [name, setup] of refused) {
   })
 }
 
-test('a backticked terminal name is this terminal', async ($, on) => {
-  const e = engine(on, { file: HANDOFF.replace('term-a', '`term-a`') })
+test('a backticked session id is this session', async ($, on) => {
+  const e = engine(on, { file: HANDOFF.replace('s1', '`s1`') })
   await $.classic.Stop(IDLE)
   await e.clock.advance(1000)
   expect(e.ran[0]).toBe('/clear')
