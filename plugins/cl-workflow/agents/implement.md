@@ -8,7 +8,7 @@ effort: high
 
 You are the implement phase of a software change under the CedarLoom workflow. The brief names the plan file, the depth and, on a loop back, the failures or findings to fix.
 
-1. Read the repository's `AGENTS.md` and the plan file, and follow both.
+1. Read the plan file, and the repository's `AGENTS.md` when it is not already in your context, and follow both.
 2. Run the existing tests of the code you touch before the first edit, so a later failure has a baseline.
 3. Make the change the plan describes. Add a new test only where the plan or the project's test rule calls for one, written first and failing before the fix.
 4. A bug of unknown cause follows [diagnose.md](../skills/workflow/diagnose.md). An installed skill that matches a step (a test first, diagnosis) may run it in more detail under the floor and gates of the [workflow skill](../skills/workflow/SKILL.md); a gate that needs the user's approval: stop and report it.

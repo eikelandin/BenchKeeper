@@ -178,6 +178,41 @@ test('approval: the command line counts a member\'s answer only with write acces
   assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
 });
 
+test('approval: apply moves a question the owner answered to ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
+  const labels = [{ name: 'question' }, { name: 'ready-for-human' }, { name: 'Deferred' }, { name: 'project:app' }];
+  const run = (comments, { body = 'Which export format?', tags = labels, args = [] } = {}) => {
+    writeFileSync(join(bin, 'issue.json'), JSON.stringify({ number: 12, labels: tags, author: { login: 'coordinator' }, body, comments }));
+    writeFileSync(join(bin, 'log'), '');
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> '${bin}/log'\ncase "$1 $2" in\n'issue view') cat '${bin}/issue.json' ;;\n'api '*) echo '{"permission":"read"}' ;;\nesac\n`, { mode: 0o755 });
+    const r = spawnSync(process.execPath, [script, 'apply', ...(args.length ? args : ['owner/tracker', '12'])], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+    return { ...r, edits: readFileSync(join(bin, 'log'), 'utf8').split('\n').filter((line) => line.startsWith('issue edit')) };
+  };
+  // The answer the questions skill has just posted.
+  const answered = run([SECOND]);
+  assert.equal(answered.status, 0, answered.stderr);
+  assert.deepEqual(JSON.parse(answered.stdout), { ...GO, labels: ['project:app', 'ready-for-agent'] });
+  assert.deepEqual(answered.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-human --remove-label Deferred --add-label ready-for-agent']);
+  // An approval's work lives in what it names: it gets no start label.
+  const approval = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED });
+  assert.equal(approval.status, 0, approval.stderr);
+  assert.deepEqual(approval.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-human --remove-label Deferred']);
+  // An approval that carries the start label loses it, or the precheck lists it as work to start.
+  const started = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED, tags: [{ name: 'question' }, { name: 'ready-for-agent' }, { name: 'project:app' }] });
+  assert.equal(started.status, 0, started.stderr);
+  assert.deepEqual(JSON.parse(started.stdout), { option: 'a', text: '', at: '2026-11-11T10:00:00Z', labels: ['project:app'] });
+  assert.deepEqual(started.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-agent']);
+  for (const comments of [[], [{ ...SECOND, authorAssociation: 'COLLABORATOR' }], [{ ...SECOND, authorAssociation: 'MEMBER' }]]) {
+    const open = run(comments);
+    assert.deepEqual([open.status, open.stdout, open.edits], [1, '', []]);
+  }
+  for (const args of [['owner/tracker'], ['owner', '12'], ['owner/tracker', '12x']]) {
+    const refused = run([SECOND], { args });
+    assert.deepEqual([refused.status, refused.edits], [2, []]);
+  }
+});
+
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
