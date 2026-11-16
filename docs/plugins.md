@@ -6,7 +6,7 @@ What the CedarLoom plugins add to a Claude Code session besides their skills, an
 |---|---|---|
 | `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand` |
 | `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent` |
-| `cl-setup` | none | none |
+| `cl-repo` | none | none |
 
 Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options with `/plugin` (Installed tab, Configure options) or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session.
 
@@ -49,7 +49,7 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 
 ## Owner questions
 
-The coordinator of `/cl-orchestration:orchestrating-projects` files an owner question in the approval layout as an issue of the project's repository, labeled `cedarloom:needs-human`, when that repository is private with issues on; else it writes it to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A question never goes to a public repository.
+The coordinator of `/cl-orchestration:coordinate` files an owner question in the approval layout as an issue of the project's repository, labeled `cedarloom:needs-human`, when that repository is private with issues on; else it writes it to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A question never goes to a public repository.
 
 | Label | Meaning |
 | --- | --- |
@@ -86,7 +86,7 @@ Start the coordinator's session with `CEDARLOOM_ROLE=coordinator claude` and now
 
 ## Coordinator context rotation
 
-A long-running coordinator of `/cl-orchestration:orchestrating-projects` starts over with a fresh context when it is idle, instead of growing until auto-compaction garbles its state. It applies only to a coordinator whose project folder (where the agent started; a shell `cd` does not move it) holds the handoff file `.cedarloom/runs/handoff.md`, which the skill writes when a run starts and deletes when it closes, and whose session id the file names (`Session: <id>`). A Codex session holds no run: the coordinator needs Claude Code ([Start the run](../plugins/cl-orchestration/skills/orchestrating-projects/orca.md#start-the-run)), so the Codex `SessionStart` hook finds no file that names its session. The hooks act only in the session whose id matches, not in another session started in the same folder, and only in a session that draws on a surface: a `claude -p` run that resumes the coordinator's session carries its id but never counts as the coordinator. A `claude --resume` of the coordinator's session in a second terminal draws on a surface, so both processes can restore, clear and move the line. After a `/clear` in the same Claude Code process, the plugin moves the line to the new session id. Without the file or that line they do nothing, and they refuse a file that is a symbolic link or sits behind one, and a folder that is no readable git repository or where git tracks anything under `.cedarloom/runs`, so a repository cannot plant the file. The coordinator's folder must therefore be a git repository.
+A long-running coordinator of `/cl-orchestration:coordinate` starts over with a fresh context when it is idle, instead of growing until auto-compaction garbles its state. It applies only to a coordinator whose project folder (where the agent started; a shell `cd` does not move it) holds the handoff file `.cedarloom/runs/handoff.md`, which the skill writes when a run starts and deletes when it closes, and whose session id the file names (`Session: <id>`). A Codex session holds no run: the coordinator needs Claude Code ([Start the run](../plugins/cl-orchestration/skills/coordinate/orca.md#start-the-run)), so the Codex `SessionStart` hook finds no file that names its session. The hooks act only in the session whose id matches, not in another session started in the same folder, and only in a session that draws on a surface: a `claude -p` run that resumes the coordinator's session carries its id but never counts as the coordinator. A `claude --resume` of the coordinator's session in a second terminal draws on a surface, so both processes can restore, clear and move the line. After a `/clear` in the same Claude Code process, the plugin moves the line to the new session id. Without the file or that line they do nothing, and they refuse a file that is a symbolic link or sits behind one, and a folder that is no readable git repository or where git tracks anything under `.cedarloom/runs`, so a repository cannot plant the file. The coordinator's folder must therefore be a git repository.
 
 - After a `/clear` or compaction, the plugin hands the file back to the model with a line to run its Resume steps first (Orca's mail, then the run's state). After the file comes what git shows changed since the coordinator last wrote the file (the plugin's own status line does not count): the commits on local branches (the workers' branches too) and the uncommitted files with a newer modification time, at most 20 each; a git failure leaves the section out. At most 9,000 characters come back: the file first, with a line saying the rest was cut, and the section only in the room the file leaves.
 - In Claude Code the plugin also writes a status line into the file's status block before a compaction and before its own clear.
@@ -106,7 +106,7 @@ The options are those of `cl-orchestration@cedarloom` (see the top of this page)
 
 ## Untrusted input
 
-Issue and pull request text can carry instructions. `/cl-orchestration:orchestrating-projects` passes workers and reviewers only text by trusted authors: the repository owner, the policy's `trustedAuthors`, and members or collaborators with `admin` or `write` on the [permission endpoint](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user). A failed lookup passes nothing.
+Issue and pull request text can carry instructions. `/cl-orchestration:coordinate` passes workers and reviewers only text by trusted authors: the repository owner, the policy's `trustedAuthors`, and members or collaborators with `admin` or `write` on the [permission endpoint](https://docs.github.com/en/rest/collaborators/collaborators#get-repository-permissions-for-a-user). A failed lookup passes nothing.
 
 | Text | How it reaches an agent | Check |
 |---|---|---|

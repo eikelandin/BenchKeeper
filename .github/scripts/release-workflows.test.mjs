@@ -53,10 +53,10 @@ const noJq = spawnSync('jq', ['--version'], { stdio: 'ignore' }).status !== 0 &&
 test('release.yml tags every plugin component at the version of its plugin.json and creates one Release with the changelog section of each plugin', { skip: noJq }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'bk-tags-'));
   try {
-    const packages = { 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/cl-workflow': { component: 'cedarloom-workflow' }, 'plugins/cl-setup': { component: 'cedarloom-setup' }, 'plugins/cl-orchestration': { component: 'cedarloom-orchestration' } };
+    const packages = { 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/cl-workflow': { component: 'cedarloom-workflow' }, 'plugins/cl-repo': { component: 'cedarloom-repo' }, 'plugins/cl-orchestration': { component: 'cedarloom-orchestration' } };
     writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
     // setup stays at its last release; orchestration has no changelog yet; workflow's first release has no compare link.
-    const versions = { cedarloom: '6.28.0', 'cl-workflow': '6.28.0', 'cl-setup': '6.27.0', 'cl-orchestration': '6.28.0' };
+    const versions = { cedarloom: '6.28.0', 'cl-workflow': '6.28.0', 'cl-repo': '6.27.0', 'cl-orchestration': '6.28.0' };
     for (const [name, version] of Object.entries(versions)) {
       mkdirSync(join(dir, 'plugins', name, '.claude-plugin'), { recursive: true });
       writeFileSync(join(dir, 'plugins', name, '.claude-plugin', 'plugin.json'), JSON.stringify({ name, version }));
@@ -64,7 +64,7 @@ test('release.yml tags every plugin component at the version of its plugin.json 
     const changelogs = {
       cedarloom: '# Changelog\n\n## [6.28.0](x) (2026-11-20)\n\n### Features\n\n* rules\n\n## [6.27.0](x)\n\n* old\n',
       'cl-workflow': '# Changelog\n\n## 6.28.0 (2026-11-20)\n\n### Bug Fixes\n\n* review\n',
-      'cl-setup': '# Changelog\n\n## [6.27.0](x)\n\n* older\n',
+      'cl-repo': '# Changelog\n\n## [6.27.0](x)\n\n* older\n',
     };
     for (const [name, text] of Object.entries(changelogs)) {
       mkdirSync(join(dir, 'plugins', name), { recursive: true });
@@ -72,7 +72,7 @@ test('release.yml tags every plugin component at the version of its plugin.json 
     }
     mkdirSync(join(dir, 'calls'));
     const stubs = `n=0
-gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release view') return 1 ;; 'api repos/o/r/git/ref/tags/cedarloom-setup-v6.27.0') return 0 ;; 'api repos/o/r/git/ref/'*) return 1 ;; esac; }
+gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release view') return 1 ;; 'api repos/o/r/git/ref/tags/cedarloom-repo-v6.27.0') return 0 ;; 'api repos/o/r/git/ref/'*) return 1 ;; esac; }
 `;
     const out = spawnSync('bash', ['-e', '-c', stubs + runBlock(release, 'Tag and create the GitHub Release')], { cwd: dir, env: { ...process.env, REPO: 'o/r', SHA: 'abc', VERSION: '6.28.0' }, encoding: 'utf8' });
     assert.equal(out.status, 0, out.stdout + out.stderr);
@@ -81,7 +81,7 @@ gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release 
     assert.deepEqual(calls, [
       ...tag('cedarloom-v6.28.0'),
       ...tag('cedarloom-workflow-v6.28.0'),
-      ['api', 'repos/o/r/git/ref/tags/cedarloom-setup-v6.27.0'],
+      ['api', 'repos/o/r/git/ref/tags/cedarloom-repo-v6.27.0'],
       ...tag('cedarloom-orchestration-v6.28.0'),
       ['release', 'view', 'cedarloom-v6.28.0', '--repo', 'o/r'],
       ['release', 'create', 'cedarloom-v6.28.0', '--repo', 'o/r', '--target', 'abc', '--title', 'cedarloom v6.28.0', '--notes',
@@ -96,9 +96,9 @@ gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release 
 test('release.yml releases the version of the bundle plugin.json', { skip: noJq }, () => {
   const dir = mkdtempSync(join(tmpdir(), 'bk-version-'));
   try {
-    const packages = { 'plugins/cl-setup': { component: 'cedarloom-setup' }, 'plugins/cedarloom': { component: 'cedarloom' } };
+    const packages = { 'plugins/cl-repo': { component: 'cedarloom-repo' }, 'plugins/cedarloom': { component: 'cedarloom' } };
     writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
-    for (const [name, version] of Object.entries({ cedarloom: '0.2.0', 'cl-setup': '0.3.0' })) {
+    for (const [name, version] of Object.entries({ cedarloom: '0.2.0', 'cl-repo': '0.3.0' })) {
       mkdirSync(join(dir, 'plugins', name, '.claude-plugin'), { recursive: true });
       writeFileSync(join(dir, 'plugins', name, '.claude-plugin', 'plugin.json'), JSON.stringify({ name, version }));
     }
