@@ -89,6 +89,6 @@ export function scan(cwd = root) {
 
 if (isMain(import.meta.url)) {
   const found = Object.entries(scan());
-  for (const [path, rules] of found) console.error(`${path}: ${rules.join(', ')} (a path outside the plugin, an import of another package or another plugin's matcher prefix)`);
+  for (const [path, rules] of found) console.error(`${path}: ${rules.join(', ')}`);
   process.exit(found.length ? 1 : 0);
 }

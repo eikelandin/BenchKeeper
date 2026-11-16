@@ -68,7 +68,7 @@ The role guard refuses merges, releases and pushes to the default branch in ever
 /plugin install ponytail@ponytail
 ```
 
-Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugin add ponytail@ponytail`.
+Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugin add ponytail@ponytail`; open `/hooks`, trust its two lifecycle hooks and start a new thread.
 
 ## Typical flow
 
