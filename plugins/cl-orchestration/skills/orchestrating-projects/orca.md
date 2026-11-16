@@ -15,7 +15,7 @@ The sections of the [runner interface](runners.md#interface), in this file:
 | Watch | [Watch](#watch) |
 | Dialogs | [A permission dialog](#a-permission-dialog) |
 | Gates | [Gates](#gates) |
-| Write scope | the worktree; supervised, anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)); automatic, the bounds of [Sandbox on](runners.md#sandbox-on) |
+| Write scope | the worktree; supervised, anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)) where Orca's agent permission setting leaves prompts ([Start the run](#start-the-run)); automatic, the bounds of [Sandbox on](runners.md#sandbox-on) |
 | Resume | [Resume](#resume) |
 | Clean up | [Clean up](#clean-up) |
 | Host limit | [Host limit](#host-limit) |
@@ -31,7 +31,7 @@ A Claude Code worker starts in a worktree of its own, then by its project's [mod
 ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
 ```
 
-Supervised: Orca's own launch, on the host's default Claude Code login. It passes no other launch flag, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
+Supervised: Orca's own launch, on the host's default Claude Code login. Supervised prompts depend on Orca's agent permission setting, the user's choice in Orca's Settings, Agents, Agent Permissions: the launch adds that setting's flag. Orca ships it at "full-access" (Orca 1.4.254), which adds `--dangerously-skip-permissions` for Claude Code and `--dangerously-bypass-approvals-and-sandbox` for Codex, which also turns off Codex's sandbox: on a host where nobody changed it, a supervised worker shows no permission prompt, a Claude Code one none but the ask matches of its rule file ([Worker rules](runners.md#worker-rules)). Of the skill's flags it passes only `--model` and `--effort`, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
 
 ```text
 Role check: right after the heartbeat, before any other command, run `printenv CEDARLOOM_ROLE`. It must print nothing. A value it prints is Blocked (below): name the variable in the report.
@@ -60,8 +60,8 @@ ORCA orchestration worker-start --spec-file <filled spec file> --terminal <termi
 A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled spec file> --worktree new-top-level --repo path:<project path> --base-branch <default branch> --name <number>-<slug> --agent codex --model "<model>" --effort <effort> --keep-open --json`.
 
 - `--autocompact 200k` caps the worker's context at 200,000 tokens before it compacts, and `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` turns off the next-prompt suggestions no one reads in a worker terminal. `env` sets the variable in any login shell.
-- No permission-bypass flag anywhere in a launch. A supervised worker runs in the default permission mode, with the prompts in its terminal ([A permission dialog](#a-permission-dialog)).
-- Automatic is for a Claude Code worker only (a Codex worker of an automatic project runs supervised): write its settings file first ([Sandbox on](runners.md#sandbox-on)), `<id>` being `<number>-<slug>`. Before each such worker, pass [Automatic start](runners.md#automatic-start); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. The `--check` read of check 2 is the last command before every `terminal create` of an automatic worker, a retry and a follow-up included. A failed check or probe step runs the project supervised, except a failed `--check` read of an item, which makes that item BLOCKED and starts no worker.
+- No launch line in this file carries a permission-bypass flag. A supervised or Codex worker gets the flag of Orca's agent permission setting (above, Orca 1.4.254; for Codex under "full-access", `--dangerously-bypass-approvals-and-sandbox`, which also turns off Codex's sandbox); the prompts that setting leaves appear in its terminal ([A permission dialog](#a-permission-dialog)). An automatic worker's `terminal create --command` line is the coordinator's alone: that setting adds nothing to it.
+- Automatic is for a Claude Code worker only (a Codex worker of an automatic project takes the [fallback](#fallback-to-supervised)): write its settings file first ([Sandbox on](runners.md#sandbox-on)), `<id>` being `<number>-<slug>`. Before each such worker, pass [Automatic start](runners.md#automatic-start); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. The `--check` read of check 2 is the last command before every `terminal create` of an automatic worker, a retry and a follow-up included. A failed check or probe step takes the [fallback](#fallback-to-supervised), except a failed `--check` read of an item, which makes that item BLOCKED and starts no worker.
 - Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so issue text is never read by the shell.
 - The model and effort are those of the spec's `Agent:` line, the model as the reader printed it, inside single quotes. Leave out what that line gives as the agent default, and the effort whenever the model is left out.
 - An automatic worker takes its task only once its agent reached its idle prompt. A `terminal wait` that times out or ends in another state starts no worker: read its screen once (`ORCA terminal read --terminal <terminal> --screen --json`). Such a start has a worktree and a terminal but no dispatch, so neither `worker-list` nor [Clean up](#clean-up) sees them:
@@ -91,13 +91,17 @@ A follow-up to a worker of this run, a supervised one still held, an automatic o
 
 A worker on `fable` that already reported gets no follow-up: release it and start a fresh worker on the branch ([SKILL.md](SKILL.md#rules)). Such a follow-up counts like a start ([Host limit](#host-limit)).
 
+### Fallback to supervised
+
+An automatic project whose [Automatic start](runners.md#automatic-start) failed runs supervised for the rest of the run, and so does a Codex worker of an automatic project. Such a worker starts as a supervised one (above): it has none of the automatic bounds (no sandbox, no network allow list, no `dontAsk`, no settings file) and runs with Orca's agent permission setting, under the shipped "full-access" with no permission prompt, except that a Claude Code one gets the worktree rule file of [Worker rules](runners.md#worker-rules) as every supervised one does, so its deny matches are refused and its ask matches prompt. Write that in the handoff's `Mode:` line and the report: the project, the failed check or step, and that its workers run without the automatic bounds under Orca's setting.
+
 ## Acknowledgement
 
 The acknowledgement is the worker's first heartbeat; an automatic worker sends none ([Worker reports](#worker-reports)). A missing one sends no mail, so the coordinator sees it at the timer's wake-up ([Watch](#watch)). Orca's rule holds: silence, a startup timeout or `unverifiable` liveness proves nothing and authorizes no stop or retry.
 
 - **Still starting**: `worker-show --full` reports the start not ready yet, or the terminal shows the agent loading or working. Keep waiting; it is no miss.
 - **Held at a dialog**: `worker-show --full` reports an `observation.agentWait`, or the terminal shows a dialog. It is the owner's, except a permission dialog with `permissionPrompts` `decline` ([A permission dialog](#a-permission-dialog)).
-- **A miss**: at two wake-ups at least 10 minutes apart, `worker-read --source terminal` shows the agent idle at an empty prompt and `worker-read` shows no turn on the task. Then `worker-stop` it. Only when the stop is confirmed, retry once in its worktree, an automatic worker with its settings file written again and read with `--check`, then a new terminal made as at the start:
+- **A miss**: at two wake-ups at least 10 minutes apart, `worker-read --source terminal` shows the agent idle at an empty prompt and `worker-read` shows no turn on the task. Then `worker-stop` it. Only when the stop is confirmed, retry once in its worktree, an automatic worker with its old terminal closed (`ORCA terminal close --terminal <terminal> --json`) unless the stop reported `processAction` `closed_agent_terminal`, its settings file written again and read with `--check`, then a new terminal made as at the start:
 
 ```text
 ORCA orchestration worker-start --task <task id> --retry-of <dispatch id> --worktree path:<worktree path> --terminal <new terminal> --keep-open --json
@@ -118,7 +122,7 @@ A worker settles with one message. The skill's outcomes map to Orca like this:
 
 Orca has no separate blocked or replan message type: such a report is a `worker_done` that failed, which settles the dispatch so the coordinator can release it. The handoff block is the message body. The worker's start message carries its own `send` command; the spec only says what to report.
 
-An automatic worker cannot run `send` or `ask` from inside the sandbox ([Sandbox on](runners.md#sandbox-on)): its report reaches the coordinator only as the `Worker stopped without reporting` escalation, which fails the probe, so its project runs supervised.
+An automatic worker cannot run `send` or `ask` from inside the sandbox ([Sandbox on](runners.md#sandbox-on)): its report reaches the coordinator only as the `Worker stopped without reporting` escalation, which fails the probe, so its project takes the [fallback](#fallback-to-supervised).
 
 A batch also sends one `--type status` message per issue, when that issue's pull request is up or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
 
@@ -240,7 +244,7 @@ ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 
 The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. Before it, delete a supervised Claude Code worker's rule file, `<worktree path>/.claude/settings.local.json`: as an untracked file it may make git refuse the removal (unverified: whether Orca forces it). `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
-A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that neither a `send` nor a dispatch of the coordinator (the start, a follow-up) carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command and, with a follow-up dispatch, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
+A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that neither a `send`, a dispatch of the coordinator (the start, a follow-up) nor its `terminal create --command` launch line carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command and, with a follow-up dispatch, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 
 Release:
 
