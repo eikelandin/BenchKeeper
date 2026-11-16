@@ -8,7 +8,7 @@ The coordinator chooses once, when the run starts, and writes the name into the 
 
 1. **Run argument.** `--runner <name>` before the project paths.
 2. **Plugin option.** `runner`, as [SKILL.md](SKILL.md) reads it: empty means auto.
-3. **Auto.** Run the Detect step of `orca` and of every runner plugin `cl-<name>` whose model-only skill `cl-<name>:runner` is available. Exactly one answers: that runner. More than one: start nothing and ask the owner to set `runner`, since no order between them holds. None: claude-code when its Detect step answers, else start nothing and tell the owner that no runner answered.
+3. **Auto.** Run the Detect step of every runner plugin `cl-<name>` whose model-only skill `cl-<name>:runner` is available. Exactly one answers: that runner. More than one: start nothing and ask the owner to set `runner`, since no order between them holds. None: claude-code when its Detect step answers, else start nothing and tell the owner that no runner answered.
 
 A name counts only when plain: lower-case letters, digits and `-`, no `-` first. A runner named by the argument or the option that is not listed here, not available as a runner plugin, or fails its Detect step starts nothing: tell the owner the name and the reason. There is no fallback to another runner.
 
@@ -37,7 +37,8 @@ Each runner file has these sections, under its own headings where the file says 
 | Runner | File | Detect |
 | --- | --- | --- |
 | `claude-code` (built in, the default) | [claude-code.md](claude-code.md) | the session is Claude Code with background agents and session crons |
-| `orca` (in this skill folder) | [orca.md](orca.md) | an Orca executable is found and its `skills get orchestration` succeeds |
+
+A runner plugin `cl-<name>` adds the runner `<name>`. Load its model-only skill `cl-<name>:runner` with the Skill tool: it holds the Detect step and names the runner file, which holds the other sections.
 
 ## Modes
 
@@ -58,7 +59,7 @@ The worker's settings file is written by `node <skill folder>/worker-settings.mj
 - The network allow list is `strictAllowlist` with the policy's hosts: what the project's own tools fetch. The worker neither pushes nor runs `gh`, so no GitHub host is needed for git. The `Bash(git push *)` deny stops the plain form only: `git -C . push` passed it and failed at the sandbox's network proxy (Claude Code v2.1.325), so the push bound rests on the allow list and on credentials, and a GitHub host in the allow list runs the project supervised ([Automatic start](#automatic-start), check 4).
 - The deny rules close the paths that configure Claude Code or run later outside the sandbox (`.claude`, `.mcp.json`, `.vscode`, `.idea`, `.bashrc`, `.zshrc`, `.gitconfig`, `.envrc`, `.npmrc`, `.husky`), and `commondir` and `config.worktree` in the shared `.git` and in each of its `worktrees/*` folders, which would make git load configuration the worker wrote: in the main checkout and in any worktree of the project, outside the sandbox. An item that must change one is BLOCKED for the owner.
 - For each folder under the shared `.git`'s `worktrees` when the file is written, the script adds the two rules with that folder's name beside the `worktrees/*` pattern rules. Only a rule that names a path keeps its folder from being renamed, and so from being swapped for a copy with another `commondir` (on Linux through mount points: the sandbox makes each folder between a named path and the write root one, which the kernel refuses to rename), and on Linux the sandbox skips a pattern rule for writes. A folder made after the file was written has the pattern rules alone, until that worker's next settings file: on macOS they close its two files but not a rename of the folder, on Linux nothing. So no worktree of a project is made while an automatic worker of that project is started and not yet released:
-  - An automatic worker is released as soon as its report (its `worker_done`) arrives. Its staged change waits in the worktree, which stays, for [Commit and push](#commit-and-push) to open its pull request. It counts as released only once its session has ended, which the runner's Clean up confirms ([orca.md](orca.md#clean-up)).
+  - An automatic worker is released as soon as its report (its `worker_done`) arrives. Its staged change waits in the worktree, which stays, for [Commit and push](#commit-and-push) to open its pull request. It counts as released only once its session has ended, which the runner's Clean up confirms.
   - Every later turn of that worker (a follow-up with review findings, a re-check, a conflict with the default branch) is a new start in the same worktree, with its settings file written again, so that file names the folders that exist then.
   - This is the regular case, also with one worker per project: the next issue of the project gets its worktree only once the worker before it is released, and a follow-up never runs under a settings file older than a worktree.
   - Workers that start together get their worktrees before the first of their settings files. A worktree needed while one of them still works waits until that worker is released.

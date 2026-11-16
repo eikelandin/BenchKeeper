@@ -60,6 +60,10 @@ export function lintSkill(dir) {
     }
   }
   const yaml = join(dir, 'agents/openai.yaml');
+  // openai.yaml is Codex metadata: a plugin with a Claude Code manifest and none for Codex ships without it.
+  const plugin = dirname(dirname(dir));
+  const claudeOnly = existsSync(join(plugin, '.claude-plugin')) && !existsSync(join(plugin, '.codex-plugin'));
+  if (claudeOnly) return errors;
   if (!existsSync(yaml)) errors.push(`${dir}: agents/openai.yaml missing`);
   else if (fm['disable-model-invocation'] === 'true' && !/^[ \t]+allow_implicit_invocation: false$/m.test(readFileSync(yaml, 'utf8')))
     errors.push(`${yaml}: user-invoked skill needs policy.allow_implicit_invocation: false`);
