@@ -1,7 +1,7 @@
 ---
 name: Approval or owner question
 about: A decision the owner makes before agents act. Every approval uses this layout.
-labels: question, ready-for-human
+labels: cedarloom:needs-human
 ---
 
 What: <the decision in one sentence; link the plan or report>
@@ -16,7 +16,7 @@ What: <the decision in one sentence; link the plan or report>
 | Owner steps | <bench, deploy, login, purchase; or none> |
 | Cost | <sessions and an estimate; mark unverified> |
 | Undo | <how each part is reversed> |
-| Answer | <in the hub repository: run /cl-workflow:questions; in any other: comment on this issue "a" or "b" alone, or "Owner answer (date): a." with "b" in place of "a" and your own text after it> |
+| Answer | <in the local queue: run /cl-workflow:questions; in a repository: run /cl-workflow:questions in a clone of it, or comment on this issue "a" or "b" alone, or "Owner answer (date): a." with "b" in place of "a" and your own text after it> |
 
 | Option | What happens | Trade-off |
 |---|---|---|

@@ -67,7 +67,13 @@ A repository that commits an `AGENTS.md` without the block: merge nothing into i
 
 The coordinator (`orchestrating-projects`) starts and merges nothing in a project without `docs/agents/orchestration.json` on its default branch. When the file is absent, propose it as a plan item with these answers (ask, recommending the first value named), and an empty `docs/agents/worker-rules.md` (extra rules for the coordinator's workers) when that is absent too. Both are committed in a shared and in a local setup, and from then on both are the owner's to edit: never propose a change to an existing one.
 
-- `startLabel`: the label that lets the coordinator start an issue. A label of the repository meant for agent work (`gh label list`), else `ready-for-agent`; a label that does not exist yet is the user's to create, give the command.
+- `startLabel`: the label that lets the coordinator start an issue, `cedarloom:ready-for-agent` unless the user names another. The plugins read this label set; a label that does not exist yet is the user's to create, give the commands (`gh label create <name> --description "<meaning>"`):
+  - `cedarloom`: CedarLoom may read and plan the issue and ask on it; it does not start work.
+  - `cedarloom:ready-for-agent`: the coordinator may start the issue.
+  - `cedarloom:needs-human`: a question or approval waits for the owner.
+  - `cedarloom:in-progress`: a worker holds the issue, so it never starts twice.
+  - `cedarloom:deferred`: the owner parked it and the question queue skips it.
+  - Rejected work is closed as not planned, with no label.
 - `merge.allowed`: `false`, the user merges; `true` lets the coordinator merge a reviewed pull request. With `true`, `merge.requiredChecks` lists check names that run on pull requests, taken from a recent one (`gh pr checks <n> --json name --jq '.[].name'`), never a job that runs only on pushes to the default branch, and only those the user keeps.
 - `closeIssue`: `true`, the coordinator closes an issue after its pull request merged; `false` leaves that to the user.
 - `trustedAuthors`: none, or the review bots the user names whose comments workers may follow.

@@ -216,8 +216,7 @@ The CedarLoom plugin hands the handoff file back after a `/clear` or compaction 
 The file's Resume section holds these steps, in this order, with the run id and the absolute path of this skill's folder filled in:
 
 1. The start condition of [Start the run](#start-the-run) again: when it fails, start nothing and tell the owner which one failed and why. Then `ORCA orchestration check --json`, before any other `orchestration` command: it returns the mail that arrived meanwhile. Orca types a wake only once per unread message, and a wake can merge into the resume prompt. Act on its output only after step 2.
-2. Read `<skill folder>/SKILL.md` and `<skill folder>/orca.md` in full, then the reference file that the mail of step 1 or the Next section's step needs. A `/clear` empties the context, the skill included, and a compaction returns only the start of it. Take the hub and `<issues in>` from the `Hub:` line, as [Names](SKILL.md#names) says.
-3. When `check` said no run is bound: `ORCA orchestration run-use --id <run id> --json`, then `check` again.
+2. Read `<skill folder>/SKILL.md` and `<skill folder>/orca.md` in full, then the reference file that the mail of step 1 or the Next section's step needs. A `/clear` empties the context, the skill included, and a compaction returns only the start of it.3. When `check` said no run is bound: `ORCA orchestration run-use --id <run id> --json`, then `check` again.
 4. `ORCA orchestration run-current --json`
 5. `ORCA orchestration task-list --ready --brief --json`
 6. `ORCA orchestration inbox --terminal run:<run id> --limit 50 --json`: the mail already handled.

@@ -21,7 +21,7 @@ const fake = (commands) => (cmd, args) => {
   if (found.exit) throw Object.assign(new Error('exit'), { status: found.exit, stdout, stderr: found.stderr ?? '' });
   return stdout;
 };
-const write = (commands) => facts({ run: RUN, repos: ['octo/app', 'octo/lib'], tracker: 'octo/tracker', labels: ['project:app'], accounts: true, now: NOW, exec: fake(commands), alive: (pid) => pid === 4242 });
+const write = (commands) => facts({ run: RUN, repos: ['octo/app', 'octo/lib'], approvals: ['octo/app'], accounts: true, now: NOW, exec: fake(commands), alive: (pid) => pid === 4242 });
 
 test('facts: job files, gh and cswap output give the expected facts.md', () => {
   assert.equal(write(COMMANDS), readFileSync(join(FIXTURES, 'facts.md'), 'utf8'));
@@ -32,20 +32,20 @@ test('facts: a failing gh call reads unread in its own section only', () => {
   assert.ok(text.includes('### octo/app\n\nunread\n\n### octo/lib\n'));
   assert.ok(text.includes('| 20 | feat: lib | 9d9d9d9 | UNKNOWN | none | unread | - |'));
   assert.ok(text.includes('## Accounts\n\nunread\n\n## Main'));
-  assert.ok(text.includes('| 41 | project:app | ready-for-agent | a | 2026-11-13T09:00Z |'));
+  assert.ok(text.includes('| 41 | cedarloom:ready-for-agent | a | 2026-11-13T09:00Z |'));
 });
 
-test('facts: an open question with an answer an agent recorded or the owner commented on GitHub loses question and ready-for-human and gains ready-for-agent; one without an answer or with another login\'s keeps its labels', () => {
+test('facts: an open question with an answer an agent recorded or the owner commented on GitHub loses cedarloom:needs-human and gains cedarloom:ready-for-agent; one without an answer or with another login\'s keeps its labels', () => {
   const edits = [];
   const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake(COMMANDS)(cmd, args); };
-  facts({ run: RUN, repos: ['octo/app'], tracker: 'octo/tracker', labels: ['project:app'], now: NOW, exec });
+  facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
   assert.deepEqual(edits, [
-    'issue edit 41 -R octo/tracker --remove-label question --remove-label ready-for-human --add-label ready-for-agent',
-    'issue edit 46 -R octo/tracker --remove-label question --remove-label ready-for-human --add-label ready-for-agent',
+    'issue edit 41 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent',
+    'issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent',
   ]);
   // A failed edit shows in the row, and the next run tries again.
-  const failed = write({ ...COMMANDS, 'gh issue edit 41 -R octo/tracker --remove-label question --remove-label ready-for-human --add-label ready-for-agent': { exit: 1 } });
-  assert.ok(failed.includes('| 41 | project:app | ready-for-human, label edit failed | a | 2026-11-13T09:00Z |'));
+  const failed = write({ ...COMMANDS, 'gh issue edit 41 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent': { exit: 1 } });
+  assert.ok(failed.includes('| 41 | cedarloom:needs-human, label edit failed | a | 2026-11-13T09:00Z |'));
 });
 
 test('facts costs: per merged pull request the summed job cost and the changes rounds, with totals and medians', () => {

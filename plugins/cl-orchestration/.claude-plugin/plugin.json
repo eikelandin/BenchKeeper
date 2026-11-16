@@ -25,19 +25,5 @@
       "default": 0,
       "min": 0,
       "max": 100
-    },
-    "hub": {
-      "type": "string",
-      "title": "Hub repository for questions and issues (owner/name)",
-      "description": "Empty by default: no hub. Set the same value as cl-workflow's hub option: a GitHub repository, best a private one. The coordinator files a question in the project's tracker when that is private, else in the hub, else in the local queue; with issuesIn hub, work items live in the hub too.",
-      "default": ""
-    },
-    "issuesIn": {
-      "type": "string",
-      "title": "Where project issues live: repo or hub",
-      "description": "repo by default: each project's work items, follow-up issues and questions live in its own repository (questions never in a public one). hub: in the hub repository, labeled project:<name>. A project's policy file can choose the other with issues.tracker. Without a hub, repo applies.",
-      "options": ["repo", "hub"],
-      "default": "repo"
-    }
-  }
+    }  }
 }

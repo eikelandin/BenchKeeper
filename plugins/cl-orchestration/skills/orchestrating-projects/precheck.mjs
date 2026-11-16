@@ -1,8 +1,6 @@
-// Usage: node precheck.mjs [--hub=<owner/name>] [--issues-in=<repo|hub>] <project paths...>. Sample precheck for a scheduled coordinator run: exit 0 when a project has an issue to pick, else 1. It starts and merges nothing.
-// Pickable: open, carries startLabel and every issues.labels entry, not labeled question (an owner question), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
-// The tracker is the hub when the policy's issues.tracker, else --issues-in, is hub and --hub names one; there an issue also carries project:<repository name>, and no pull request is matched, since branches hold no hub number: the coordinator takes startLabel off an issue whose worker starts.
-// An issue that several of the given projects list starts in none of them: it is printed once on stderr, as "several projects: <tracker>#<number> (<paths>)".
-import { parseArgs } from 'node:util';
+// Usage: node precheck.mjs <project paths...>. Sample precheck for a scheduled coordinator run: exit 0 when a project has an issue to pick, else 1. It starts and merges nothing.
+// Pickable: open, carries startLabel and every issues.labels entry, not labeled cedarloom:needs-human (an owner question) or cedarloom:in-progress (a worker holds it), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
+// An issue that several of the given projects list starts in none of them: it is printed once on stderr, as "several projects: <owner/repo>#<number> (<paths>)".
 import { errorLine, escaped, isMain, read, sh } from './policy.mjs';
 
 // MEMBER is any member of the owning organization and COLLABORATOR any invited collaborator: either may have only the Read role, so each counts only with write access.
@@ -24,15 +22,17 @@ export const trusts = (policy, writes) => {
   return (i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login));
 };
 
-// writes(login) is asked last, so only for an issue that is pickable otherwise. extra: labels the tracker adds, as the hub's project label.
-export function pickable(policy, issues, pulls, writes = () => false, extra = []) {
+// An issue with one of these waits for the owner, also after it gained the start label, or is held by a worker.
+const HELD = ['cedarloom:needs-human', 'cedarloom:in-progress'];
+
+// writes(login) is asked last, so only for an issue that is pickable otherwise.
+export function pickable(policy, issues, pulls, writes = () => false) {
   if (!policy?.startLabel) return [];
-  const labels = [policy.startLabel, ...(policy.issues?.labels ?? []), ...extra];
+  const labels = [policy.startLabel, ...(policy.issues?.labels ?? [])];
   return issues
     .filter((i) => !i.pull_request)
     .filter((i) => labels.every((label) => i.labels.some((l) => l.name.toLowerCase() === label.toLowerCase())))
-    // The approvals the coordinator files carry this label: such an issue asks the owner, also after it gained the start label.
-    .filter((i) => !i.labels.some((l) => l.name.toLowerCase() === 'question'))
+    .filter((i) => !i.labels.some((l) => HELD.includes(l.name.toLowerCase())))
     .filter((i) => !pulls.some((p) => p.headRefName.includes(`/${i.number}-`)))
     .filter(trusts(policy, writes))
     .map((i) => i.number);
@@ -67,44 +67,20 @@ export const originRepo = (dir, run, env = process.env) => {
 };
 
 // { tracker, numbers }: the repository that holds the project's issues and the pickable ones; no tracker is read without a startLabel.
-function picks(dir, run, env, settings = {}) {
+function picks(dir, run, env) {
   const { policy, errors, warnings = [] } = read(dir, run);
   // Thrown, so the command line names the project and why nothing starts there, as it does for a failed command.
   if (!policy) throw new Error(errors.map(errorLine).join('; '));
   if (!policy.startLabel) return { tracker: null, numbers: [], warnings };
   const repo = originRepo(dir, run, env);
-  const inHub = hubTracks(policy, settings);
-  const tracker = inHub ? settings.hub : repo;
-  const extra = inHub ? [`project:${repo.split('/')[1]}`] : [];
-  const labels = [policy.startLabel, ...policy.issues.labels, ...extra].map(encodeURIComponent).join(',');
-  const issues = JSON.parse(run(dir, 'gh', ['api', '--paginate', '--slurp', `repos/${tracker}/issues?state=open&per_page=100&labels=${labels}`])).flat();
-  const pulls = inHub ? [] : JSON.parse(run(dir, 'gh', ['pr', 'list', '-R', repo, '--state', 'all', '--limit', '1000', '--json', 'headRefName,state,isCrossRepository']))
+  const labels = [policy.startLabel, ...policy.issues.labels].map(encodeURIComponent).join(',');
+  const issues = JSON.parse(run(dir, 'gh', ['api', '--paginate', '--slurp', `repos/${repo}/issues?state=open&per_page=100&labels=${labels}`])).flat();
+  const pulls = JSON.parse(run(dir, 'gh', ['pr', 'list', '-R', repo, '--state', 'all', '--limit', '1000', '--json', 'headRefName,state,isCrossRepository']))
     .filter((p) => p.state === 'MERGED' || (p.state !== 'CLOSED' && !p.isCrossRepository));
-  // Issue text counts by its author's access to the tracker, as its association does.
-  return { tracker, numbers: pickable(policy, issues, pulls, writers(tracker, (cmd, args) => run(dir, cmd, args)), extra), warnings };
+  return { tracker: repo, numbers: pickable(policy, issues, pulls, writers(repo, (cmd, args) => run(dir, cmd, args))), warnings };
 }
 
-export const check = (dir, run = sh, env = process.env, settings = {}) => picks(dir, run, env, settings).numbers;
-
-// The hub as the skill reads it: one / with letters, digits, . _ or - on each side, no - first, no ..
-export const HUB = /^(?!-)(?!.*\.\.)[A-Za-z0-9._-]+\/[A-Za-z0-9._-]+$/;
-// True when the project's issues live in the hub: the policy's issues.tracker, else issuesIn, is hub and a hub is set.
-export const hubTracks = (policy, { hub, issuesIn } = {}) => Boolean(hub) && (policy.issues.tracker ?? issuesIn) === 'hub';
-// The command-line options that choose the tracker, as precheck.mjs and thread.mjs take them.
-export const TRACKER_OPTIONS = { hub: { type: 'string' }, 'issues-in': { type: 'string' } };
-// { hub, issuesIn } of the parsed TRACKER_OPTIONS, or an Error for a value the coordinator should not have passed.
-export function trackerSettings(values) {
-  if (values.hub !== undefined && !HUB.test(values.hub)) throw new Error('--hub takes a plain owner/name');
-  if (values['issues-in'] !== undefined && !['repo', 'hub'].includes(values['issues-in'])) throw new Error('--issues-in takes repo or hub');
-  return { hub: values.hub, issuesIn: values['issues-in'] ?? 'repo' };
-}
-// { hub, issuesIn, dirs } of the command line, or an Error for a value the coordinator should not have passed.
-export function settingsOf(argv) {
-  const { values, positionals } = parseArgs({ args: argv, options: TRACKER_OPTIONS, allowPositionals: true });
-  const settings = trackerSettings(values);
-  if (!positionals.length) throw new Error('usage: node precheck.mjs [--hub=<owner/name>] [--issues-in=<repo|hub>] <project paths...>');
-  return { ...settings, dirs: positionals };
-}
+export const check = (dir, run = sh, env = process.env) => picks(dir, run, env).numbers;
 
 // A label per project does not make the labels distinct: an issue listed for two projects would get a worker in each. lists: [{ dir, tracker, numbers }]; shared: [{ tracker, number, dirs }].
 export function distinct(lists) {
@@ -137,9 +113,9 @@ export function report(dirs, pick) {
 }
 
 if (isMain(import.meta.url)) {
-  let settings;
-  try { settings = settingsOf(process.argv.slice(2)); } catch (e) { console.error(e.message); process.exit(1); }
-  const { out, err, code } = report(settings.dirs, (dir) => picks(dir, sh, process.env, settings));
+  const dirs = process.argv.slice(2);
+  if (!dirs.length) { console.error('usage: node precheck.mjs <project paths...>'); process.exit(1); }
+  const { out, err, code } = report(dirs, (dir) => picks(dir, sh, process.env));
   for (const line of err) console.error(line);
   for (const line of out) console.log(line);
   process.exit(code);
