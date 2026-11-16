@@ -21,8 +21,9 @@ let lastEnd: number | null = null
 let noted = false
 // Main-loop turns started in this process: a turn that starts between the decision and the clear makes it stale.
 let turns = 0
-// This process's session id at its last main-loop turn: a clear starts a new id, which takes the file over from this one.
-let previous: string | null = null
+// The id the first /clear of a row ended, kept across a second /clear: the next prompt or turn under another id moves a
+// file that names it there. Any other session end, or that one use, disarms it.
+let armed: string | null = null
 // Set by a /clear until the next prompt that is no slash command carries the file back.
 let cleared = false
 
@@ -74,18 +75,20 @@ const vetted = async ($: EngineInterface) => {
   const text = await own($)
   return text !== null && (await safe($)) ? text : null
 }
-// After a clear or compaction gave this process a new session id: a file that still names the id it had moves to the new
-// one. A file another session took over, one this process never owned, or a run on no surface (a -p run) leaves it as it is.
+// After a /clear gave this process a new session id: a file that names the id the clear ended moves to the new one, also
+// in a process that ran no turn yet. A compaction keeps the id. A file another session took over, a run on no surface (a -p
+// run), or a /clear whose session.end never reached this module leaves it as it is.
 async function takeOver($: EngineInterface) {
-  if ((await $.session.surfaces()).length === 0) return
+  if (armed === null || (await $.session.surfaces()).length === 0) return
   const id = await $.session.id()
-  if (previous === null || !id || id === previous) return
+  if (!id || id === armed) return
+  const from = armed
+  armed = null
   const text = await $.fs.read(await handoff($)).catch(() => null)
-  if (text !== null && mine(String(text), previous) && (await safe($))) {
+  if (text !== null && mine(String(text), from) && (await safe($))) {
     const usage = await $.session.usage().catch(() => null)
     await status($, claimed(String(text), id), 'moved to a new session id', usage?.context.tokens)
   }
-  previous = id
 }
 // The drift since the coordinator last wrote the file: the time the status line carries, else the file's mtime. Any
 // failure of git or a stat means no drift, never a failed restore.
@@ -103,7 +106,9 @@ async function drifted($: EngineInterface, text: string) {
     return ''
   }
 }
-// After a clear: moves the file to the new session id and returns the text that hands it back, or null.
+// After a clear: moves the file to the new session id and returns the text that hands it back, or null. A prompt that
+// arrives while it awaits during the plugin's own clear (unverified that the engine submits one there) gets no file; the
+// resume prompt queued behind it carries it.
 async function handBack($: EngineInterface) {
   cleared = false
   await takeOver($).catch(() => undefined)
@@ -200,17 +205,16 @@ export const register: Register = (on, options) => {
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) {
       turns++
-      // The id changed without a prompt this module saw (a slash command after a clear, or another engine path).
+      // A turn after a /clear that no prompt carried the file to (a cron wake, a task notification).
       await takeOver($).catch(() => undefined)
-      previous = (await $.session.id()) || null
     }
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  // No $ calls: all session.end hooks share 1.5 s. /resume and /branch (reason resume) never take the file over.
+  // No $ calls: all session.end hooks share 1.5 s. Any other reason (a /resume) disarms the takeover.
   on('session.end', ($, e, next) => {
     cleared = e.reason === 'clear'
-    previous = cleared ? e.sessionId || null : null
+    armed = cleared ? (armed ?? (e.sessionId || null)) : null
     return next(e)
   }).catch(($, e, next) => next(e))
 

@@ -308,13 +308,34 @@ test('a /clear before the first turn of a resumed process still moves the file a
   expect((await cleared($))[1]).toContain('\nrun r1\nSession: s2\n\n## Next\nwatch #12\n')
 })
 
-test('a turn after the session id changed without a prompt the plugin saw takes the file over', async ($, on) => {
+test('a turn after a /clear that no prompt followed takes the file over', async ($, on) => {
   const e = engine(on)
   await $.turn.start({ turnId: 't1', text: 'go on' })
+  await $.session.end(ended('clear'))
   e.id.value = 's2'
   await $.turn.start({ turnId: 't2', text: '' })
   expect(e.files[PATH]).toContain('\nrun r1\nSession: s2\n')
 })
+
+test('a turn after the session id changed with no /clear leaves the file with its session', async ($, on) => {
+  const e = engine(on)
+  const file = e.files[PATH]
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  e.id.value = 's2'
+  await $.turn.start({ turnId: 't2', text: '' })
+  expect(e.files[PATH]).toBe(file)
+})
+
+for (const [name, between] of [['a second /clear', []], ['a /model and a second /clear', ['model']]] as const) {
+  test(`${name} before a prompt still moves the file and hands it back`, async ($, on) => {
+    const e = engine(on)
+    await $.session.end(ended('clear'))
+    e.id.value = 's2'
+    for (const command of between) await $.prompt.submit({ ...typed(`/${command}`), command: { name: command, args: '' } })
+    e.id.value = 's3'
+    expect((await cleared($, 's2'))[1]).toContain('\nrun r1\nSession: s3\n\n## Next\nwatch #12\n')
+  })
+}
 
 test('a /resume or /branch to another conversation leaves the file with its session', async ($, on) => {
   const e = engine(on)

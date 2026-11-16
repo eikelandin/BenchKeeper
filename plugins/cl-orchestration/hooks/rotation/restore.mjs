@@ -41,7 +41,8 @@ let handoff;
 let drifting;
 try {
   const { cwd, session_id: session } = JSON.parse(await text(process.stdin));
-  // Claude Code's project folder, where the module looks too, never a folder a shell cd moved to; Codex sets no such variable.
+  // Claude Code's project folder, never a folder a shell cd moved to; Codex sets no such variable. The module's root follows
+  // a /cd or worktree move; whether this variable does is unverified.
   const root = process.env.CLAUDE_PROJECT_DIR || cwd;
   const path = join(root, FILE);
   // Opened without following a link or waiting on a FIFO where the platform can (Windows cannot), read through that handle,
@@ -49,6 +50,8 @@ try {
   const handle = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   if (!fstatSync(handle).isFile() || realpathSync(path) !== join(realpathSync(root), FILE)) process.exit(0);
   handoff = readFileSync(handle, 'utf8');
+  // A claude -p run that resumed the coordinator's session passes too: CLAUDE_CODE_SESSION_ATTENDED, which command hooks
+  // get, might tell it apart, but its value in such a run is unverified.
   if (!mine(handoff, session) || tracked(root)) process.exit(0);
   drifting = drifted(root, handle, handoff);
 } catch {
