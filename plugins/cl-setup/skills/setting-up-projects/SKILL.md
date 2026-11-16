@@ -80,7 +80,7 @@ The coordinator (`orchestrating-projects`) starts and merges nothing in a projec
 
 Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `cl-orchestration:orchestrating-projects` (the cl-orchestration plugin, when installed) lists each field and its default.
 
-Where the repository has no `.github/ISSUE_TEMPLATE` folder, propose [issue-templates/work.md](issue-templates/work.md) as `.github/ISSUE_TEMPLATE/work.md` in the same plan item, committed.
+Where the repository has no `.github/ISSUE_TEMPLATE` folder and its owner has no default issue templates (`gh api repos/<owner>/.github/contents/.github/ISSUE_TEMPLATE` answers 404), propose [issue-templates/work.md](issue-templates/work.md) as `.github/ISSUE_TEMPLATE/work.md` as a plan item (the policy's, where that one is proposed), committed.
 
 ## 6. Other configuration (ask)
 

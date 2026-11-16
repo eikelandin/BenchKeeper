@@ -72,6 +72,7 @@ const CASES = [
   ['the Approval table inside a multi-line HTML comment', swap(APPROVAL, `<!--\n${APPROVAL}\n-->`),
     ['Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo']],
   ['a Recommended line that names another option than the first', swap(RECOMMENDED, 'Recommended: (b) Hold, because nothing else changes'), ['Recommended']],
+  ['a second Recommended line that names another option', swap(RECOMMENDED, `${RECOMMENDED}\nRecommended: (b) Hold, because nothing else changes`), ['Recommended']],
   ['no Recommended line', swap(`${RECOMMENDED}\n`, ''), ['Recommended']],
   ['no Context line', swap('Context: Exports', 'Exports'), ['Context']],
   ['no Source line', swap('Source: docs/plans/export.md\n', ''), ['Source']],

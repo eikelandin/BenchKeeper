@@ -65,9 +65,9 @@ export function missing(text) {
     && options.every(([option, impact, tradeOff], i) => filled(option) && filled(impact) && filled(tradeOff) && option.includes('(Recommended)') === (i === 0))
     && labels.every(Boolean) && new Set(labels.map((label) => label.toLowerCase())).size === labels.length
     && !options.flat().some((cell) => PLACEHOLDER.test(cell));
-  // The questions skill takes its recommendation from the Recommended line and the first option from the table: both must name one option.
+  // The questions skill takes its recommendation from the Recommended line and the first option from the table: every such line must name that option.
   const label = labels[0];
-  const agrees = !chosen || (label && shown(/^Recommended:(.*)$/m.exec(text)?.[1] ?? '').startsWith(label));
+  const agrees = !chosen || (label && [...text.matchAll(/^Recommended:(.*)$/gm)].every(([, said]) => shown(said).startsWith(label)));
   return [
     // Posted with the body, the front matter would show as text: its labels go on the command line.
     ...(/^\s*---[ \t]*(\r?\n|$)/.test(text) ? [FRONT] : []),
