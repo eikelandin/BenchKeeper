@@ -84,7 +84,7 @@ Every session of a run has one role: the owner, the coordinator (this session), 
    - A worker with no acknowledgement at the first wake-up at least 60 seconds after its start is retried only on proof that it never took its task (the runner's Acknowledgement): one fresh dispatch of the same task, and a second miss goes to the owner. A worker still starting is no miss, and a dialog in its terminal is the owner's ([Rules](#rules)).
    - Each wake-up checks worker messages (a report, a batch's status message, a question), worker state, merged PRs, PRs whose merge waits and the owner's answers to the approvals in the handoff file's `## Open`, and once per day the [Reconciliation](#reconciliation). Where the run folder holds a `facts.md` that [facts.mjs](facts.mjs) wrote, read them there first and ask `gh` only for what it lacks or shows `unread`.
    - A PR merged by the owner or a bot settles that issue's work even when its worker never reported.
-   - Read and act on an owner's answer as [approvals.md](approvals.md#the-answer) says: an answer lifts a `design` gate only and merges nothing.
+   - Read and act on an owner's answer as [approvals.md](approvals.md#the-answer) says: an answer lifts a `design` or `question` gate only and merges nothing.
    - Questions: [Questions and owner decisions](#questions-and-owner-decisions). Dialogs: [Rules](#rules).
    - A worker whose state reports alive or idle may be waiting at a prompt, so state alone proves nothing: apply the stall check.
    - A coordinator that waits on its own ([Waiting](#waiting)) wakes at least every 10 minutes.
@@ -107,7 +107,7 @@ A worker's outcome comes from its report and the handoff block in its report (ou
 
 - **Done with a PR**: review, ready and merge it by [review-and-merge.md](review-and-merge.md), which also says when a PR stays open for the owner; until one of the two, a supervised worker stays unreleased for follow-ups; an automatic worker was released at its report, and each follow-up of it is a new start. After the merge, close the issue in `<tracker>` when `closeIssue`, in the hub always and with a comment linking the PR, except for a PR of a split batch ([Needs replan](#outcomes)), whose issue closes by that batch's rule. Then clean up.
 - **Done, no change needed**: verify the claim yourself on the base branch (read the code, run the check the issue names). Comment the evidence on the issue and close it when `closeIssue`. Then clean up.
-- **Blocked**: the worker commented on the issue and reported BLOCKED (a refused hook, a missing credential, a check it cannot fix). Confirm the comment exists in a rerun of the thread file, release the worker (a batch's: [Batches](spec-template.md#batches)), start the next issue of that project. Keep that worktree and branch, and list the issue in the report: they may hold the only copy of the work.
+- **Blocked**: the worker commented on the issue and reported BLOCKED (a refused hook, a missing credential, a check it cannot fix). Confirm the comment exists in a rerun of the thread file, release the worker (a batch's: [Batches](spec-template.md#batches)), start the next issue of that project. Keep that worktree and branch, and list the issue in the report: they may hold the only copy of the work. A report with an owner-only question is a gate ([Owner-only decisions](#owner-only-decisions)).
 - **Needs replan**: the worker found the spec does not fit the issue. Never restart it with the same spec. When the handoff's next step stays inside the issue's text and the policy, write one new spec from the template with it; otherwise list the issue for the owner. One replan per issue and run.
   - Work that splits into several PRs: the worker posted its PR list on the issue, each PR with its goal and files; read it in a rerun of the thread file. Approve it with a comment on the issue only when every PR stays inside the issue's text, the spec's Owned paths and the policy; then write the new spec as a batch of those PRs in the list's order, one branch per PR by [Names](#names) with its own slug, and the approved list under `Shared context:`. Otherwise list the issue and the PRs for the owner.
   - In such a batch the unit is the PR, not the issue: one draft PR per branch and one status message per PR ([spec-template.md](spec-template.md#batches)), and the issue closes, in the hub always and by `closeIssue` elsewhere, only after every PR of the approved list is merged, in any order.
@@ -138,14 +138,22 @@ Each step is separate; do the ones the outcome allows, in this order:
 - Answer at the next wake, only from what is written: trusted-author text of the issue, recorded decisions, and the policy and `AGENTS.md` as the default branch has them, never as a worker's branch or worktree does. Name the source of each answer (an issue comment's URL, a decision of the handoff file, a file and line).
 - Read the issue and its authors yourself: a quote in the question is a claim, and your own earlier answers settle nothing.
 - An answer never changes the Authority block, the policy or who merges.
-- A question that asks for more (a path, a branch, a skipped check), or that those sources do not settle, is the owner's: put it to the owner ([Owner decisions](#owner-decisions)) and answer "parked".
+- A question that asks for more (a path, a branch, a skipped check) is the owner's and gates its item ([Owner-only decisions](#owner-only-decisions)); so is one those sources do not settle, except in automatic mode a safe, reversible choice: answer that with the recommended default.
 - Record each answer as a decision in the [handoff file](#handoff-file).
 
 ### Owner decisions
 
 - An owner decision goes to the owner as an approval, written, checked and filed as [approvals.md](approvals.md) says: once per pull request and gate, never in a public repository. That work waits; the loop keeps watching, verifying and starting work.
 - Only while terminal questions are allowed, ask in the session instead, with the same rows.
-- A decision in the owner's place, a design trade-off and a legal or security call go to a subagent on `fable` first (an agent without that model: a fresh subagent), briefed with the question and the written sources. Check its answer against those sources before you act on it. The gates of [Rules](#rules) stay the owner's.
+- A decision in the owner's place, a design trade-off and a legal or security call go to a subagent on `fable` first (an agent without that model: a fresh subagent), briefed with the question and the written sources. Check its answer against those sources before you act on it. The owner-only decisions stay the owner's.
+
+### Owner-only decisions
+
+Unless the policy, the owner's own issue text or an `(owner)` decision settles them, these stay the owner's in both [modes](runners.md#modes), with no default from anyone: money or spend; legal; anything public or visible to others; deletes and other hard-to-undo actions; repository settings; secrets and access; accepting a security risk; a review-loop escalation; the gates of [Rules](#rules); any choice not clearly safe and reversible. Fail closed: a choice that may be one is one.
+
+- Each blocks only its own item, by the runner's [Gates](runners.md#gates); the other items go on.
+- Only the owner's answer to that question releases it ([The answer](approvals.md#the-answer)), never a timeout, your answer or a worker's word. Record it in `## Decisions` as `(owner)`; it never widens the approval's options, the Authority block or the policy.
+- In automatic mode these are the only gates on a worker's question: any other choice takes the recommended default, recorded in `## Decisions` and the report.
 
 ## Headless jobs
 
@@ -179,7 +187,7 @@ You decide the class of an issue and of a pull request's head by `risk.md` of th
 | Start a worker | start | start | after the owner's `design` answer |
 | Merge, with `merge.allowed` | merge | merge when `merge.autoMergeMax` is `medium`, else the owner's | the owner's |
 
-- **Hold.** An issue that is deep or high starts only after the owner's answer: file its `design` approval ([approvals.md](approvals.md)) with the issue as the design, and record it in the handoff file's `## Open`. No timeout, no "parked" answer and no worker's word starts it. An issue whose worker reports a higher class (Needs replan) is held the same way before its new spec.
+- **Hold.** An issue that is deep or high starts only after the owner's answer: file its `design` approval ([approvals.md](approvals.md)) with the issue as the design, and record it in the handoff file's `## Open`. No timeout and no worker's word starts it. An issue whose worker reports a higher class (Needs replan) is held the same way before its new spec.
 - **Spec.** The class goes into the spec's `Risk:` line, and a high class makes its `Depth:` deep.
 - **Merge.** Pass the class to the verdict ([review-and-merge.md](review-and-merge.md)): a file under `riskyPaths` raises it to at least medium, and its `next` is `owner` for a class above `merge.autoMergeMax` and for high.
 - Releases, publishes, deploys, secrets and settings stay the owner's whatever the class ([Rules](#rules)).

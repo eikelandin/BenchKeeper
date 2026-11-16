@@ -26,6 +26,7 @@ Each runner file has these sections, under its own headings where the file says 
 | Follow-up | How review findings, red checks and owner answers reach the owning worker. |
 | Watch | How the coordinator waits without polling, and the liveness check. |
 | Dialogs | What happens to a permission prompt, per [mode](#modes). |
+| Gates | How an owner decision holds its item, per [mode](#modes), and how the owner's answer reaches the worker ([Gates](#gates)). |
 | Write scope | What the worker can write, what enforces it, and the check after each report. |
 | Resume | What survives a clear or restart of the coordinator, and how workers are bound again. |
 | Clean up | Releasing the worker and removing its worktree. |
@@ -46,8 +47,15 @@ Each project's `mode` comes from its policy ([policy.md](policy.md)). A leading 
 - **Supervised:** a worker starts in its agent's default permission mode, with no flag that bypasses or skips permission prompts; its prompts are the owner's (the runner's Dialogs). Every question to the owner blocks its own item until answered; other items go on.
 - **Automatic:** a Claude Code worker starts only with the sandbox on (below), with `--permission-mode dontAsk` and `--settings <run folder>/settings/<id>.json` on its launch; a call the bounds and allow rules do not cover is denied, never prompted. No flag that bypasses permission prompts, in any form. The coordinator takes the recommended default only for a safe, reversible choice and records it in the handoff's `## Decisions` and the report. A worker takes one issue, whatever `issuesPerWorker` says: it cannot commit, so it cannot switch branches. It is released at its report, and each follow-up of it is a new start ([Sandbox on](#sandbox-on)). Its spec changes as [spec-template.md](spec-template.md#automatic-mode) says.
 
-`dontAsk` only refuses tool calls that no allow rule lists; it decides no question.
-An owner-only decision still makes the worker stop that item and report BLOCKED with the question: the coordinator files the issue, the item waits, and the owner's answer goes to the worker as the runner's Follow-up says.
+`dontAsk` only refuses tool calls that no allow rule lists; it decides no question: an owner-only decision is a gate ([Gates](#gates)).
+
+### Gates
+
+A gate holds one item for the owner while the other items go on ([Owner-only decisions](SKILL.md#owner-only-decisions)): in supervised mode every question put to the owner, in automatic mode an owner-only decision only.
+
+- Worker side: the worker never decides an owner-only question and never takes a default for it, also where a tool call would pass. With a question command and in supervised mode it asks and waits for the answer; otherwise it stops that item and reports BLOCKED with the question ([spec-template.md](spec-template.md)).
+- Coordinator side: put each such question to the owner once, in your own words, as an approval whose What starts with `question` and names the issue and the decision ([approvals.md](approvals.md)), and record it in `## Open` with the worker (its id and, where it asked, the question's id) in place of the head. A BLOCKED report keeps its worktree and branch ([Outcomes](SKILL.md#outcomes)).
+- After the answer the runner's Gates section brings it to the same worker, or where its session ended to a new start in its worktree with the gate form of the spec's Branch line ([spec-template.md](spec-template.md)) and the answer under `Shared context:`. Either counts like a follow-up for the caps ([SKILL.md](SKILL.md#loop), step 5). The item goes on and ends with a new report. An answer that holds, and no answer, keep it blocked: list it in the report.
 
 ### Sandbox on
 

@@ -14,6 +14,7 @@ The sections of the [runner interface](runners.md#interface), in this file:
 | Follow-up | the follow-up of [Start the run](#start-the-run); the worker answers as [Worker reports](#worker-reports) says |
 | Watch | [Watch](#watch) |
 | Dialogs | [A permission dialog](#a-permission-dialog) |
+| Gates | [Gates](#gates) |
 | Write scope | the worktree; supervised, anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)); automatic, the bounds of [Sandbox on](runners.md#sandbox-on) |
 | Resume | [Resume](#resume) |
 | Clean up | [Clean up](#clean-up) |
@@ -125,6 +126,17 @@ ORCA orchestration reply --id <message id> --body "$(cat <answer file>)" --json
 
 The answer's sources are the default branch's: the policy as the reader prints it now, and `AGENTS.md` read in a scratch clone as [review-and-merge.md](review-and-merge.md#scratch-clone) reads it. An issue without a pull request has no clone yet: make one for the answer, with the two commands of that section.
 
+## Gates
+
+By ask and reply, per [mode](runners.md#modes) ([Gates](runners.md#gates)):
+
+| | Supervised | Automatic |
+| --- | --- | --- |
+| Which questions | each question that the written sources do not settle | owner-only decisions only; a worker's other question gets the recommended default as its reply, recorded in `## Decisions` |
+| The worker | asks ([Questions](#questions)) and waits | reports `BLOCKED` with the question, and is released at its report like every automatic worker ([Clean up](#clean-up)), so it holds back no worktree of its project |
+| While it waits | send no reply; until the reply it does not count as working ([Host limit](#host-limit)), and its turn that ended with the `ask` is no stall ([Watch](#watch)) | the item holds no slot |
+| After the answer | once a slot is free, `reply --id <message id>` with the chosen option in a file, as [Questions](#questions) says | a new start in its worktree ([Start the run](#start-the-run)), as [Gates](runners.md#gates) says |
+
 ## Watch
 
 The mail types are `worker_done,escalation,question,status`. Orca wakes the coordinator when mail arrives, a `worker_done`, an `escalation` or a `question`, whatever its agent. A `status` message wakes it too: its terminal is told "You have 1 orchestration message" (unverified: observed, not in Orca's documentation).
@@ -156,7 +168,7 @@ For a row whose `projection.attention.requiresAction` is true:
 
 Acknowledge a delivery only after its outcome is handled (`check --ack <delivery_id>`).
 
-Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done`. Then `worker-stop` it and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
+Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done` and no `ask` still waiting for its reply ([Gates](#gates)). Then `worker-stop` it and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
 
 ## A permission dialog
 
@@ -239,7 +251,7 @@ Before the coordinator turn ends, `ORCA orchestration worker-list --run <run id>
 
 ## Host limit
 
-The limit is machine-wide, and `worker-list` covers one run (the bound one unless `--run` is given). Count the rows whose `outcome` is `in_progress` in every run that `ORCA orchestration run-list` shows, before every start: a kept-open worker's terminal state is `retained` also while it works (observed with Orca 1.4.254), so that state does not tell the working ones. A start held at a dialog in the handoff file's `## Open` ([Start the run](#start-the-run)) counts as working too.
+The limit is machine-wide, and `worker-list` covers one run (the bound one unless `--run` is given). Count the rows whose `outcome` is `in_progress` in every run that `ORCA orchestration run-list` shows, before every start: a kept-open worker's terminal state is `retained` also while it works (observed with Orca 1.4.254), so that state does not tell the working ones. A start held at a dialog in the handoff file's `## Open` ([Start the run](#start-the-run)) counts as working too; a worker whose `ask` waits for the owner ([Gates](#gates)) does not, until its reply.
 
 A follow-up puts a worker that already reported back to work (an automatic worker's is a new start in its worktree, [Start the run](#start-the-run)), so it counts like a start for `hostWorkerLimit` and `workersPerProject`: count before it too. When a cap is full the follow-up waits, and no start in that project (for `hostWorkerLimit`: on the machine) comes before it ([SKILL.md](SKILL.md#loop), step 5): otherwise steady new issues keep the slot, and the pull request never merges. Count each worker with a follow-up it has not answered yet as working, whatever its row says (unverified: whether such a worker's row shows `in_progress` again).
 
