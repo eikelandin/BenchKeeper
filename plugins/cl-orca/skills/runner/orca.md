@@ -111,7 +111,7 @@ A worker settles with one message. The outcomes (`SKILL.md#outcomes`) map to Orc
 
 Orca has no separate blocked or replan message type: such a report is a `worker_done` that failed, which settles the dispatch so the coordinator can release it. The handoff block is the message body. The worker's start message carries its own `send` command; the spec only says what to report.
 
-An automatic worker cannot run `send` or `ask` from inside the sandbox (`runners.md#sandbox-on`): its report reaches the coordinator only as the `Worker stopped without reporting` escalation, which fails the probe, so its project runs supervised.
+An automatic worker cannot run `send` or `ask` from inside the sandbox (`runners.md#sandbox-on`): its report reaches the coordinator only as the `Worker stopped without reporting` escalation with its last output, which fails the probe, so its project runs supervised. `orca orchestration send` and `ask` fail with `runtime_unavailable` (Orca 1.4.254, Claude Code v2.1.325): the CLI reads `orca-runtime.json` in the home folder, which the read block closes, and would then connect to Orca's socket, which the sandbox closes too (unverified: read from the CLI's source and the settings reference, not run). Neither is opened: that file holds Orca's one auth token, with which `orca terminal create --command` runs any command on the host outside the sandbox.
 
 A batch also sends one `--type status` message per issue, when that issue's pull request is up or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
 

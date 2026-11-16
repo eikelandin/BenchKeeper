@@ -36,7 +36,7 @@ claude plugin install cedarloom@cedarloom
 
 To install one plugin instead of the bundle, name it: `/plugin install cl-workflow@cedarloom`. `cl-orchestration` installs `cl-workflow` with it, and `cl-orca` installs both.
 
-Codex reads the same marketplace; `cl-orca` is for Claude Code only. Codex installs no dependencies, so add each plugin you want, `cl-workflow` before `cl-orchestration`:
+Codex reads the same marketplace. In Codex, `cl-orchestration` gives the skill text and the hook that hands a coordinator its handoff file back; its coordinator starts workers only in Claude Code. `cl-orca` is for Claude Code only. Codex installs no dependencies, so add each plugin you want, `cl-workflow` before `cl-orchestration`:
 
 ```sh
 codex plugin marketplace add CedarLoom/cedarloom@stable
