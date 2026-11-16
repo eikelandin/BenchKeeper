@@ -33,7 +33,6 @@ CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/
 | [plugins/cl-setup/skills/improve](../plugins/cl-setup/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-setup:improve`, user-invoked |
 | [plugins/cl-setup/skills/debloat](../plugins/cl-setup/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-setup/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-setup:debloat`, user-invoked; the script also runs the `token-budget` CI job |
 | [CHANGELOG.md](../CHANGELOG.md) | the changelog up to 6.25 and the tags `setup-v*` and `app-v*` up to 6.27; each plugin keeps its own in `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`), see [Releasing](releasing.md) | not linked |
-| [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 
 ## How this stack was selected
 

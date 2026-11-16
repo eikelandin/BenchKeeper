@@ -9,9 +9,9 @@ SPDX-FileCopyrightText = "2026 Eike Landin"
 SPDX-License-Identifier = "ISC"
 
 # The CedarLoom name and logos are not under the code license: LICENSES/LicenseRef-Brand.txt, the brand repository's
-# own text. The site serves copies from web/public.
+# own text.
 [[annotations]]
-path = ["brand/**", "web/public/brand/**", "web/public/og.png"]
+path = "brand/**"
 precedence = "override"
 SPDX-FileCopyrightText = "2026 CedarLoom contributors"
 SPDX-License-Identifier = "LicenseRef-Brand"
