@@ -14,6 +14,7 @@ The sections of the runner interface (`runners.md#interface`), in this file:
 | Follow-up | the follow-up of [Start the run](#start-the-run); the worker answers as [Worker reports](#worker-reports) says |
 | Watch | [Watch](#watch) |
 | Dialogs | [A permission dialog](#a-permission-dialog) |
+| Gates | [Gates](#gates) |
 | Write scope | the worktree; supervised, anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)) where Orca's agent permission setting leaves prompts ([Start the run](#start-the-run)); automatic, the bounds of Sandbox on (`runners.md#sandbox-on`) |
 | Resume | [Resume](#resume) |
 | Clean up | [Clean up](#clean-up) |
@@ -30,7 +31,7 @@ A Claude Code worker starts in a worktree of its own, then by its project's mode
 ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
 ```
 
-Supervised: Orca's own launch, on the host's default Claude Code login. Supervised prompts depend on Orca's agent permission setting, the user's choice in Orca's Settings, Agents, Agent Permissions: the launch adds that setting's flag. Orca ships it at "full-access" (Orca 1.4.254), which adds `--dangerously-skip-permissions` for Claude Code and `--dangerously-bypass-approvals-and-sandbox` for Codex, which also turns off Codex's sandbox: on a host where nobody changed it, a supervised worker shows no permission prompt. Of the skill's flags it passes only `--model` and `--effort`, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
+Supervised: Orca's own launch, on the host's default Claude Code login. Supervised prompts depend on Orca's agent permission setting, the user's choice in Orca's Settings, Agents, Agent Permissions: the launch adds that setting's flag. Orca ships it at "full-access" (Orca 1.4.254), which adds `--dangerously-skip-permissions` for Claude Code and `--dangerously-bypass-approvals-and-sandbox` for Codex, which also turns off Codex's sandbox: on a host where nobody changed it, a supervised worker shows no permission prompt, a Claude Code one none but the ask matches of its rule file (`runners.md#worker-rules`). Of the skill's flags it passes only `--model` and `--effort`, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
 
 ```text
 Role check: right after the heartbeat, before any other command, run `printenv CEDARLOOM_ROLE`. It must print nothing. A value it prints is Blocked (below): name the variable in the report.
@@ -40,6 +41,12 @@ After such a report, start no further supervised Claude Code worker in the run a
 
 ```text
 ORCA orchestration worker-start --spec-file <filled spec file> --worktree path:<worktree path> --agent claude --model '<model>' --effort <effort> --keep-open --json
+```
+
+Before each such `worker-start`, write and check its rule file (`runners.md#worker-rules`). Its spec takes this line after the role check:
+
+```text
+Rule file: `.claude/settings.local.json` in this worktree is the runner's. Never stage, commit, change or delete it.
 ```
 
 Automatic: a terminal of its own, so that its launch carries the settings below; `worker-start` has no flag for them, and its `--model` and `--effort` do not combine with `--terminal`. `worker-start` on a session that is not idle yet fails with `agent_unconfigured`, hence the wait:
@@ -86,7 +93,7 @@ A worker on `fable` that already reported gets no follow-up: release it and star
 
 ### Fallback to supervised
 
-An automatic project whose Automatic start (`runners.md#automatic-start`) failed runs supervised for the rest of the run, and so does a Codex worker of an automatic project. Such a worker starts as a supervised one (above): it has none of the automatic bounds (no sandbox, no network allow list, no `dontAsk`, no settings file) and runs with Orca's agent permission setting, under the shipped "full-access" with no permission prompt. Write that in the handoff's `Mode:` line and the report: the project, the failed check or step, and that its workers run without the automatic bounds under Orca's setting.
+An automatic project whose Automatic start (`runners.md#automatic-start`) failed runs supervised for the rest of the run, and so does a Codex worker of an automatic project. Such a worker starts as a supervised one (above): it has none of the automatic bounds (no sandbox, no network allow list, no `dontAsk`, no settings file) and runs with Orca's agent permission setting, under the shipped "full-access" with no permission prompt, except that a Claude Code one gets the worktree rule file of Worker rules (`runners.md#worker-rules`) as every supervised one does, so its deny matches are refused and its ask matches prompt. Write that in the handoff's `Mode:` line and the report: the project, the failed check or step, and that its workers run without the automatic bounds under Orca's setting.
 
 ## Acknowledgement
 
@@ -131,6 +138,19 @@ ORCA orchestration reply --id <message id> --body "$(cat <answer file>)" --json
 
 The answer's sources are the default branch's: the policy as the reader prints it now, and `AGENTS.md` read in a scratch clone as `review-and-merge.md#scratch-clone` reads it. An issue without a pull request has no clone yet: make one for the answer, with the two commands of that section.
 
+## Gates
+
+By ask and reply, in supervised mode (`runners.md#gates`):
+
+| | Supervised |
+| --- | --- |
+| Which questions | each question that the written sources do not settle; for an owner-only decision, only the sources of Owner-only decisions (`SKILL.md#owner-only-decisions`) |
+| The worker | asks ([Questions](#questions)) and waits |
+| While it waits | send no reply; once its turn ended while its `ask` waits for the owner, with no other work left open, it does not count as working until the reply ([Host limit](#host-limit)), and that turn is no stall ([Watch](#watch)) |
+| After the answer | once a slot is free, `reply --id <message id>` with the chosen option in a file, as [Questions](#questions) says |
+
+Automatic: not reached while an automatic worker cannot `send` or `ask` ([Worker reports](#worker-reports)): its project runs supervised. Once the probe passes, an owner-only question is a `BLOCKED` report and its answer a new start in its worktree, as Gates (`runners.md#gates`) says.
+
 ## Watch
 
 The mail types are `worker_done,escalation,question,status`. Orca wakes the coordinator when mail arrives, a `worker_done`, an `escalation` or a `question`, whatever its agent. A `status` message wakes it too: its terminal is told "You have 1 orchestration message" (unverified: observed, not in Orca's documentation).
@@ -162,7 +182,7 @@ For a row whose `projection.attention.requiresAction` is true:
 
 Acknowledge a delivery only after its outcome is handled (`check --ack <delivery_id>`).
 
-Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done`. Then `worker-stop` it and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
+Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done` and not while its `ask` waits for the owner, with no other work left open ([Gates](#gates)). Then `worker-stop` it and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
 
 ## A permission dialog
 
@@ -222,7 +242,7 @@ ORCA orchestration worker-release --dispatch <dispatch id> --json
 ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 ```
 
-The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
+The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. Before it, delete a supervised Claude Code worker's rule file, `<worktree path>/.claude/settings.local.json`: as an untracked file it may make git refuse the removal (unverified: whether Orca forces it). `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
 A worker whose terminal a person typed in gets no cleanup (`SKILL.md#rules` has the rule). With Orca, such a worker's `worker-read` output shows input that neither a `send`, a dispatch of the coordinator (the start, a follow-up) nor its `terminal create --command` launch line carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command and, with a follow-up dispatch, the only way into a worker terminal (`SKILL.md#rules` has the rule).
 
@@ -245,7 +265,7 @@ Before the coordinator turn ends, `ORCA orchestration worker-list --run <run id>
 
 ## Host limit
 
-The limit is machine-wide, and `worker-list` covers one run (the bound one unless `--run` is given). Count the rows whose `outcome` is `in_progress` in every run that `ORCA orchestration run-list` shows, before every start: a kept-open worker's terminal state is `retained` also while it works (observed with Orca 1.4.254), so that state does not tell the working ones. A start held at a dialog in the handoff file's `## Open` ([Start the run](#start-the-run)) counts as working too.
+The limit is machine-wide, and `worker-list` covers one run (the bound one unless `--run` is given). Count the rows whose `outcome` is `in_progress` in every run that `ORCA orchestration run-list` shows, before every start: a kept-open worker's terminal state is `retained` also while it works (observed with Orca 1.4.254), so that state does not tell the working ones. A start held at a dialog in the handoff file's `## Open` ([Start the run](#start-the-run)) counts as working too; a worker whose last turn ended while its `ask` waits for the owner, with no other work left open ([Gates](#gates)), does not, until its reply; one that works on counts.
 
 A follow-up puts a worker that already reported back to work (an automatic worker's is a new start in its worktree, [Start the run](#start-the-run)), so it counts like a start for `hostWorkerLimit` and `workersPerProject`: count before it too. When a cap is full the follow-up waits, and no start in that project (for `hostWorkerLimit`: on the machine) comes before it (`SKILL.md#loop`, step 5): otherwise steady new issues keep the slot, and the pull request never merges. Count each worker with a follow-up it has not answered yet as working, whatever its row says (unverified: whether such a worker's row shows `in_progress` again).
 

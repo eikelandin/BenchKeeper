@@ -30,11 +30,11 @@ The agent id the `Agent` call returns is the acknowledgement. A call that return
 
 ## Reports
 
-The worker's final result arrives as its completion notification and is its report: the first word is `DONE`, `BLOCKED` or `NEEDS_REPLAN`, followed by the handoff block; any other result is failed. A batch reports once, with one handoff block per issue in place of the status messages. The final result of a turn that a [Follow-up](#follow-up) started is the answer to it, not a new report.
+The worker's final result arrives as its completion notification and is its report: the first word is `DONE`, `BLOCKED` or `NEEDS_REPLAN`, followed by the handoff block; any other result is failed. A batch reports once, with one handoff block per issue in place of the status messages. The final result of a turn that a [Follow-up](#follow-up) started is the answer to it, not a new report; of one that a gate's answer started, a new report ([Gates](#gates)).
 
 ## Questions
 
-None: a worker cannot ask while it works, so a point it may not decide ends it with `NEEDS_REPLAN`, as its spec's Needs replan line says.
+None: a worker cannot ask while it works, so a point it may not decide ends it with `NEEDS_REPLAN`, as its spec's Needs replan line says, and an owner-only decision with `BLOCKED` and the question ([Gates](#gates)).
 
 ## Follow-up
 
@@ -54,6 +54,10 @@ At each wake-up, in this order:
 ## Dialogs
 
 Supervised only ([modes](runners.md#modes)): a worker shares this session's mode and sandbox, so the automatic bounds cannot apply to it, and a project whose policy says automatic runs supervised here: say so in the report. Every worker runs in this session's default permission mode, and its permission prompts appear in this session, naming the worker. They are the owner's: the coordinator answers none. A grant that lasts beyond one call applies to the whole session, the coordinator's included. `permissionPrompts` `decline` does not apply, since there is no worker terminal.
+
+## Gates
+
+Supervised only, so every question put to the owner is a gate ([Gates](runners.md#gates)). The worker reports `BLOCKED` with the question and holds no slot while it waits; keep its agent id. After the owner's answer, once `workersPerProject` and `hostWorkerLimit` both have a free slot ([SKILL.md](SKILL.md#loop), step 5), `SendMessage` the chosen option to that agent id, in your own words: it resumes the worker with its context, and the final result of that turn is its new report ([Reports](#reports)). Without the agent (a restart), the answer goes to a fresh worker in its worktree as [Gates](runners.md#gates) says.
 
 ## Write scope
 

@@ -26,6 +26,7 @@ Each runner file has these sections, under its own headings where the file says 
 | Follow-up | How review findings, red checks and owner answers reach the owning worker. |
 | Watch | How the coordinator waits without polling, and the liveness check. |
 | Dialogs | What happens to a permission prompt, per [mode](#modes). |
+| Gates | How an owner decision holds its item, per [mode](#modes), and how the owner's answer reaches the worker ([Gates](#gates)). |
 | Write scope | What the worker can write, what enforces it, and the check after each report. |
 | Resume | What survives a clear or restart of the coordinator, and how workers are bound again. |
 | Clean up | Releasing the worker and removing its worktree. |
@@ -47,8 +48,30 @@ Each project's `mode` comes from its policy ([policy.md](policy.md)). A leading 
 - **Supervised:** a worker starts in its agent's default permission mode, and the coordinator writes no flag that bypasses or skips permission prompts; its prompts are the owner's (the runner's Dialogs). On Orca, a worker starts through Orca's own launch, so its prompts depend on Orca's agent permission setting, the user's choice (`orca.md#start-the-run` of the cl-orca plugin). Every question to the owner blocks its own item until answered; other items go on.
 - **Automatic:** a Claude Code worker starts only with the sandbox on (below), with `--permission-mode dontAsk` and `--settings <run folder>/settings/<id>.json` on its launch; a call the bounds and allow rules do not cover is denied, never prompted. No flag that bypasses permission prompts, in any form. The coordinator takes the recommended default only for a safe, reversible choice and records it in the handoff's `## Decisions` and the report. A worker takes one issue, whatever `issuesPerWorker` says: it cannot commit, so it cannot switch branches. It is released at its report, and each follow-up of it is a new start ([Sandbox on](#sandbox-on)). Its spec changes as [spec-template.md](spec-template.md#automatic-mode) says.
 
-`dontAsk` only refuses tool calls that no allow rule lists; it decides no question.
-An owner-only decision still makes the worker stop that item and report BLOCKED with the question: the coordinator files the issue, the item waits, and the owner's answer goes to the worker as the runner's Follow-up says.
+`dontAsk` only refuses tool calls that no allow rule lists; it decides no question: an owner-only decision is a gate ([Gates](#gates)).
+
+### Gates
+
+A gate holds one item for the owner while the other items go on ([Owner-only decisions](SKILL.md#owner-only-decisions)): in supervised mode every question put to the owner, in automatic mode an owner-only decision only.
+
+- Worker side: the worker never decides an owner-only question and never takes a default for it, also where a tool call would pass. With a question command and in supervised mode it asks and waits for the answer; otherwise it stops that item and reports BLOCKED with the question ([spec-template.md](spec-template.md)).
+- Coordinator side: put each such question to the owner once, in your own words, as an approval whose What starts with `question` and names the issue and the decision ([approvals.md](approvals.md)), and record it in `## Open` with the worker (its id and, where it asked, the question's id) in place of the head. A BLOCKED report keeps its worktree and branch ([Outcomes](SKILL.md#outcomes)).
+- After the answer the runner's Gates section brings it to the same worker, or where its session ended to a new start in its worktree with the gate form of the spec's Branch line ([spec-template.md](spec-template.md)) and the answer under `Shared context:` as a line of its own marked `(owner)` ([Owner-only decisions](SKILL.md#owner-only-decisions)). Either counts like a follow-up for the caps ([SKILL.md](SKILL.md#loop), step 5). The item goes on and ends with a new report. An answer that holds, and no answer, keep it blocked: list it in the report.
+
+### Worker rules
+
+[worker-rules.json](worker-rules.json) is one deny and ask list for each Claude Code worker that runs in a session of its own. Deny wins over ask and ask over allow, across every settings scope, so a broad allow rule in the user settings lifts neither ([permissions](https://code.claude.com/docs/en/permissions#manage-permissions)). Both still act under `--dangerously-skip-permissions`, which Orca's full-access setting adds to its own launch ([permission modes](https://code.claude.com/docs/en/permission-modes#actions-no-mode-auto-approves)).
+
+| Rules | Supervised | Automatic |
+| --- | --- | --- |
+| Deny: `gh pr merge`, `gh release`, `gh repo create`, `delete` and `edit`; `git push` with `--force`, `-f`, a `+` refspec, `--delete`, `-d`, a `:` refspec, `--mirror` or `--prune`; reading `.env`, `.env.*` and `secrets/` | refused | refused |
+| Ask: `git push`, `gh pr create`, `gh pr comment`, `gh issue` writes, `rm -r` (`-R`, `-fr`, `--recursive`), edits under `.claude/`, `.github/` and any `.git`, `WebFetch` | a prompt in the worker's terminal | refused (`dontAsk`): push and pull request stay with the coordinator ([Commit and push](#commit-and-push)) |
+
+- Supervised (Orca): before each `worker-start` of a Claude Code worker, `node <skill folder>/worker-settings.mjs --supervised <worktree path>` writes the list as `<worktree path>/.claude/settings.local.json`, then the same command with `--check` before `--supervised` must exit 0. Claude Code reads that file in the folder it starts in beside the main checkout's and applies the permission rules of both ([settings](https://code.claude.com/docs/en/settings#where-claude-code-keeps-the-local-file-in-a-git-repository)). Deny and ask rules need no workspace trust. A rule path that starts with `/` counts from the worktree, so the file names no host path. The script refuses a path that is no linked worktree and never overwrites another file there: any failure starts no worker and makes the item BLOCKED. It also lists `/.claude/settings.local.json` in the shared `.git`'s `info/exclude`, which git reads for every worktree and the main checkout, and `--check` fails without that line: `git add -A` leaves the file out, `git add -f` does not, and the spec forbids staging it (`orca.md#start-the-run` of the cl-orca plugin).
+- Supervised, a worker's own `git push` and `gh pr create` prompt in its terminal like any other dialog: with `permissionPrompts` `block` its item waits there for the owner, with `decline` the coordinator declines them at the stall check and tells the worker to change the approach or report BLOCKED (`orca.md#a-permission-dialog` of the cl-orca plugin), so such an item does not finish its own push.
+- Automatic: `worker-settings.mjs` adds the list to the settings file ([Sandbox on](#sandbox-on)), minus a rule that the template's deny list already matches (`Bash(gh *)`, `Bash(git push *)`, `WebFetch`, `.claude`).
+- `claude-code`: a worker runs in the coordinator's session with its settings, so no rule file reaches it.
+- A Bash rule matches the command as written: `git -C . push`, `gh api` and `/bin/rm` pass it ([permissions](https://code.claude.com/docs/en/permissions#bash-rule-limits)). An ask rule wins over an allow rule, so every `WebFetch` asks, also to a listed host. Under full access a supervised worker's Bash can still rewrite its rule file. A `Read` deny also refuses Edit and Write on that path, `.env.example` included, at any depth, and in automatic mode the sandbox closes it to Bash too ([Read and Edit](https://code.claude.com/docs/en/permissions#read-and-edit), [sandboxing](https://code.claude.com/docs/en/sandboxing#permission-rules)).
 
 ### Sandbox on
 
@@ -68,7 +91,7 @@ The worker's settings file is written by `node <skill folder>/worker-settings.mj
   - Supervised workers stay open for follow-ups as the runner says.
 
   The `commondir` read of [Commit and push](#commit-and-push) is the second check. Unverified: the sandbox's part of this is read from the [sandbox runtime](https://github.com/anthropic-experimental/sandbox-runtime)'s README and source, not run, and which runtime version Claude Code carries is not known.
-- Lists of rules and folders merge across every settings scope the worker loads, so the bounds are the template plus the user's and the main checkout's entries.
+- Lists of rules and folders merge across every settings scope the worker loads, so the bounds are the template and the [Worker rules](#worker-rules) plus the user's and the main checkout's entries.
 
 ### Automatic start
 

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -41,8 +41,80 @@ test('worker-settings: fills the worktree, the shared .git, its worktrees folder
       `Edit(${folders}/*/commondir)`, `Edit(${folders}/other/commondir)`, `Edit(${folders}/${name}/commondir)`,
       `Edit(${folders}/*/config.worktree)`, `Edit(${folders}/other/config.worktree)`, `Edit(${folders}/${name}/config.worktree)`,
     ]);
+    // The worker rules that Bash(gh *), Bash(git push *), WebFetch and the .claude deny already match are left out.
+    assert.deepEqual(settings.permissions.deny.slice(-6), ['mcp__*', 'Bash(gh *)', 'Bash(git push *)', 'Read(.env)', 'Read(.env.*)', 'Read(secrets/**)']);
+    assert.deepEqual(settings.permissions.ask, [
+      'Bash(rm -r*)', 'Bash(rm -R*)', 'Bash(rm -fr*)', 'Bash(rm -fR*)', 'Bash(rm * -r*)', 'Bash(rm * -R*)', 'Bash(rm *--recursive*)',
+      `Edit(${w}/.github/**)`, 'Edit(//**/.git)', 'Edit(//**/.git/**)',
+    ]);
     assert.deepEqual(settings.sandbox.network, { strictAllowlist: true, allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
     assert.equal(settings.permissions.defaultMode, 'dontAsk');
+  }
+});
+
+test('worker-settings --supervised: writes the worker rules without a host path into the worktree, never over another file', () => {
+  const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  const args = ['--supervised', join(base, 'wt')];
+  const file = join(base, 'wt/.claude/settings.local.json');
+  const exclude = join(base, 'main/.git/info/exclude');
+  mkdirSync(join(base, 'main/.git/info'));
+  writeFileSync(exclude, '*.log');
+  const written = run(args, base);
+  assert.equal(written.status, 0, written.stderr);
+  const { permissions } = JSON.parse(readFileSync(file, 'utf8'));
+  assert.deepEqual(Object.keys(permissions), ['deny', 'ask']);
+  // A rule that ends in :* is a prefix rule, so the : refspec deny must end otherwise.
+  assert.ok(permissions.deny.includes('Bash(gh pr merge *)') && permissions.deny.includes('Bash(git push * :**)') && permissions.deny.includes('Read(.env)'));
+  assert.deepEqual(permissions.ask.slice(0, 3), ['Bash(git push *)', 'Bash(gh pr create *)', 'Bash(gh pr comment *)']);
+  assert.deepEqual(permissions.ask.slice(-5), ['Edit(/.claude/**)', 'Edit(/.github/**)', 'Edit(//**/.git)', 'Edit(//**/.git/**)', 'WebFetch']);
+  assert.equal(run(args, base).status, 0);
+  assert.equal(readFileSync(exclude, 'utf8'), '*.log\n/.claude/settings.local.json\n');
+  const checked = run(['--check', ...args], base);
+  assert.equal(checked.status, 0, checked.stderr);
+  writeFileSync(exclude, '');
+  const unexcluded = run(['--check', ...args], base);
+  assert.equal(unexcluded.status, 1);
+  assert.match(unexcluded.stderr, /does not list \/\.claude\/settings\.local\.json/);
+  assert.equal(run(args, base).status, 0);
+  assert.equal(readFileSync(exclude, 'utf8'), '/.claude/settings.local.json\n');
+  for (const content of ['{"permissions":{}}\n', '']) {
+    writeFileSync(file, content);
+    const { status, stderr } = run(['--check', ...args], base);
+    assert.equal(status, 1);
+    assert.match(stderr, /is not the settings file this script writes/);
+    const rewrite = run(args, base);
+    assert.equal(rewrite.status, 1);
+    assert.match(rewrite.stderr, /exists with other content: not overwritten/);
+    assert.equal(readFileSync(file, 'utf8'), content);
+  }
+  const relativePath = run(['--supervised', 'wt'], base);
+  assert.equal(relativePath.status, 1);
+  assert.match(relativePath.stderr, /^wt is not an absolute path/);
+  // The main checkout, whose .git is a folder, and a mistyped path are no linked worktree; a stale .git names a shared .git that is gone.
+  mkdirSync(join(base, 'stale'));
+  writeFileSync(join(base, 'stale/.git'), `gitdir: ${base}/gone/.git/worktrees/stale\n`);
+  for (const [folder, error] of [['main', /EISDIR/], ['no/such/wt', /ENOENT/], ['stale', /ENOENT/]]) {
+    const { status, stderr } = run(['--supervised', join(base, folder)], base);
+    assert.equal(status, 1, folder);
+    assert.match(stderr, error, folder);
+    assert.equal(existsSync(join(base, folder, '.claude')), false, folder);
+  }
+  assert.equal(existsSync(join(base, 'gone')), false);
+  // Links a repository can commit: .claude to a folder outside the worktree, the file itself to a path that does not exist yet.
+  mkdirSync(join(base, 'outside'));
+  for (const name of ['linked', 'dangling']) {
+    mkdirSync(join(base, 'main/.git/worktrees', name));
+    mkdirSync(join(base, name));
+    writeFileSync(join(base, name, '.git'), `gitdir: ${base}/main/.git/worktrees/${name}\n`);
+  }
+  symlinkSync(join(base, 'outside'), join(base, 'linked/.claude'));
+  mkdirSync(join(base, 'dangling/.claude'));
+  symlinkSync(join(base, 'outside/target.json'), join(base, 'dangling/.claude/settings.local.json'));
+  for (const [folder, error] of [['linked', /\.claude is a link: not written or read/], ['dangling', /EEXIST/]]) {
+    const { status, stderr } = run(['--supervised', join(base, folder)], base);
+    assert.equal(status, 1, folder);
+    assert.match(stderr, error, folder);
+    assert.deepEqual(readdirSync(join(base, 'outside')), [], folder);
   }
 });
 
