@@ -1,4 +1,4 @@
-// Coordinator context rotation (orchestrating-projects): when the session's project root holds the coordinator's handoff
+// Coordinator context rotation (cl-orchestration:coordinate): when the session's project root holds the coordinator's handoff
 // file and the file names this session's id, an idle Stop above the plugin's threshold clears the context with /clear and
 // submits a resume prompt, and a clear or compaction hands the file back to the model, with the git drift since the
 // coordinator wrote it. Otherwise every hook here passes. It reads and writes that one file, reads git, and sends nothing.

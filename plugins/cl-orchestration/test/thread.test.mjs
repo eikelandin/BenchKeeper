@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { reviewThreads, thread } from '../skills/orchestrating-projects/thread.mjs';
+import { reviewThreads, thread } from '../skills/coordinate/thread.mjs';
 
 const POLICY = { startLabel: 'agent-ready', trustedAuthors: ['helper[bot]'] };
 const by = (login, author_association, body, id) => ({ user: { login }, author_association, body, created_at: `2026-01-0${id}T00:00:00Z`, html_url: `https://github.com/owner/project/issues/7#issuecomment-${id}` });
@@ -112,7 +112,7 @@ test('reviewThreads: a failed permission lookup or a thread longer than one page
 });
 
 test('thread: the command line writes only into the run folder, never through .. or a link, and refuses any other file with exit 2', () => {
-  const script = fileURLToPath(new URL('../skills/orchestrating-projects/thread.mjs', import.meta.url));
+  const script = fileURLToPath(new URL('../skills/coordinate/thread.mjs', import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-thread-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   mkdirSync(join(dir, 'elsewhere'));
@@ -131,7 +131,7 @@ test('thread: the command line writes only into the run folder, never through ..
 });
 
 test('thread: the command line reads the issue from the project\'s repository', () => {
-  const script = fileURLToPath(new URL('../skills/orchestrating-projects/thread.mjs', import.meta.url));
+  const script = fileURLToPath(new URL('../skills/coordinate/thread.mjs', import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-thread-cli-'));
   const bin = join(dir, 'bin');
   mkdirSync(bin);

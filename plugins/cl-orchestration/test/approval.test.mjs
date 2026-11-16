@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { answer, missing } from '../skills/orchestrating-projects/approval.mjs';
+import { answer, missing } from '../skills/coordinate/approval.mjs';
 
-const SKILL = '../skills/orchestrating-projects/';
+const SKILL = '../skills/coordinate/';
 const WHAT = 'What: Approve the design of the streamed export (plan: docs/plans/export.md).';
 const MERGES = '| Merges | the coordinator after green checks; .github stays for the owner |';
 const COST = '| Cost | 2 worker sessions, about 3 hours (unverified) |';

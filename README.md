@@ -41,7 +41,7 @@ Codex reads the same marketplace. In Codex, `cl-orchestration` gives the skill t
 ```sh
 codex plugin marketplace add CedarLoom/cedarloom@stable
 codex plugin add cl-workflow@cedarloom
-codex plugin add cl-setup@cedarloom
+codex plugin add cl-repo@cedarloom
 codex plugin add cl-orchestration@cedarloom
 ```
 
@@ -53,8 +53,8 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 |---|---|---|
 | `cedarloom` | The bundle: installs the three plugins below together. | none of its own |
 | `cl-workflow` | The `workflow` skill, which the agent starts before the first edit: it picks the task kind (software change, docs pass, research) and the depth (quick, standard, deep), then runs the planning, test, review and verify agents that depth needs. Hooks that keep terminal questions and plan mode off unless you allow them, a role guard that keeps merges, releases and pushes to the default branch with the coordinator, and an optional status band. | `/cl-workflow:plan <task>` settles one task and writes the plan. `/cl-workflow:ask` allows terminal questions for a while. `/cl-workflow:questions` asks you the open question issues in batches and records each answer. `/cl-workflow:workflow` starts the workflow by hand. |
-| `cl-setup` | Skills that set up and maintain a repository: agent instructions, the dev container, the coordinator's policy file, a maintenance pass and reviews of rules files and docs. Each change is a plan item you approve first. | `/cl-setup:setting-up-projects`, `/cl-setup:maintaining-repos`, `/cl-setup:reviewing-rules`, `/cl-setup:audit`, `/cl-setup:improve`, `/cl-setup:debloat` |
-| `cl-orchestration` | A coordinator that works labeled issues of several projects in parallel with worker jobs, has a fresh reviewer check each pull request, merges only where the repository's written policy allows, and resumes from a handoff file after a clear or compaction. | `/cl-orchestration:orchestrating-projects` with the project paths |
+| `cl-repo` | Skills that set up and maintain a repository: agent instructions, the dev container, the coordinator's policy file, a maintenance pass and audits of rule files, docs and code. Each change is a plan item you approve first. | `/cl-repo:setup`, `/cl-repo:maintain`, `/cl-repo:audit`, `/cl-repo:improve`, `/cl-repo:debloat` |
+| `cl-orchestration` | A coordinator that works labeled issues of several projects in parallel with worker jobs, has a fresh reviewer check each pull request, merges only where the repository's written policy allows, and resumes from a handoff file after a clear or compaction. | `/cl-orchestration:coordinate` with the project paths |
 
 The role guard refuses merges, releases and pushes to the default branch in every session without `CEDARLOOM_ROLE=coordinator` in its environment, your own sessions included. Start only the coordinator's session with it, for example `CEDARLOOM_ROLE=coordinator claude` ([The plugins](docs/plugins.md)).
 
@@ -71,14 +71,14 @@ Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugi
 
 ## Typical flow
 
-1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without the coordinator. Update with the commands under [Update](#update).
-2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-setup:setting-up-projects`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](plugins/cl-orchestration/skills/orchestrating-projects/policy.md)). The coordinator starts nothing until that file is on the default branch.
+1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-repo` is enough without the coordinator. Update with the commands under [Update](#update).
+2. Once per repository, start a session there (`cd <repo>`, then `claude`) and run `/cl-repo:setup`. It also writes the coordinator's policy, `docs/agents/orchestration.json`, whose `startLabel` names the label that lets the coordinator start an issue ([policy](plugins/cl-orchestration/skills/coordinate/policy.md)). The coordinator starts nothing until that file is on the default branch.
 3. Per task, without the coordinator:
    - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
-   - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
+   - Keep the repository in shape with `/cl-repo:maintain`, and run `/cl-repo:audit`, `/cl-repo:improve` and `/cl-repo:debloat` on its instructions, docs or code.
 4. Per issue, with the coordinator (needs `cl-orchestration`):
    - Label the issues with the `startLabel` (`cedarloom:ready-for-agent` by default).
-   - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/orchestrating-projects/orca.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
+   - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:coordinate <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/coordinate/orca.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
    - The coordinator's questions go to the project's repository when it is private, else to the local queue `.cedarloom/questions/`; `/cl-workflow:questions` asks them. Labels: [owner questions](docs/plugins.md#owner-questions).
 
 ## Update

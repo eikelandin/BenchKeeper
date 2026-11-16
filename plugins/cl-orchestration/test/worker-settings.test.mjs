@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { supervisedSettings } from '../skills/orchestrating-projects/worker-settings.mjs';
+import { supervisedSettings } from '../skills/coordinate/worker-settings.mjs';
 
-const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/worker-settings.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../skills/coordinate/worker-settings.mjs', import.meta.url));
 const run = (args, cwd) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd });
 
 // A linked worktree as git lays it out: the worktree's .git file names its folder under the main checkout's .git. The real path, since the rules take the shared .git's (the macOS temporary folder is a link).
