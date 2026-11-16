@@ -72,8 +72,9 @@ const vetted = async ($: EngineInterface) => {
   return text !== null && (await safe($)) ? text : null
 }
 // After a clear or compaction gave this process a new session id: a file that still names the id it had moves to the new
-// one. A file another session took over, or one this process never owned, stays as it is.
+// one. A file another session took over, one this process never owned, or a run on no surface (a -p run) leaves it as it is.
 async function takeOver($: EngineInterface) {
+  if ((await $.session.surfaces()).length === 0) return
   const id = await $.session.id()
   if (previous === null || !id || id === previous) return
   const text = await $.fs.read(await handoff($)).catch(() => null)

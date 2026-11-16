@@ -273,6 +273,15 @@ test('with rotation off, a clear of its own still moves the file to the new sess
   expect((await $.classic.SessionStart({ source: 'clear' })).additionalContext?.[1]).toContain('\nrun r1\nSession: s2\n\n## Next\nwatch #12\n')
 })
 
+test('a -p run that resumed the coordinator session leaves the file alone when it clears', async ($, on) => {
+  const e = engine(on, { surfaces: [] })
+  const file = e.files[PATH]
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  e.id.value = 's2'
+  await $.classic.SessionStart({ source: 'clear' })
+  expect(e.files[PATH]).toBe(file)
+})
+
 test('a file a coordinator resumed in another process took over stays with it after this process clears', async ($, on) => {
   const e = engine(on)
   await $.turn.start({ turnId: 't1', text: 'go on' })
