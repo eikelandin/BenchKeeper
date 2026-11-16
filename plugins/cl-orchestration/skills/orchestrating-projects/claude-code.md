@@ -57,7 +57,7 @@ Supervised only ([modes](runners.md#modes)): a worker shares this session's mode
 
 ## Gates
 
-Supervised only, so every question put to the owner is a gate ([Gates](runners.md#gates)). The worker reports `BLOCKED` with the question and holds no slot while it waits; keep its agent id. After the owner's answer, once a slot is free ([Host limit](#host-limit)), `SendMessage` the chosen option to that agent id, in your own words: it resumes the worker with its context, and the final result of that turn is its new report ([Reports](#reports)). Without the agent (a restart), the answer goes to a fresh worker in its worktree as [Gates](runners.md#gates) says.
+Supervised only, so every question put to the owner is a gate ([Gates](runners.md#gates)). The worker reports `BLOCKED` with the question and holds no slot while it waits; keep its agent id. After the owner's answer, once `workersPerProject` and `hostWorkerLimit` both have a free slot ([SKILL.md](SKILL.md#loop), step 5), `SendMessage` the chosen option to that agent id, in your own words: it resumes the worker with its context, and the final result of that turn is its new report ([Reports](#reports)). Without the agent (a restart), the answer goes to a fresh worker in its worktree as [Gates](runners.md#gates) says.
 
 ## Write scope
 

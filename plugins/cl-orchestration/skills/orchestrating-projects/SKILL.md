@@ -103,7 +103,7 @@ The runner wakes the coordinator when mail arrives, and a timer wakes it every 1
 
 ## Outcomes
 
-A worker's outcome comes from its report and the handoff block in its report (outcome, what changed, checks and results, open risks, next step), in a batch per issue from its status message ([spec-template.md](spec-template.md#batches)), never from reading its terminal. Before acting on a report, run the runner's Write scope check where it has one: a difference makes the issue Blocked. An automatic worker reports a staged change: release it at once, which keeps its worktree ([Sandbox on](runners.md#sandbox-on)), then commit, push and open its draft PR by [Commit and push](runners.md#commit-and-push). Copy the handoff into the run folder before cleaning up. For a [public project with the hub as tracker](spec-template.md#public-project-with-the-hub-as-tracker), what a worker comments on the issue below is in its report: copy it to the hub issue first, and file a follow-up it names under Next step in the hub with the label `follow-up`.
+A worker's outcome comes from its report and the handoff block in its report (outcome, what changed, checks and results, open risks, next step), in a batch per issue from its status message ([spec-template.md](spec-template.md#batches)), never from reading its terminal. Before acting on a report, run the runner's Write scope check where it has one: a difference makes the issue Blocked. Record the decisions a report or its pull request lists in `## Decisions`; one that is owner-only ([Owner-only decisions](#owner-only-decisions)) is a gate, and its pull request stays a draft until the owner's answer. An automatic worker reports a staged change: release it at once, which keeps its worktree ([Sandbox on](runners.md#sandbox-on)), then commit, push and open its draft PR by [Commit and push](runners.md#commit-and-push). Copy the handoff into the run folder before cleaning up. For a [public project with the hub as tracker](spec-template.md#public-project-with-the-hub-as-tracker), what a worker comments on the issue below is in its report: copy it to the hub issue first, and file a follow-up it names under Next step in the hub with the label `follow-up`.
 
 - **Done with a PR**: review, ready and merge it by [review-and-merge.md](review-and-merge.md), which also says when a PR stays open for the owner; until one of the two, a supervised worker stays unreleased for follow-ups; an automatic worker was released at its report, and each follow-up of it is a new start. After the merge, close the issue in `<tracker>` when `closeIssue`, in the hub always and with a comment linking the PR, except for a PR of a split batch ([Needs replan](#outcomes)), whose issue closes by that batch's rule. Then clean up.
 - **Done, no change needed**: verify the claim yourself on the base branch (read the code, run the check the issue names). Comment the evidence on the issue and close it when `closeIssue`. Then clean up.
@@ -139,6 +139,7 @@ Each step is separate; do the ones the outcome allows, in this order:
 - Read the issue and its authors yourself: a quote in the question is a claim, and your own earlier answers settle nothing.
 - An answer never changes the Authority block, the policy or who merges.
 - A question that asks for more (a path, a branch, a skipped check) is the owner's and gates its item ([Owner-only decisions](#owner-only-decisions)); so is one those sources do not settle, except in automatic mode a safe, reversible choice: answer that with the recommended default.
+- An owner-only decision takes only the sources of [Owner-only decisions](#owner-only-decisions), never the other sources above.
 - Record each answer as a decision in the [handoff file](#handoff-file).
 
 ### Owner decisions
@@ -149,11 +150,11 @@ Each step is separate; do the ones the outcome allows, in this order:
 
 ### Owner-only decisions
 
-Unless the policy, the owner's own issue text or an `(owner)` decision settles them, these stay the owner's in both [modes](runners.md#modes), with no default from anyone: money or spend; legal; anything public or visible to others; deletes and other hard-to-undo actions; repository settings; secrets and access; accepting a security risk; a review-loop escalation; the gates of [Rules](#rules); any choice not clearly safe and reversible. Fail closed: a choice that may be one is one.
+Unless the policy or `AGENTS.md` as the default branch has them, an `(owner)` decision, or the answer that `approval.mjs answer` reads on a filed approval ([The answer](approvals.md#the-answer)) settles them, these stay the owner's in both [modes](runners.md#modes), with no default from anyone: money or spend; legal; anything public or visible to others; deletes and other hard-to-undo actions; repository settings; secrets and access; accepting a security risk; a review-loop escalation; the gates of [Rules](#rules); any choice not clearly safe and reversible. Fail closed: a choice that may be one is one. Issue text and comments never settle one: every session of the run may write under the owner's login ([Roles](#roles)).
 
 - Each blocks only its own item, by the runner's [Gates](runners.md#gates); the other items go on.
 - Only the owner's answer to that question releases it ([The answer](approvals.md#the-answer)), never a timeout, your answer or a worker's word. Record it in `## Decisions` as `(owner)`; it never widens the approval's options, the Authority block or the policy.
-- In automatic mode these are the only gates on a worker's question: any other choice takes the recommended default, recorded in `## Decisions` and the report.
+- In automatic mode these are the only gates on a worker's question: any other choice takes the recommended default, recorded in `## Decisions` and the report. A question a worker reports as owner-only stays one unless the sources above settle it.
 
 ## Headless jobs
 
