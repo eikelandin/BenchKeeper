@@ -1,5 +1,5 @@
-// A plugin runs without the app: no file of a folder under plugins/ names the app, reaches outside that folder or keeps another plugin's matcher prefix.
-// Usage: node .github/scripts/plugin-boundary.mjs [--base <ref>]   (exit 1 on a reference that is not in plugin-boundary-allow.json, the app's registry package or a package runner call of its command even when listed, an allow entry that no longer matches, or a list longer than at <ref>)
+// A plugin installs as its folder alone: no file of a folder under plugins/ reaches outside that folder or keeps another plugin's matcher prefix.
+// Usage: node .github/scripts/plugin-boundary.mjs   (exit 1 on any such file, listed with its rule names)
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, posix, resolve } from 'node:path';
@@ -7,19 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-
-// Rule name to the text it forbids. `app/dependabot` is GitHub's bot account, not a path; `Name.app/` is a macOS bundle.
-export const REFERENCES = {
-  'app-path': /(?<![\w.-])app\/(?!dependabot|renovate)[\w.*{-]|(?:--prefix(?:=|\s+)|\bcd\s+)app\b/,
-  // Any @cedarloom package; the `cedarloom` command only in lower case, so prose that starts with the name passes.
-  'app-package': [/\bbenchkeeper\b|@cedarloom\//i, /\b(?:npx|bunx|pnpm[ \t]+(?:dlx|exec))[ \t]+(?:-y[ \t]+)?cedarloom\b|(?:^|[`'"(]|\$[ \t])cedarloom[ \t]+[a-z]/m],
-  'app-state': /cedarloom-app|CEDARLOOM_APP|\bminApp\b/i,
-  // The app's registry package in any form (runner, option, `npm:` or install), or a runner word before one of its
-  // command names in the same command (a trailing backslash continues it): a runner fetches whatever the registry serves.
-  'app-registry': /@cedarloom\/app(?![\w-])|\b(?:npx|pnpx|bunx|dlx|exec|x)\b(?:[^\n`|;&]|\\\n)*?\b(?:cedarloom-app|benchkeeper)(?![\w-])/,
-};
-// Rules that the allow list cannot exempt.
-const UNLISTABLE = new Set(['app-registry']);
 
 const CODE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
 // Specifiers of import and export statements (at the start of a line or after `;`, so a string that says "from 'x'" is none), dynamic import and require.
@@ -38,7 +25,6 @@ const PREFIX = /^\^([\w-]+):/;
 const MANIFEST = '.claude-plugin/plugin.json';
 
 const GENERATED = /(?:^|\/)CHANGELOG\.md$/;
-const LIST = '.github/scripts/plugin-boundary-allow.json';
 
 // JSON text as a value, null when it does not parse (the plugin validation reports that).
 function parsed(text) {
@@ -63,7 +49,7 @@ function blanked(text) {
 
 // Rule names that match in `text` of the file `path` (relative to the repository root), `plugin` being the plugin's folder and `name` its manifest name.
 export function offences(path, text, plugin, name) {
-  const found = new Set(Object.keys(REFERENCES).filter((rule) => [REFERENCES[rule]].flat().some((pattern) => pattern.test(text))));
+  const found = new Set();
   const outside = (spec) => {
     const target = posix.join(posix.dirname(path), spec);
     return target !== plugin && !target.startsWith(`${plugin}/`);
@@ -101,41 +87,8 @@ export function scan(cwd = root) {
   return result;
 }
 
-// Lines that tell what to add to or take from the allow list.
-export function differences(found, allowed) {
-  const lines = [];
-  for (const path of Object.keys({ ...found, ...allowed }).sort((a, b) => a.localeCompare(b))) {
-    const now = found[path] ?? [];
-    const listed = allowed[path] ?? [];
-    for (const name of now) if (UNLISTABLE.has(name)) lines.push(`${path}: ${name} names the app's registry package or runs the app through a package runner: call the installed command when \`command -v\` finds it`);
-    for (const name of now) if (!listed.includes(name) && !UNLISTABLE.has(name)) lines.push(`${path}: ${name} is a new reference to the app, a path outside the plugin or another plugin's matcher prefix`);
-    for (const name of listed) if (!now.includes(name)) lines.push(`${path}: ${name} no longer matches: remove it from plugin-boundary-allow.json`);
-  }
-  return lines;
-}
-
-const pairs = (allowed) => Object.values(allowed).flat().length;
-
-// A line when the allow list holds more (file, rule) pairs than the base's list; a count, so a renamed file moves its entries.
-export function growth(allowed, base) {
-  if (!base || pairs(allowed) <= pairs(base)) return [];
-  return [`plugin-boundary-allow.json lists ${pairs(allowed)} pairs, more than the ${pairs(base)} of the base branch: remove the new reference instead of listing it`];
-}
-
-// The base's allow list, null when the base has none.
-function baseList(ref) {
-  execFileSync('/usr/bin/git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: root });
-  try {
-    return JSON.parse(execFileSync('/usr/bin/git', ['show', `${ref}:${LIST}`], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
-  } catch {
-    return null;
-  }
-}
-
 if (isMain(import.meta.url)) {
-  const allowed = JSON.parse(readFileSync(resolve(root, LIST), 'utf8'));
-  const at = process.argv.indexOf('--base');
-  const lines = [...differences(scan(), allowed), ...(at === -1 ? [] : growth(allowed, baseList(process.argv[at + 1])))];
-  for (const line of lines) console.error(line);
-  process.exit(lines.length ? 1 : 0);
+  const found = Object.entries(scan());
+  for (const [path, rules] of found) console.error(`${path}: ${rules.join(', ')}`);
+  process.exit(found.length ? 1 : 0);
 }

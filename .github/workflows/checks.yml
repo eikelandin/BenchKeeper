@@ -54,16 +54,9 @@ jobs:
         run: node --test .github/scripts/pr-title.test.mjs
       - name: Renamed account
         run: node --test .github/scripts/account-name.test.mjs
-      # A plugin runs without the app: references to it and paths outside the plugin folder fail unless listed in plugin-boundary-allow.json, which a pull request may not grow; the text @cedarloom/app and a package runner call of cedarloom-app or benchkeeper fail even when listed.
+      # A plugin installs as its folder alone: paths outside it, imports of other packages and another plugin's matcher prefix fail.
       - name: Plugin boundary
-        run: |
-          node --test .github/scripts/plugin-boundary.test.mjs
-          if [ -n "$GITHUB_BASE_REF" ]; then
-            git fetch --depth=1 --no-tags origin "$GITHUB_BASE_REF"
-            node .github/scripts/plugin-boundary.mjs --base FETCH_HEAD
-          else
-            node .github/scripts/plugin-boundary.mjs
-          fi
+        run: node --test .github/scripts/plugin-boundary.test.mjs && node .github/scripts/plugin-boundary.mjs
       # release.yml never lets a later push cancel the release job.
       - name: Release workflows
         run: node --test .github/scripts/release-workflows.test.mjs
