@@ -18,7 +18,12 @@
     "autoAllowBashIfSandboxed": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
-    "network": { "strictAllowlist": true, "allowedDomains": ["registry.npmjs.org"] },
+    "allowAppleEvents": false,
+    "allowNestedUserNamespaces": false,
+    "enableWeakerNestedSandbox": false,
+    "enableWeakerNetworkIsolation": false,
+    "network": { "strictAllowlist": true, "allowLocalBinding": false, "allowedDomains": ["registry.npmjs.org"] },
+    "filesystem": { "disabled": false, "denyWrite": ["//W/.git"] },
     "credentials": {
       "files": [
         { "path": "~/.ssh", "mode": "deny" },
@@ -32,7 +37,8 @@
       ],
       "envVars": [
         { "name": "GH_TOKEN", "mode": "deny" }, { "name": "GITHUB_TOKEN", "mode": "deny" },
-        { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" }
+        { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" },
+        { "name": "ORCA_PAIRING_CODE", "mode": "deny" }, { "name": "ORCA_AGENT_SESSION_SPAWN_TOKEN", "mode": "deny" }
       ]
     }
   }
