@@ -7,30 +7,36 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/worker-settings.mjs', import.meta.url));
-const run = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
+const run = (args, cwd) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd });
 
 // A linked worktree as git lays it out: the worktree's .git file names its folder under the main checkout's .git.
-function worktree(gitdirLine) {
+function worktree(name, gitdirLine) {
   const base = mkdtempSync(join(tmpdir(), 'worker-settings-'));
-  mkdirSync(join(base, 'main/.git/worktrees/wt'), { recursive: true });
-  mkdirSync(join(base, 'wt'));
-  writeFileSync(join(base, 'wt/.git'), gitdirLine(base));
+  mkdirSync(join(base, 'main/.git/worktrees', name), { recursive: true });
+  mkdirSync(join(base, name));
+  writeFileSync(join(base, name, '.git'), gitdirLine(base));
   return base;
 }
 
-test('worker-settings: fills the worktree, its folder under the shared .git and the hosts into the template', () => {
-  for (const line of [(base) => `gitdir: ${base}/main/.git/worktrees/wt\n`, () => 'gitdir: ../main/.git/worktrees/wt\n']) {
-    const base = worktree(line);
+test('worker-settings: fills the worktree, the shared .git and the hosts into the template', () => {
+  for (const [name, line] of [
+    ['wt', (base) => `gitdir: ${base}/main/.git/worktrees/wt\n`],
+    ['wt', () => 'gitdir: ../main/.git/worktrees/wt\n'],
+    ['w$$t', (base) => `gitdir: ${base}/main/.git/worktrees/w$$t\n`],
+  ]) {
+    const base = worktree(name, line);
     const file = join(base, 'run/settings/1-x.json');
-    const { status, stderr } = run(join(base, 'wt'), file, 'registry.npmjs.org', '*.pythonhosted.org');
+    const { status, stderr } = run([join(base, name), file, 'registry.npmjs.org', '*.pythonhosted.org']);
     assert.equal(status, 0, stderr);
     const settings = JSON.parse(readFileSync(file, 'utf8'));
-    assert.deepEqual(settings.permissions.allow, [`Edit(/${base}/wt/**)`]);
-    assert.deepEqual(settings.permissions.deny.slice(0, 12), [
-      `Edit(/${base}/wt/.claude/**)`, `Edit(/${base}/wt/.mcp.json)`, `Edit(/${base}/wt/.vscode/**)`, `Edit(/${base}/wt/.idea/**)`,
-      `Edit(/${base}/wt/.bashrc)`, `Edit(/${base}/wt/.zshrc)`, `Edit(/${base}/wt/.gitconfig)`,
-      `Edit(/${base}/wt/.envrc)`, `Edit(/${base}/wt/.npmrc)`, `Edit(/${base}/wt/.husky/**)`,
-      `Edit(/${base}/main/.git/worktrees/wt/commondir)`, `Edit(/${base}/main/.git/worktrees/wt/config.worktree)`,
+    const w = `/${base}/${name}`;
+    assert.deepEqual(settings.permissions.allow, [`Edit(${w}/**)`]);
+    assert.deepEqual(settings.permissions.deny.slice(0, 14), [
+      `Edit(${w}/.claude/**)`, `Edit(${w}/.mcp.json)`, `Edit(${w}/.vscode/**)`, `Edit(${w}/.idea/**)`,
+      `Edit(${w}/.bashrc)`, `Edit(${w}/.zshrc)`, `Edit(${w}/.gitconfig)`,
+      `Edit(${w}/.envrc)`, `Edit(${w}/.npmrc)`, `Edit(${w}/.husky/**)`,
+      `Edit(/${base}/main/.git/commondir)`, `Edit(/${base}/main/.git/config.worktree)`,
+      `Edit(/${base}/main/.git/worktrees/*/commondir)`, `Edit(/${base}/main/.git/worktrees/*/config.worktree)`,
     ]);
     assert.deepEqual(settings.sandbox.network, { strictAllowlist: true, allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
     assert.equal(settings.permissions.defaultMode, 'dontAsk');
@@ -38,23 +44,27 @@ test('worker-settings: fills the worktree, its folder under the shared .git and 
 });
 
 test('worker-settings: writes no file for a path, a host or a worktree it cannot fill in safely', () => {
-  const base = worktree((b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  mkdirSync(join(base, 'main/.git/worktrees/w*t'));
   mkdirSync(join(base, 'w*t'));
-  writeFileSync(join(base, 'w*t/.git'), `gitdir: ${base}/main/.git/worktrees/wt\n`);
-  mkdirSync(join(base, 'main/.git/objects'));
+  writeFileSync(join(base, 'w*t/.git'), `gitdir: ${base}/main/.git/worktrees/w*t\n`);
+  mkdirSync(join(base, 'main/.git/modules/sub'), { recursive: true });
+  mkdirSync(join(base, 'sub'));
+  writeFileSync(join(base, 'sub/.git'), `gitdir: ${base}/main/.git/modules/sub\n`);
   const file = join(base, 'run/settings/1-x.json');
-  for (const args of [
-    [join(base, 'wt'), file],
-    [join(base, 'wt'), file, '*'],
-    [join(base, 'wt'), file, 'localhost'],
-    [join(base, 'w*t'), file, 'registry.npmjs.org'],
-    [join(base, 'main'), file, 'registry.npmjs.org'],
-    ['wt', file, 'registry.npmjs.org'],
-    [join(base, 'wt'), join(base, 'wt/settings.json'), 'registry.npmjs.org'],
+  const inWorktree = [join(base, 'wt/settings.json'), join(base, 'wt/..settings.json')];
+  for (const [args, error] of [
+    [[join(base, 'wt'), file], /^length at sandbox\.allowedDomains/],
+    [[join(base, 'wt'), file, '*'], /^pattern at sandbox\.allowedDomains\[0\]/],
+    [[join(base, 'wt'), file, 'localhost'], /^pattern at sandbox\.allowedDomains\[0\]/],
+    [[join(base, 'w*t'), file, 'registry.npmjs.org'], /is not an absolute path without a pattern character/],
+    [['wt', file, 'registry.npmjs.org'], /^wt is not an absolute path without a pattern character/],
+    [[join(base, 'sub'), file, 'registry.npmjs.org'], /not a linked worktree/],
+    ...inWorktree.map((inside) => [[join(base, 'wt'), inside, 'registry.npmjs.org'], /^the settings file must lie outside the worktree/]),
   ]) {
-    const { status, stderr } = run(...args);
+    const { status, stderr } = run(args, base);
     assert.equal(status, 1, args.join(' '));
-    assert.notEqual(stderr, '');
-    assert.equal(existsSync(file) || existsSync(join(base, 'wt/settings.json')), false);
+    assert.match(stderr, error, args.join(' '));
+    assert.equal([file, ...inWorktree].some((path) => existsSync(path)), false);
   }
 });

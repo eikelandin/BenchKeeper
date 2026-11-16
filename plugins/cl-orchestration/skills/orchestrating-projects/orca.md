@@ -30,7 +30,7 @@ A Claude Code worker starts in a worktree of its own, then by its project's [mod
 ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
 ```
 
-Supervised: Orca's own launch, on the host's default Claude Code login. It passes no other launch flag, so the worker runs without `--autocompact 200k` and with prompt suggestions on.
+Supervised: Orca's own launch, on the host's default Claude Code login. It passes no other launch flag, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: the worker inherits the variable when Orca's environment or the terminal's login shell sets it (unverified: not measured), and the role guard then takes it for the coordinator. So `CEDARLOOM_ROLE` goes on the coordinator's launch line only (`CEDARLOOM_ROLE=coordinator claude`); while it is exported in a shell profile or in the environment Orca started from, start no supervised Claude Code worker and tell the owner.
 
 ```text
 ORCA orchestration worker-start --spec-file <filled spec file> --worktree path:<worktree path> --agent claude --model '<model>' --effort <effort> --keep-open --json
@@ -58,7 +58,7 @@ A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled 
 - When the agent refuses the model, start without `--model` and `--effort` and say so in the report.
 - `--repo path:<project path>` is one of the selectors Orca's help lists (`id:`, `name:`, `path:`).
 - `--keep-open` keeps the worker's terminal after its report, so that a supervised worker's follow-up reaches the session that did the work while its pull request is in review or merge. `worker-release` ends it ([Clean up](#clean-up)).
-- Keep the returned dispatch id and task id per worker with its project, issues, worktree path and branch names (the spec's `<type>/<number>-<slug>`); every later command takes the dispatch id. `<branch>`, `<default branch>` and `<owner/repo>` in this file are the names of that spec.
+- Keep the returned dispatch id and task id per worker with its project, issues, worktree path and branch names (the spec's `<type>/<number>-<slug>`); every later command takes the dispatch id. A supervised follow-up (below) returns a new dispatch id: keep both. `worker-show`, `worker-read`, `send`, `worker-retain` and the stall check take the newest; `worker-release` takes each, newest first, since Orca's release closes only the terminal its own dispatch made, never a reused one (`worker-release --help`; unverified in a live run). `<branch>`, `<default branch>` and `<owner/repo>` in this file are the names of that spec.
 - A non-zero exit means no worker: read `failedStage` and `residualResources` before trying again.
 
 A follow-up to a worker still held in this run ([SKILL.md](SKILL.md#loop), step 3) has its text in a file:
@@ -212,7 +212,7 @@ ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 
 `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
-A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that no `send` carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
+A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that neither a `send` nor a dispatch of the coordinator (the start, a follow-up) carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command and, with a follow-up dispatch, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 
 Release:
 
@@ -224,7 +224,7 @@ The worktree:
 
 - `ORCA worktree rm` also tries to delete the checked-out local branch (Orca keeps it when it predates the worktree or its changes are not provably merged). Run it only with `deleteMergedBranch` true, and while `git -C <worktree path> branch --show-current` (for an automatic worker, as `gitW` of [Commit and push](runners.md#commit-and-push)) prints a branch of the spec whose pull request is merged: a batch's worktree holds one of several.
 - Never remove a blocked worker's worktree.
-- In the other cases (no merge allowed, `deleteMergedBranch` false, another or an unmerged branch checked out), remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch (unverified: whether Orca's worktree list then drops the entry).
+- In the other cases (no merge allowed, `deleteMergedBranch` false, another or an unmerged branch checked out), remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch (unverified: whether Orca's worktree list then drops the entry). For an automatic worker, first the `commondir` read of [Commit and push](runners.md#commit-and-push), then the command with the pins of its `gitW`: `git --no-replace-objects -C <project path> -c core.hooksPath=/dev/null -c core.fsmonitor=false -c protocol.ext.allow=never worktree remove <worktree path>`. The removal runs `git status` in the worktree, which can run a hook or a monitor of the worktree, and `-c` reaches that child process too.
 - The remote branch and a batch's other local branches: [SKILL.md](SKILL.md#clean-up), step 3.
 
 Before the coordinator turn ends, `ORCA orchestration worker-list --run <run id> --terminal-state reclaimable --json` returns no worker. The same list with `--terminal-state retained` shows the kept-open workers ([Host limit](#host-limit)): each settled one in it (`outcome` other than `in_progress`) has a pull request in review or merge, or a terminal a person typed in. Every other settled worker is released, retained or removed above. `worker-release` removes no worktree, so a worktree still listed by `ORCA worktree list` after its worker settled is the step above not run.
