@@ -1,5 +1,5 @@
-// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>..., both paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match. With --supervised <worktree path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json, never over a file with other content. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now. Any other input prints the error, exits 1 and writes nothing.
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>..., both paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match. With --supervised <worktree path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
+import { appendFileSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
 
@@ -18,6 +18,9 @@ export function gitCommonDir(worktree, read = (path) => readFileSync(path, 'utf8
 const covers = (deny, rule) => deny.includes(rule) || deny.some((d) => d.startsWith('Bash(') && d.endsWith(' *)') && rule.startsWith(d.slice(0, -2)));
 
 // In .claude/settings.local.json a rule path that starts with / counts from the session's starting folder, the worktree, so the file names no host path.
+const EXCLUDED = '/.claude/settings.local.json';
+const excluded = (exclude) => existsSync(exclude) && readFileSync(exclude, 'utf8').split('\n').includes(EXCLUDED);
+
 export function supervisedSettings(rules) {
   const local = (rule) => rule.replace('(//W/', '(/');
   return { permissions: { deny: rules.deny.map(local), ask: rules.ask.map(local) } };
@@ -53,10 +56,13 @@ if (isMain(import.meta.url)) {
     const rules = read('worker-rules.json');
     let file;
     let settings;
+    let exclude;
     if (supervised) {
       const [worktree, ...rest] = args;
       if (!worktree || rest.length) throw new Error('usage: node worker-settings.mjs [--check] --supervised <worktree path>');
       if (!isAbsolute(worktree)) throw new Error(`${escaped(worktree)} is not an absolute path`);
+      // A main checkout or a mistyped path would pass --check while the worker starts without its rules; git reads the shared .git's exclude for every worktree.
+      exclude = `${gitCommonDir(worktree)}/info/exclude`;
       file = `${worktree}/.claude/settings.local.json`;
       settings = supervisedSettings(rules);
     } else {
@@ -77,6 +83,7 @@ if (isMain(import.meta.url)) {
     if (check) {
       // Claude Code loads an empty file as no settings and starts without the sandbox, and another parser may read a duplicate key otherwise than JSON.parse, so the file's text must be the one this script writes.
       if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} is not the settings file this script writes for those arguments`);
+      if (supervised && !excluded(exclude)) throw new Error(`${escaped(exclude)} does not list ${EXCLUDED}: git add would stage the rule file`);
     } else if (supervised && existsSync(file)) {
       // A file the repository tracks or a person wrote stays theirs.
       if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} exists with other content: not overwritten`);
@@ -84,6 +91,11 @@ if (isMain(import.meta.url)) {
       mkdirSync(dirname(file), { recursive: true });
       // wx: no write through a dangling link in the worktree.
       writeFileSync(file, text, { flag: supervised ? 'wx' : 'w' });
+    }
+    if (supervised && !check && !excluded(exclude)) {
+      const before = existsSync(exclude) ? readFileSync(exclude, 'utf8') : '';
+      mkdirSync(dirname(exclude), { recursive: true });
+      appendFileSync(exclude, `${before && !before.endsWith('\n') ? '\n' : ''}${EXCLUDED}\n`);
     }
   } catch (e) {
     console.error(e.message);
