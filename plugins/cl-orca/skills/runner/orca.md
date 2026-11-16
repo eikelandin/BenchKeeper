@@ -54,12 +54,12 @@ A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled 
 
 - `--autocompact 200k` caps the worker's context at 200,000 tokens before it compacts, and `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` turns off the next-prompt suggestions no one reads in a worker terminal. `env` sets the variable in any login shell.
 - No permission-bypass flag anywhere in a launch. A supervised worker runs in the default permission mode, with the prompts in its terminal ([A permission dialog](#a-permission-dialog)).
-- Automatic is for a Claude Code worker only (a Codex worker of an automatic project runs supervised): write its settings file first (`runners.md#sandbox-on`), `<id>` being `<number>-<slug>`. Before each such worker, pass Automatic start (`runners.md#automatic-start`); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. A failed check or step runs the project supervised.
+- Automatic is for a Claude Code worker only (a Codex worker of an automatic project runs supervised): write its settings file first (`runners.md#sandbox-on`), `<id>` being `<number>-<slug>`. Before each such worker, pass Automatic start (`runners.md#automatic-start`); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. The `--check` read of check 2 is the last command before every `terminal create` of an automatic worker, a retry and a follow-up included. A failed check or probe step runs the project supervised, except a failed `--check` read of an item, which makes that item BLOCKED and starts no worker.
 - Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so issue text is never read by the shell.
 - The model and effort are those of the spec's `Agent:` line, the model as the reader printed it, inside single quotes. Leave out what that line gives as the agent default, and the effort whenever the model is left out.
 - An automatic worker takes its task only once its agent reached its idle prompt. A `terminal wait` that times out or ends in another state starts no worker: read its screen once (`ORCA terminal read --terminal <terminal> --screen --json`). Such a start has a worktree and a terminal but no dispatch, so neither `worker-list` nor [Clean up](#clean-up) sees them:
   - A dialog there (a trust question, a login) is the owner's (`SKILL.md#rules`). Write the issue, the terminal handle and the worktree path into the handoff file's `## Open`, list it for the owner, and count it as a working worker ([Host limit](#host-limit)) until the owner acts.
-  - Anything else is a failed start (`SKILL.md#outcomes`). Close the terminal (`ORCA terminal close --terminal <terminal> --json`); the one retry runs in that worktree with a new terminal, from `terminal create` on, and makes no second worktree.
+  - Anything else is a failed start (`SKILL.md#outcomes`). Close the terminal (`ORCA terminal close --terminal <terminal> --json`); the one retry runs in that worktree with a new terminal, from the settings file and its `--check` read on, and makes no second worktree.
 - `<number>-<slug>` takes the first issue of a batch, for the worktree, the terminal title and `--name`. `worktree create` prints the worktree path; for a Codex worker, `worker-show` gives it.
 - When the agent refuses the model, start without `--model` and `--effort` and say so in the report.
 - `--repo path:<project path>` is one of the selectors Orca's help lists (`id:`, `name:`, `path:`).
@@ -75,7 +75,7 @@ A follow-up to a worker of this run, a supervised one still held, an automatic o
   ORCA orchestration worker-start --spec-file <follow-up file> --terminal <terminal> --worktree path:<worktree path> --keep-open --json
   ```
 
-- An automatic worker was released at its report, its worktree kept ([Clean up](#clean-up)), so its follow-up is a new start: a fresh session in a new terminal of the same worktree, as at the start from `terminal create` on, with its settings file written again and the follow-up file holding the filled spec, then the follow-up. Its old terminal would not take it anyway: Orca recognises that terminal for its first dispatch only.
+- An automatic worker was released at its report, its worktree kept ([Clean up](#clean-up)), so its follow-up is a new start: a fresh session in a new terminal of the same worktree, as at the start, with its settings file written again and read with `--check`, the follow-up file holding the filled spec, then the follow-up. Its old terminal would not take it anyway: Orca recognises that terminal for its first dispatch only.
 - A Codex worker gets it as a message:
 
   ```text
@@ -86,11 +86,11 @@ A worker on `fable` that already reported gets no follow-up: release it and star
 
 ## Acknowledgement
 
-The acknowledgement is the worker's first heartbeat. A missing one sends no mail, so the coordinator sees it at the timer's wake-up ([Watch](#watch)). Orca's rule holds: silence, a startup timeout or `unverifiable` liveness proves nothing and authorizes no stop or retry.
+The acknowledgement is the worker's first heartbeat; an automatic worker sends none ([Worker reports](#worker-reports)). A missing one sends no mail, so the coordinator sees it at the timer's wake-up ([Watch](#watch)). Orca's rule holds: silence, a startup timeout or `unverifiable` liveness proves nothing and authorizes no stop or retry.
 
 - **Still starting**: `worker-show --full` reports the start not ready yet, or the terminal shows the agent loading or working. Keep waiting; it is no miss.
 - **Held at a dialog**: `worker-show --full` reports an `observation.agentWait`, or the terminal shows a dialog. It is the owner's, except a permission dialog with `permissionPrompts` `decline` ([A permission dialog](#a-permission-dialog)).
-- **A miss**: at two wake-ups at least 10 minutes apart, `worker-read --source terminal` shows the agent idle at an empty prompt and `worker-read` shows no turn on the task. Then `worker-stop` it. Only when the stop is confirmed, retry once in its worktree, an automatic worker with a new terminal made as at the start:
+- **A miss**: at two wake-ups at least 10 minutes apart, `worker-read --source terminal` shows the agent idle at an empty prompt and `worker-read` shows no turn on the task. Then `worker-stop` it. Only when the stop is confirmed, retry once in its worktree, an automatic worker with its settings file written again and read with `--check`, then a new terminal made as at the start:
 
 ```text
 ORCA orchestration worker-start --task <task id> --retry-of <dispatch id> --worktree path:<worktree path> --terminal <new terminal> --keep-open --json
@@ -115,7 +115,7 @@ An automatic worker cannot run `send` or `ask` from inside the sandbox (`runners
 
 A batch also sends one `--type status` message per issue, when that issue's pull request is up or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
 
-A worker answers a follow-up dispatch with its `worker_done`, and a follow-up message with one `--type status` message; either names the head commit it pushed, or for an automatic worker its staged files (`runners.md#commit-and-push`). That id is a claim: read `<head>` yourself (`review-and-merge.md`).
+A supervised worker answers a follow-up dispatch with its `worker_done`, and a follow-up message with one `--type status` message; either names the head commit it pushed. An automatic worker's follow-up is a new start, and its report names its staged files (`runners.md#commit-and-push`). That id is a claim: read `<head>` yourself (`review-and-merge.md`).
 
 ## Questions
 

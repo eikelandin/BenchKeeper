@@ -1,7 +1,6 @@
-// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>... Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list. With --check first, it writes nothing and exits 0 only when the file holds exactly what it would write now. Any other input prints the error, exits 1 and writes nothing.
+// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>..., both paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now. Any other input prints the error, exits 1 and writes nothing.
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
-import { isDeepStrictEqual } from 'node:util';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
 
 // A character the permission rule syntax reads as a pattern or a bracket would widen or break every rule with the path in it.
@@ -37,20 +36,20 @@ if (isMain(import.meta.url)) {
     const check = process.argv[2] === '--check';
     const [worktree, file, ...domains] = process.argv.slice(check ? 3 : 2);
     if (!file) throw new Error('usage: node worker-settings.mjs [--check] <worktree path> <settings file> <domain>...');
+    // The launch's --settings resolves a relative path in the worker's terminal folder, the worktree, not here.
+    if (!isAbsolute(file)) throw new Error(`${escaped(file)} is not an absolute path`);
     // The worker writes its worktree: a settings file there would be the worker's to change.
-    const inside = relative(worktree, resolve(file));
+    const inside = relative(worktree, file);
     if (inside !== '..' && !inside.startsWith(`..${sep}`) && !isAbsolute(inside)) throw new Error('the settings file must lie outside the worktree');
     const template = JSON.parse(readFileSync(new URL('./automatic-settings.json', import.meta.url), 'utf8'));
     const commonDir = gitCommonDir(worktree);
-    const settings = workerSettings(template, worktree, commonDir, readdirSync(`${commonDir}/worktrees`).sort(), domains);
+    const text = `${JSON.stringify(workerSettings(template, worktree, commonDir, readdirSync(`${commonDir}/worktrees`).sort(), domains), null, 2)}\n`;
     if (check) {
-      // Claude Code loads an empty file as no settings and starts without the sandbox, so the file as it is now must be the one this script writes.
-      let held;
-      try { held = JSON.parse(readFileSync(file, 'utf8')); } catch (e) { throw new Error(`${escaped(file)} is not a readable JSON file: ${escaped(e.message)}`); }
-      if (!isDeepStrictEqual(held, settings)) throw new Error(`${escaped(file)} is not the settings file this script writes for that worktree and those domains`);
+      // Claude Code loads an empty file as no settings and starts without the sandbox, and another parser may read a duplicate key otherwise than JSON.parse, so the file's text must be the one this script writes.
+      if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} is not the settings file this script writes for that worktree and those domains`);
     } else {
       mkdirSync(dirname(file), { recursive: true });
-      writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
+      writeFileSync(file, text);
     }
   } catch (e) {
     console.error(e.message);
