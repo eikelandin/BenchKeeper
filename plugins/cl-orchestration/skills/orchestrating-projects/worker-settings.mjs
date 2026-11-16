@@ -1,5 +1,5 @@
-// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>... Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git and the domains (the policy's sandbox.allowedDomains) as the network allow list. Any other input prints the error, exits 1 and writes nothing.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>... Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list. Any other input prints the error, exits 1 and writes nothing.
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
 
@@ -15,16 +15,18 @@ export function gitCommonDir(worktree, read = (path) => readFileSync(path, 'utf8
 }
 
 // In a --settings file a rule path that starts with / counts from the file's folder, so an absolute path takes a second /.
-export function workerSettings(template, worktree, commonDir, domains) {
-  for (const path of [worktree, commonDir]) if (!PLAIN.test(path)) throw new Error(`${escaped(path)} is not an absolute path without a pattern character, a bracket or a trailing /`);
+export function workerSettings(template, worktree, commonDir, worktreeFolders, domains) {
+  for (const path of [worktree, commonDir, ...worktreeFolders.map((name) => `${commonDir}/worktrees/${name}`)]) if (!PLAIN.test(path)) throw new Error(`${escaped(path)} is not an absolute path without a pattern character, a bracket or a trailing /`);
   const errors = validate({ mode: 'automatic', sandbox: { allowedDomains: domains } });
   if (errors.length) throw new Error(errors.map(errorLine).join('\n'));
   // A function as the replacement, so a $ in a path stays as written.
   const fill = (rule) => rule.replace('(//W/', () => `(/${worktree}/`).replace('(//C/', () => `(/${commonDir}/`);
+  // The sandbox keeps a folder from being renamed, and so swapped for a copy, only where a rule names its path, and on Linux it skips a pattern rule for writes.
+  const perFolder = (rule) => (rule.includes('(//C/worktrees/*/') ? [rule, ...worktreeFolders.map((name) => rule.replace('/worktrees/*/', () => `/worktrees/${name}/`))] : [rule]);
   const { permissions, sandbox } = template;
   return {
     ...template,
-    permissions: { ...permissions, allow: permissions.allow.map(fill), deny: permissions.deny.map(fill) },
+    permissions: { ...permissions, allow: permissions.allow.map(fill), deny: permissions.deny.flatMap(perFolder).map(fill) },
     sandbox: { ...sandbox, network: { ...sandbox.network, allowedDomains: domains } },
   };
 }
@@ -37,7 +39,8 @@ if (isMain(import.meta.url)) {
     const inside = relative(worktree, resolve(file));
     if (inside !== '..' && !inside.startsWith(`..${sep}`) && !isAbsolute(inside)) throw new Error('the settings file must lie outside the worktree');
     const template = JSON.parse(readFileSync(new URL('./automatic-settings.json', import.meta.url), 'utf8'));
-    const settings = workerSettings(template, worktree, gitCommonDir(worktree), domains);
+    const commonDir = gitCommonDir(worktree);
+    const settings = workerSettings(template, worktree, commonDir, readdirSync(`${commonDir}/worktrees`).sort(), domains);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
   } catch (e) {

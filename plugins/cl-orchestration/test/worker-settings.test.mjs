@@ -18,25 +18,28 @@ function worktree(name, gitdirLine) {
   return base;
 }
 
-test('worker-settings: fills the worktree, the shared .git and the hosts into the template', () => {
+test('worker-settings: fills the worktree, the shared .git, its worktrees folders and the hosts into the template', () => {
   for (const [name, line] of [
     ['wt', (base) => `gitdir: ${base}/main/.git/worktrees/wt\n`],
     ['wt', () => 'gitdir: ../main/.git/worktrees/wt\n'],
     ['w$$t', (base) => `gitdir: ${base}/main/.git/worktrees/w$$t\n`],
   ]) {
     const base = worktree(name, line);
+    mkdirSync(join(base, 'main/.git/worktrees/other'));
     const file = join(base, 'run/settings/1-x.json');
     const { status, stderr } = run([join(base, name), file, 'registry.npmjs.org', '*.pythonhosted.org']);
     assert.equal(status, 0, stderr);
     const settings = JSON.parse(readFileSync(file, 'utf8'));
     const w = `/${base}/${name}`;
+    const folders = `/${base}/main/.git/worktrees`;
     assert.deepEqual(settings.permissions.allow, [`Edit(${w}/**)`]);
-    assert.deepEqual(settings.permissions.deny.slice(0, 14), [
+    assert.deepEqual(settings.permissions.deny.slice(0, 18), [
       `Edit(${w}/.claude/**)`, `Edit(${w}/.mcp.json)`, `Edit(${w}/.vscode/**)`, `Edit(${w}/.idea/**)`,
       `Edit(${w}/.bashrc)`, `Edit(${w}/.zshrc)`, `Edit(${w}/.gitconfig)`,
       `Edit(${w}/.envrc)`, `Edit(${w}/.npmrc)`, `Edit(${w}/.husky/**)`,
       `Edit(/${base}/main/.git/commondir)`, `Edit(/${base}/main/.git/config.worktree)`,
-      `Edit(/${base}/main/.git/worktrees/*/commondir)`, `Edit(/${base}/main/.git/worktrees/*/config.worktree)`,
+      `Edit(${folders}/*/commondir)`, `Edit(${folders}/other/commondir)`, `Edit(${folders}/${name}/commondir)`,
+      `Edit(${folders}/*/config.worktree)`, `Edit(${folders}/other/config.worktree)`, `Edit(${folders}/${name}/config.worktree)`,
     ]);
     assert.deepEqual(settings.sandbox.network, { strictAllowlist: true, allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
     assert.equal(settings.permissions.defaultMode, 'dontAsk');
@@ -45,9 +48,11 @@ test('worker-settings: fills the worktree, the shared .git and the hosts into th
 
 test('worker-settings: writes no file for a path, a host or a worktree it cannot fill in safely', () => {
   const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
-  mkdirSync(join(base, 'main/.git/worktrees/w*t'));
-  mkdirSync(join(base, 'w*t'));
-  writeFileSync(join(base, 'w*t/.git'), `gitdir: ${base}/main/.git/worktrees/w*t\n`);
+  // A folder under worktrees that no rule can name refuses every worktree beside it, so the pattern-named one has a .git of its own.
+  const patterned = worktree('w*t', (b) => `gitdir: ${b}/main/.git/worktrees/w*t\n`);
+  mkdirSync(join(patterned, 'main/.git/worktrees/wt'));
+  mkdirSync(join(patterned, 'wt'));
+  writeFileSync(join(patterned, 'wt/.git'), `gitdir: ${patterned}/main/.git/worktrees/wt\n`);
   mkdirSync(join(base, 'main/.git/modules/sub'), { recursive: true });
   mkdirSync(join(base, 'sub'));
   writeFileSync(join(base, 'sub/.git'), `gitdir: ${base}/main/.git/modules/sub\n`);
@@ -57,7 +62,8 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
     [[join(base, 'wt'), file], /^length at sandbox\.allowedDomains/],
     [[join(base, 'wt'), file, '*'], /^pattern at sandbox\.allowedDomains\[0\]/],
     [[join(base, 'wt'), file, 'localhost'], /^pattern at sandbox\.allowedDomains\[0\]/],
-    [[join(base, 'w*t'), file, 'registry.npmjs.org'], /is not an absolute path without a pattern character/],
+    [[join(patterned, 'w*t'), file, 'registry.npmjs.org'], /is not an absolute path without a pattern character/],
+    [[join(patterned, 'wt'), file, 'registry.npmjs.org'], /main\/\.git\/worktrees\/w\*t is not an absolute path without a pattern character/],
     [['wt', file, 'registry.npmjs.org'], /^wt is not an absolute path without a pattern character/],
     [[join(base, 'sub'), file, 'registry.npmjs.org'], /not a linked worktree/],
     ...inWorktree.map((inside) => [[join(base, 'wt'), inside, 'registry.npmjs.org'], /^the settings file must lie outside the worktree/]),

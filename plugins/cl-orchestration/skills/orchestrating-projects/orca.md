@@ -30,7 +30,13 @@ A Claude Code worker starts in a worktree of its own, then by its project's [mod
 ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
 ```
 
-Supervised: Orca's own launch, on the host's default Claude Code login. It passes no other launch flag, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: the worker inherits the variable when Orca's environment or the terminal's login shell sets it (unverified: not measured), and the role guard then takes it for the coordinator. So `CEDARLOOM_ROLE` goes on the coordinator's launch line only (`CEDARLOOM_ROLE=coordinator claude`); while it is exported in a shell profile or in the environment Orca started from, start no supervised Claude Code worker and tell the owner.
+Supervised: Orca's own launch, on the host's default Claude Code login. It passes no other launch flag, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
+
+```text
+Role check: right after the heartbeat, before any other command, run `printenv CEDARLOOM_ROLE`. It must print nothing. A value it prints is Blocked (below): name the variable in the report.
+```
+
+After such a report, start no further supervised Claude Code worker in the run and tell the owner: `CEDARLOOM_ROLE` goes on the coordinator's launch line only (`CEDARLOOM_ROLE=coordinator claude`).
 
 ```text
 ORCA orchestration worker-start --spec-file <filled spec file> --worktree path:<worktree path> --agent claude --model '<model>' --effort <effort> --keep-open --json
@@ -210,7 +216,7 @@ ORCA orchestration worker-release --dispatch <dispatch id> --json
 ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 ```
 
-`--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
+The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
 A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that neither a `send` nor a dispatch of the coordinator (the start, a follow-up) carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command and, with a follow-up dispatch, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 
@@ -222,10 +228,11 @@ Release:
 
 The worktree:
 
-- `ORCA worktree rm` also tries to delete the checked-out local branch (Orca keeps it when it predates the worktree or its changes are not provably merged). Run it only with `deleteMergedBranch` true, and while `git -C <worktree path> branch --show-current` (for an automatic worker, as `gitW` of [Commit and push](runners.md#commit-and-push)) prints a branch of the spec whose pull request is merged: a batch's worktree holds one of several.
+- `ORCA worktree rm` is for a supervised worker's worktree only, never for an automatic worker's, the probe's included. Orca runs its own git commands for the removal, without the pins and the `commondir` read of [Commit and push](runners.md#commit-and-push), and `--run-hooks` runs the archive script, all outside the sandbox: a hook, a monitor or an `orca.yaml` that the worker wrote in its worktree could run there. Unverified: which git commands Orca runs in the worktree, and whether it reads `orca.yaml` from the worktree or from the main checkout (`ORCA worktree rm --help` states neither).
+- `ORCA worktree rm` also tries to delete the checked-out local branch (Orca keeps it when it predates the worktree or its changes are not provably merged). Run it only with `deleteMergedBranch` true, and while `git -C <worktree path> branch --show-current` prints a branch of the spec whose pull request is merged: a batch's worktree holds one of several.
 - Never remove a blocked worker's worktree.
-- In the other cases (no merge allowed, `deleteMergedBranch` false, another or an unmerged branch checked out), remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch (unverified: whether Orca's worktree list then drops the entry). For an automatic worker, first the `commondir` read of [Commit and push](runners.md#commit-and-push), then the command with the pins of its `gitW`: `git --no-replace-objects -C <project path> -c core.hooksPath=/dev/null -c core.fsmonitor=false -c protocol.ext.allow=never worktree remove <worktree path>`. The removal runs `git status` in the worktree, which can run a hook or a monitor of the worktree, and `-c` reaches that child process too.
-- The remote branch and a batch's other local branches: [SKILL.md](SKILL.md#clean-up), step 3.
+- In the other cases (an automatic worker, no merge allowed, `deleteMergedBranch` false, another or an unmerged branch checked out), remove the worktree with `git -C <project path> worktree remove <worktree path>`, which leaves the branch (unverified: whether Orca's worktree list then drops the entry). For an automatic worker, first the `commondir` read of [Commit and push](runners.md#commit-and-push), then the command with the pins of its `gitW`: `git --no-replace-objects -C <project path> -c core.hooksPath=/dev/null -c core.fsmonitor=false -c protocol.ext.allow=never worktree remove <worktree path>`. The removal runs `git status` in the worktree, which can run a hook or a monitor of the worktree, and `-c` reaches that child process too. Its archive script does not run: its containers go by the listing above.
+- The remote branch, a batch's other local branches and the local branch an automatic worker's worktree leaves: [SKILL.md](SKILL.md#clean-up), step 3.
 
 Before the coordinator turn ends, `ORCA orchestration worker-list --run <run id> --terminal-state reclaimable --json` returns no worker. The same list with `--terminal-state retained` shows the kept-open workers ([Host limit](#host-limit)): each settled one in it (`outcome` other than `in_progress`) has a pull request in review or merge, or a terminal a person typed in. Every other settled worker is released, retained or removed above. `worker-release` removes no worktree, so a worktree still listed by `ORCA worktree list` after its worker settled is the step above not run.
 
