@@ -6,7 +6,7 @@ The sections of the [runner interface](runners.md#interface), in this file:
 
 | Section | Here |
 | --- | --- |
-| Detect | an Orca executable is found and `ORCA skills get orchestration` succeeds |
+| Detect | the session is Claude Code, an Orca executable is found, and `ORCA skills get orchestration` succeeds |
 | Start | [Start the run](#start-the-run) |
 | Acknowledgement | [Acknowledgement](#acknowledgement) |
 | Reports | [Worker reports](#worker-reports) |

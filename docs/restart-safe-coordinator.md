@@ -96,7 +96,7 @@ Merges stay on the deterministic path: a script that checks `merge.*` of the pol
 
 ## Runtime-specific: Orca
 
-The commands below follow the runtime's guide (`orca skills get orchestration`) and the skill's [Orca notes](../plugins/cl-orchestration/skills/orchestrating-projects/orca.md).
+The commands below follow the runtime's guide (`orca skills get orchestration`) and the `orchestrating-projects` skill's [Orca notes](../plugins/cl-orchestration/skills/orchestrating-projects/orca.md).
 
 - A restart resumes the same run: `orchestration run-use --id <run id>`. Never create a new run on restart.
 - Only the terminal bound to the run consumes its inbox (observed; not stated in the runtime's guide: unverified). Start the loop in that terminal: resume the run, then start the loop.

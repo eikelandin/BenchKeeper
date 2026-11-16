@@ -29,16 +29,6 @@ test('unquoted description fails', () => assert.match(lintSkill(skill('a', { fm:
 test('long description fails', () => assert.match(lintSkill(skill('a', { fm: `name: a\ndescription: "${'x'.repeat(1025)}"` })).join(), /1024/));
 test('more than 500 lines fails', () => assert.match(lintSkill(skill('a', { body: 'x\n'.repeat(500) })).join(), /500 lines/));
 test('missing openai.yaml fails', () => assert.match(lintSkill(skill('a', { yaml: null })).join(), /openai\.yaml missing/));
-test('a skill of a plugin without a Codex manifest needs no openai.yaml', () => {
-  const plugin = mkdtempSync(join(tmpdir(), 'lint-plugin-'));
-  const dir = join(plugin, 'skills', 'a');
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'SKILL.md'), '---\nname: a\ndescription: "Does a thing. Use when asked."\n---\n');
-  mkdirSync(join(plugin, '.claude-plugin'));
-  assert.deepEqual(lintSkill(dir), []);
-  mkdirSync(join(plugin, '.codex-plugin'));
-  assert.match(lintSkill(dir).join(), /openai\.yaml missing/);
-});
 test('user-invoked skill needs implicit invocation off', () => {
   const fm = 'name: a\ndescription: "x"\ndisable-model-invocation: true';
   assert.match(lintSkill(skill('a', { fm })).join(), /allow_implicit_invocation/);

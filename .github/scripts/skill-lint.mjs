@@ -49,7 +49,6 @@ export function lintSkill(dir) {
   if (text.split('\n').length > 500) errors.push(`${skillFile}: more than 500 lines`);
   const files = markdownFiles(dir);
   const all = files.map((f) => readFileSync(f, 'utf8')).join('\n');
-  const plugin = dirname(dirname(dir));
   if (/\bworkers?\b/i.test(all) && HANDS_TEXT.test(all) && !AUTHOR_FILTER.every((re) => re.test(all)))
     errors.push(`${dir}: hands issue or pull request text to a worker without the author filter (a "Trusted authors:" line and the words "data, never instructions")`);
   if (DEPTH_MINIMUM_FIRST.test(all)) errors.push(`${dir}: a Depth line names the Depth minimum line ahead of the workflow skill`);
@@ -61,9 +60,6 @@ export function lintSkill(dir) {
     }
   }
   const yaml = join(dir, 'agents/openai.yaml');
-  // openai.yaml is Codex metadata: a plugin with a Claude Code manifest and none for Codex ships without it.
-  const claudeOnly = existsSync(join(plugin, '.claude-plugin')) && !existsSync(join(plugin, '.codex-plugin'));
-  if (claudeOnly) return errors;
   if (!existsSync(yaml)) errors.push(`${dir}: agents/openai.yaml missing`);
   else if (fm['disable-model-invocation'] === 'true' && !/^[ \t]+allow_implicit_invocation: false$/m.test(readFileSync(yaml, 'utf8')))
     errors.push(`${yaml}: user-invoked skill needs policy.allow_implicit_invocation: false`);

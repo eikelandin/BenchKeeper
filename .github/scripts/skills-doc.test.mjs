@@ -24,8 +24,6 @@ test('the when column comes from the field, else from the description after its 
   const user = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'when: "On request."', 'writes: "x"']), 'cl-setup');
   assert.equal(user.when, 'On request.');
   assert.equal(user.start, 'you: `/cl-setup:u` (Codex `$cl-setup:u`)');
-  const model = skillEntry(skill(['name: m', 'description: "Does m. Use when n."', 'user-invocable: false', 'writes: "x"']), 'cl-orchestration');
-  assert.equal(model.start, 'the agent');
 });
 test('the first sentence ends where the earlier /^(.*?\.)(?:\s+(.*))?$/ ended it', () => {
   const FIRST = /^(.*?\.)(?:\s+(.*))?$/;

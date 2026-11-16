@@ -10,7 +10,7 @@ The coordinator chooses once, when the run starts, and writes the name into the 
 2. **Plugin option.** `runner`, as [SKILL.md](SKILL.md) reads it: empty means auto.
 3. **Auto.** orca when its Detect step answers, else claude-code when its Detect step answers, else start nothing and tell the owner that no runner answered.
 
-A name counts only when plain: lower-case letters, digits and `-`, no `-` first. A runner named by the argument or the option that is neither listed here nor available as a runner plugin, or that fails its Detect step, starts nothing: tell the owner the name and the reason. There is no fallback to another runner.
+A name counts only when plain: lower-case letters, digits and `-`, no `-` first. A runner named by the argument or the option that is not listed here, or that fails its Detect step, starts nothing: tell the owner the name and the reason. There is no fallback to another runner.
 
 ## Interface
 
@@ -37,8 +37,8 @@ Each runner file has these sections, under its own headings where the file says 
 
 | Runner | File | Detect |
 | --- | --- | --- |
-| `claude-code` (built in, the default) | [claude-code.md](claude-code.md) | the session is Claude Code with background agents and session crons |
-| `orca` | [orca.md](orca.md) | an Orca executable is found, and `<that executable> skills get orchestration` succeeds |
+| `claude-code` (built in) | [claude-code.md](claude-code.md) | the session is Claude Code with background agents and session crons |
+| `orca` | [orca.md](orca.md) | the session is Claude Code, an Orca executable is found, and `<that executable> skills get orchestration` succeeds |
 
 ## Modes
 

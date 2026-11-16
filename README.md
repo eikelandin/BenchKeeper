@@ -100,8 +100,6 @@ Repeat the second line for each installed plugin, or in a session open `/plugin`
 /plugin marketplace remove cedarloom
 ```
 
-`cl-orchestration` holds the Orca runner. A `cl-orca` plugin installed earlier from this marketplace is no longer listed there: remove it with `/plugin uninstall cl-orca@cedarloom`.
-
 Removing the marketplace uninstalls every plugin installed from it. Files the skills wrote into your repositories stay, for example `AGENTS.md`, `docs/agents/orchestration.json` and the `.cedarloom/runs` folder: delete them yourself if you no longer want them.
 
 ## Not in 0.1
