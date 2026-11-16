@@ -49,7 +49,7 @@ const ROWS = tables(readFileSync(new URL('./approval-template.md', import.meta.u
 // With no row to look for, every approval would pass.
 if (!ROWS.length) throw new Error('approval-template.md holds no Approval table');
 
-// The names of the parts that keep the text from being posted: a part that is absent, empty or still holds a <...> placeholder, a Recommended row that names another option than the first, and front matter left in.
+// The names of the parts that keep the text from being posted: a part that is absent, empty or still holds a <...> placeholder, a Recommended line that names another option than the first, and front matter left in.
 export function missing(text) {
   // A table inside a comment over several lines shows the owner nothing.
   text = text.replace(COMMENT, '');
@@ -60,21 +60,23 @@ export function missing(text) {
   const options = tables(text, 'Option')[0] ?? [];
   // The owner answers with a label, such as "a": each option row starts with its own.
   const labels = options.map(([option]) => labelOf(option));
-  // The questions skill offers the recommended option first; the Trade-off cell may stay empty.
+  // The questions skill offers the recommended option first; every cell is filled.
   const chosen = options.length >= 2
-    && options.every(([option, happens], i) => filled(option) && filled(happens) && option.includes('(Recommended)') === (i === 0))
+    && options.every(([option, impact, tradeOff], i) => filled(option) && filled(impact) && filled(tradeOff) && option.includes('(Recommended)') === (i === 0))
     && labels.every(Boolean) && new Set(labels.map((label) => label.toLowerCase())).size === labels.length
     && !options.flat().some((cell) => PLACEHOLDER.test(cell));
-  // The questions skill takes its recommendation from the Recommended row and the first option from the table: both must name one option.
+  // The questions skill takes its recommendation from the Recommended line and the first option from the table: both must name one option.
   const label = labels[0];
-  const agrees = !chosen || (label && approval.every(([first, cell = '']) => first !== 'Recommended' || shown(cell).startsWith(label)));
+  const agrees = !chosen || (label && shown(/^Recommended:(.*)$/m.exec(text)?.[1] ?? '').startsWith(label));
   return [
     // Posted with the body, the front matter would show as text: its labels go on the command line.
     ...(/^\s*---[ \t]*(\r?\n|$)/.test(text) ? [FRONT] : []),
-    ...(line('What') ? [] : ['What']),
-    ...ROWS.filter((name) => !row(name) || (name === 'Recommended' && !agrees)),
+    ...['What', 'Context'].filter((label) => !line(label)),
+    ...(line('Recommended') && agrees ? [] : ['Recommended']),
+    ...['Source', 'Confidence'].filter((label) => !line(label)),
+    ...ROWS.filter((name) => !row(name)),
     ...(chosen ? [] : ['Options']),
-    ...(line('Why now') ? [] : ['Why now']),
+    ...['Why now', 'Answer'].filter((label) => !line(label)),
   ];
 }
 

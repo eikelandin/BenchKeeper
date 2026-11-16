@@ -2,7 +2,7 @@
 name: setting-up-projects
 description: "Sets up or updates a repository's agent setup for Claude Code and Codex: the CedarLoom rules block, the coordinator policy file, the devcontainer configuration and where the agent runs, the project parts of AGENTS.md, other project configuration to remove. Use when the user asks to set up, onboard, update, or audit a project's agent setup."
 disable-model-invocation: true
-writes: "After you approve its plan: the CedarLoom block (repository rules, where commands run) in `AGENTS.md`, or in `CLAUDE.local.md` for a local setup; `AGENTS.md` (commands, first-class targets, footgun docs, pointers) and `CLAUDE.md` with only `@AGENTS.md`, both committed, where `AGENTS.md` is new or holds the block (into a committed `AGENTS.md` without the block, only the parts you pick, and `CLAUDE.md` stays as it is); when absent, the coordinator's `docs/agents/orchestration.json` and an empty `docs/agents/worker-rules.md`, committed; the dev container configuration; short footgun docs under `docs/agents/`; and the removals you confirm when the skill lists other agent configuration: skills, plugin and marketplace entries, MCP servers, hooks, other agent rules files and tool folders."
+writes: "After you approve its plan: the CedarLoom block (repository rules, where commands run) in `AGENTS.md`, or in `CLAUDE.local.md` for a local setup; `AGENTS.md` (commands, first-class targets, footgun docs, pointers) and `CLAUDE.md` with only `@AGENTS.md`, both committed, where `AGENTS.md` is new or holds the block (into a committed `AGENTS.md` without the block, only the parts you pick, and `CLAUDE.md` stays as it is); when absent, the coordinator's `docs/agents/orchestration.json` and an empty `docs/agents/worker-rules.md`, committed; `.github/ISSUE_TEMPLATE/work.md` where the repository has no issue templates; the dev container configuration; short footgun docs under `docs/agents/`; and the removals you confirm when the skill lists other agent configuration: skills, plugin and marketplace entries, MCP servers, hooks, other agent rules files and tool folders."
 ---
 
 # Setting up projects
@@ -79,6 +79,8 @@ The coordinator (`orchestrating-projects`) starts and merges nothing in a projec
 - `trustedAuthors`: none, or the review bots the user names whose comments workers may follow.
 
 Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `cl-orchestration:orchestrating-projects` (the cl-orchestration plugin, when installed) lists each field and its default.
+
+Where the repository has no `.github/ISSUE_TEMPLATE` folder, propose [issue-templates/work.md](issue-templates/work.md) as `.github/ISSUE_TEMPLATE/work.md` in the same plan item, committed.
 
 ## 6. Other configuration (ask)
 

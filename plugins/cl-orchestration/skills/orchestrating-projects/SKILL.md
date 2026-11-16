@@ -115,7 +115,7 @@ A worker's outcome comes from its report and the handoff block in its report (ou
 
 A refused commit or push by a repository hook is reported with paths and counts only and handed to the owner; the hook stays as it is ([Rules](#rules)).
 
-Follow-up issues, the ones filed with the label `follow-up` during the run, are triaged before the run closes: one that repeats an open issue gets a comment naming that issue, and each is listed for the owner. Add no `startLabel`: the owner chooses the work.
+Follow-up issues, the ones filed with the label `follow-up` during the run, are triaged before the run closes: one that repeats an open issue gets a comment naming that issue, and each is listed for the owner. File a follow-up, whoever names it, only when it is worth a pull request of its own; list the smaller ones in the report, grouped by the code they touch. Add no `startLabel`: the owner chooses the work.
 
 ## Clean up
 

@@ -13,12 +13,24 @@ const MERGES = '| Merges | the coordinator after green checks; .github stays for
 const COST = '| Cost | 2 worker sessions, about 3 hours (unverified) |';
 const STREAM = '| (a) Stream the export (Recommended) | Both PRs start | More code to review |';
 const HOLD = '| (b) Hold | Nothing changes | The export stays slow |';
+const RECOMMENDED = 'Recommended: (a) Stream the export, because its memory use stays flat for any row count';
 const WHY = 'Why now: issue 12 waits on it.';
 const FILLED = `${WHAT}
 
+Context: Exports of more than 200,000 rows fail, as the export builds the whole file in memory.
+
+| Option | Impact | Trade-off |
+|---|---|---|
+${STREAM}
+${HOLD}
+
+${RECOMMENDED}
+Source: docs/plans/export.md
+Confidence: high
+${WHY}
+
 | Approval | |
 |---|---|
-| Recommended | (a) Stream the export, confidence high |
 | Work if approved | 2 PRs, each under 1,000 lines, in owner/project; the reader first |
 | Runs on | opus xhigh; phases: plan opus high, implement opus high, test sonnet high, review opus high, depth xhigh |
 | Review | fresh reviewer per PR at xhigh, plus the security review |
@@ -26,20 +38,14 @@ ${MERGES}
 | Owner steps | none |
 ${COST}
 | Undo | revert each PR |
-| Answer | comment "a", "b" or free text, or run /cl-workflow:questions |
 
-| Option | What happens | Trade-off |
-|---|---|---|
-${STREAM}
-${HOLD}
-
-${WHY}
+Answer: comment "a", "b" or free text, or run /cl-workflow:questions
 `;
 
 // A variant must differ from the filled text, or its case would pass on the text that passes.
 const swap = (from, to) => { assert.ok(FILLED.includes(from), from); return FILLED.replace(from, to); };
 const NO_COST = swap(`${COST}\n`, '');
-const APPROVAL = FILLED.slice(FILLED.indexOf('| Approval | |'), FILLED.indexOf('\n\n| Option'));
+const APPROVAL = FILLED.slice(FILLED.indexOf('| Approval | |'), FILLED.indexOf('\n\nAnswer:'));
 
 const CASES = [
   ['the filled text', FILLED, []],
@@ -64,8 +70,13 @@ const CASES = [
   ['a deferral as a link text whose target holds a bracket', swap(COST, '| Cost | [TBD](x]y) |'), ['Cost']],
   ['a deferral after a zero-width space', swap(COST, '| Cost | ​TBD |'), ['Cost']],
   ['the Approval table inside a multi-line HTML comment', swap(APPROVAL, `<!--\n${APPROVAL}\n-->`),
-    ['Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer']],
-  ['a Recommended row that names another option than the first', swap('| Recommended | (a) Stream the export, confidence high |', '| Recommended | (b) Hold, confidence high |'), ['Recommended']],
+    ['Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo']],
+  ['a Recommended line that names another option than the first', swap(RECOMMENDED, 'Recommended: (b) Hold, because nothing else changes'), ['Recommended']],
+  ['no Recommended line', swap(`${RECOMMENDED}\n`, ''), ['Recommended']],
+  ['no Context line', swap('Context: Exports', 'Exports'), ['Context']],
+  ['no Source line', swap('Source: docs/plans/export.md\n', ''), ['Source']],
+  ['a placeholder as Confidence', swap('Confidence: high', 'Confidence: <high, medium or low>'), ['Confidence']],
+  ['no Answer line', swap('Answer: comment', 'Comment'), ['Answer']],
   ['a second Approval table with an empty row', `${FILLED}\n| Approval | |\n|---|---|\n| Cost | |\n`, ['Cost']],
   ['a row twice, once empty', swap(COST, `| Cost | |\n${COST}`), ['Cost']],
   ['no What line', swap(`${WHAT}\n`, ''), ['What']],
@@ -77,14 +88,15 @@ const CASES = [
   ['the marked option not first', swap(`${STREAM}\n${HOLD}`, `${HOLD}\n${STREAM}`), ['Options']],
   ['two options marked', swap('| (b) Hold |', '| (b) Hold (Recommended) |'), ['Options']],
   ['a placeholder in the options table', swap('| More code to review |', '| <trade-off> |'), ['Options']],
-  ['an option without What happens', swap(HOLD, '| (b) Hold | | The export stays slow |'), ['Options']],
+  ['an option without Impact', swap(HOLD, '| (b) Hold | | The export stays slow |'), ['Options']],
+  ['an option without Trade-off', swap(HOLD, '| (b) Hold | Nothing changes | |'), ['Options']],
   ['two options with one label', swap('| (b) Hold |', '| (a) Hold |'), ['Options']],
   ['two options with one label in two cases', swap('| (b) Hold |', '| (A) Hold |'), ['Options']],
   ['an option without a label', swap('| (b) Hold |', '| Hold |'), ['Options']],
   ['front matter left in', `---\nlabels: cedarloom:needs-human\n---\n\n${FILLED}`, ['Front matter']],
-  // Every part of the template holds a placeholder: the Answer row depends on where the issue lands.
+  // Every part of the template holds a placeholder: the Answer line depends on where the issue lands.
   ['the unfilled template', readFileSync(new URL(`${SKILL}approval-template.md`, import.meta.url), 'utf8'),
-    ['Front matter', 'What', 'Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer', 'Options', 'Why now']],
+    ['What', 'Context', 'Recommended', 'Source', 'Confidence', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Options', 'Why now', 'Answer']],
 ];
 
 // A comment as `gh issue view --json comments` prints it.
