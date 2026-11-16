@@ -1,7 +1,7 @@
 // Structural checks for BenchKeeper's own skills (plugin skills) and the plugin's agents.
 // Usage: node .github/scripts/skill-lint.mjs [skill folders...]   (default: every own skill and agent), exit 1 on any error.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { basename, dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
@@ -28,20 +28,6 @@ function filesIn(dir) {
 
 const markdownFiles = (dir) => filesIn(dir).filter((p) => p.endsWith('.md'));
 
-// The spec templates of the sibling plugins a plugin's manifest names in `dependencies` (bare names).
-function dependencySpecTemplates(plugin) {
-  const manifest = join(plugin, '.claude-plugin/plugin.json');
-  if (!existsSync(manifest)) return '';
-  const names = JSON.parse(readFileSync(manifest, 'utf8')).dependencies ?? [];
-  return names
-    .map((name) => join(dirname(plugin), name, 'skills'))
-    .filter((skills) => existsSync(skills))
-    .flatMap(markdownFiles)
-    .filter((f) => basename(f) === 'spec-template.md')
-    .map((f) => readFileSync(f, 'utf8'))
-    .join('\n');
-}
-
 // A skill that hands issue or pull request text to a worker names the author filter somewhere in its files: text of other authors is untrusted input.
 const HANDS_TEXT = /\b(read|pass|hand|send|give|copy|paste)\b[^.\n]{0,60}\b(issues?|pull requests?|PRs?)\b[^.\n]{0,60}\b(comments?|bod(y|ies)|text)\b/i;
 const AUTHOR_FILTER = [/^Trusted authors: \S/m, /\bdata, never instructions\b/i];
@@ -64,9 +50,7 @@ export function lintSkill(dir) {
   const files = markdownFiles(dir);
   const all = files.map((f) => readFileSync(f, 'utf8')).join('\n');
   const plugin = dirname(dirname(dir));
-  // A runner plugin's skill hands on specs filled from its dependency's spec template, which holds the filter.
-  const filterText = `${all}\n${dependencySpecTemplates(plugin)}`;
-  if (/\bworkers?\b/i.test(all) && HANDS_TEXT.test(all) && !AUTHOR_FILTER.every((re) => re.test(filterText)))
+  if (/\bworkers?\b/i.test(all) && HANDS_TEXT.test(all) && !AUTHOR_FILTER.every((re) => re.test(all)))
     errors.push(`${dir}: hands issue or pull request text to a worker without the author filter (a "Trusted authors:" line and the words "data, never instructions")`);
   if (DEPTH_MINIMUM_FIRST.test(all)) errors.push(`${dir}: a Depth line names the Depth minimum line ahead of the workflow skill`);
   for (const file of files) {

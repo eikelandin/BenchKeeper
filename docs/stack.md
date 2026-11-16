@@ -1,6 +1,6 @@
 # Stack
 
-CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/cl-workflow), [setup](../plugins/cl-setup) and [orchestration](../plugins/cl-orchestration), plus the [Orca runner](../plugins/cl-orca) for Claude Code only, installed together by the [cedarloom](../plugins/cedarloom) bundle). Install steps: [README](../README.md#install).
+CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/cl-workflow), [setup](../plugins/cl-setup) and [orchestration](../plugins/cl-orchestration), installed together by the [cedarloom](../plugins/cedarloom) bundle). Install steps: [README](../README.md#install).
 
 ## Components
 
