@@ -1,6 +1,7 @@
 {
   "permissions": {
     "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
     "blockWritesOutsideWorkingDirectories": true,
     "blockReadsOutsideWorkingDirectories": true,
     "allow": ["Edit(//W/**)"],
@@ -17,9 +18,15 @@
     "autoAllowBashIfSandboxed": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
-    "network": { "strictAllowlist": true, "allowedDomains": ["registry.npmjs.org"] },
+    "allowAppleEvents": false,
+    "allowNestedUserNamespaces": false,
+    "enableWeakerNestedSandbox": false,
+    "enableWeakerNetworkIsolation": false,
+    "network": { "strictAllowlist": true, "allowLocalBinding": false, "allowedDomains": ["registry.npmjs.org"] },
+    "filesystem": { "disabled": false, "denyWrite": ["//W/.git"] },
     "credentials": {
       "files": [
+        { "path": "~/.ssh", "mode": "deny" },
         { "path": "~/.aws", "mode": "deny" },
         { "path": "~/.azure", "mode": "deny" },
         { "path": "~/.config/gcloud", "mode": "deny" },
@@ -30,7 +37,9 @@
       ],
       "envVars": [
         { "name": "GH_TOKEN", "mode": "deny" }, { "name": "GITHUB_TOKEN", "mode": "deny" },
-        { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" }
+        { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" },
+        { "name": "ORCA_PAIRING_CODE", "mode": "deny" }, { "name": "ORCA_REMOTE_PAIRING", "mode": "deny" },
+        { "name": "ORCA_AGENT_SESSION_SPAWN_TOKEN", "mode": "deny" }
       ]
     }
   }
