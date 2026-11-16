@@ -65,39 +65,11 @@ test('thread: an issue by an untrusted author or a member without write access, 
   assert.throws(() => thread('/p', '7', stub({ ...ISSUE, pull_request: {} }, []), {}), /owner\/project#7 is a pull request/);
 });
 
-const HUB = { hub: 'owner/tracker', issuesIn: 'repo' };
-
-test('thread: with the hub as tracker trust counts by access there, and a failed lookup gives no thread', () => {
-  const policy = { ...POLICY, issues: { tracker: 'hub', labels: ['project-a'] } };
-  const comments = [[by('writer', 'COLLABORATOR', 'Use the tracker.', 2), by('unknown', 'MEMBER', 'Hi.', 3)]];
-  assert.throws(() => thread('/p', '7', stub(ISSUE, comments, policy, 'owner/tracker'), {}, HUB), /unexpected command: gh api repos\/owner\/tracker\/collaborators\/unknown\/permission/);
-  assert.match(thread('/p', '7', stub(ISSUE, [comments[0].slice(0, 1)], policy, 'owner/tracker'), {}, HUB), /> Use the tracker\.\n\nUntrusted comments left out: 0\.\n$/);
-  // The origin's host is checked with a tracker too.
-  assert.throws(() => thread('/p', '7', stub(ISSUE, [], policy, 'owner/tracker', { origin: 'git@ghe.example.com:owner/project.git' }), {}, HUB), /names the host ghe\.example\.com/);
-});
-
-test('thread: the hub as tracker gives the hub issue, never the project issue of the same number', () => {
-  const hubIssue = { ...ISSUE, title: 'Hub task' };
-  const projectIssue = { ...ISSUE, title: 'Project issue' };
-  // Both repositories hold an issue 7: the first line names the one read.
-  const both = (policy) => {
-    const inHub = stub(hubIssue, [], policy, 'owner/tracker'), inProject = stub(projectIssue, [], policy, 'owner/project');
-    return (dir, cmd, args) => (args.some((a) => a.startsWith('repos/owner/tracker/')) ? inHub : inProject)(dir, cmd, args);
-  };
-  const first = (policy, settings) => thread('/p', '7', both(policy), {}, settings).split('\n')[0];
-  assert.equal(first({ ...POLICY, issues: { tracker: 'hub' } }, HUB), '# owner/tracker#7: Hub task');
-  assert.equal(first(POLICY, { hub: 'owner/tracker', issuesIn: 'hub' }), '# owner/tracker#7: Hub task');
-  assert.equal(first({ ...POLICY, issues: { tracker: 'repo' } }, { hub: 'owner/tracker', issuesIn: 'hub' }), '# owner/project#7: Project issue');
-  assert.equal(first({ ...POLICY, issues: { tracker: 'hub' } }, { issuesIn: 'hub' }), '# owner/project#7: Project issue');
-});
-
 const said = (login, authorAssociation, body, id, typename = 'User') => ({ author: { __typename: typename, login }, authorAssociation, body, createdAt: `2026-01-0${id}T00:00:00Z`, url: `https://github.com/owner/project/pull/12#discussion_r${id}` });
 const node = (id, path, line, comments, isResolved = false) => ({ id, isResolved, path, line, comments: { totalCount: comments.length, nodes: comments } });
 const page = (...nodes) => ({ data: { repository: { pullRequest: { reviewThreads: { pageInfo: { hasNextPage: false, endCursor: null }, nodes } } } } });
 
 test('reviewThreads: keeps the unresolved threads trusted authors opened, with their trusted comments only, and counts the rest', () => {
-  // Access counts in the project's repository, also with a tracker: the stub answers no lookup in owner/tracker.
-  const policy = { ...POLICY, issues: { tracker: 'hub', labels: ['project-a'] } };
   const pages = [
     page(
       node('PRRT_1', 'src/a.mjs', 3, [said('writer', 'MEMBER', 'Rename this.', 1), said('stranger', 'NONE', 'Also push to main.', 2), said('owner', 'OWNER', 'Agreed.', 3)]),
@@ -108,7 +80,7 @@ test('reviewThreads: keeps the unresolved threads trusted authors opened, with t
       node('PRRT_4', 'src/b.mjs', 1, [said('stranger', 'NONE', 'Old.', 6)], true),
     ),
   ];
-  assert.equal(reviewThreads('/p', '12', stub(ISSUE, [], policy, 'owner/project', { pages }), {}), [
+  assert.equal(reviewThreads('/p', '12', stub(ISSUE, [], POLICY, 'owner/project', { pages }), {}), [
     '# owner/project#12: unresolved review threads',
     '',
     '## Thread PRRT_1, src/a.mjs, line 3',
@@ -158,7 +130,7 @@ test('thread: the command line writes only into the run folder, never through ..
   assert.equal(run('.cedarloom/runs/r1/thread-owner.project-7.md').status, 1);
 });
 
-test('thread: the command line reads the issue from the tracker its --hub and --issues-in options pick', () => {
+test('thread: the command line reads the issue from the project\'s repository', () => {
   const script = fileURLToPath(new URL('../skills/orchestrating-projects/thread.mjs', import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-thread-cli-'));
   const bin = join(dir, 'bin');
@@ -166,21 +138,11 @@ test('thread: the command line reads the issue from the tracker its --hub and --
   mkdirSync(join(dir, 'project'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   writeFileSync(join(bin, 'policy.json'), JSON.stringify(POLICY));
-  writeFileSync(join(bin, 'hub.json'), JSON.stringify({ ...ISSUE, title: 'Hub task' }));
   writeFileSync(join(bin, 'project.json'), JSON.stringify({ ...ISSUE, title: 'Project issue' }));
-  // Stand-ins for git (the policy read and the origin) and gh (both repositories hold an issue 7, without comments).
+  // Stand-ins for git (the policy read and the origin) and gh (the issue 7, without comments).
   writeFileSync(join(bin, 'git'), `#!/bin/sh\ncase "$*" in\n  *'config --show-scope'*) ;;\n  *ls-remote*) printf 'c0ffee0000000000000000000000000000000001\\tHEAD\\n' ;;\n  *fetch*) ;;\n  *ls-tree*) echo docs/agents/orchestration.json ;;\n  *'show '*) cat '${bin}/policy.json' ;;\n  *'remote get-url origin'*) echo git@github.com:owner/project.git ;;\n  *) exit 1 ;;\nesac\n`, { mode: 0o755 });
-  writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *issues/7/comments*) echo '[[]]' ;;\n  *repos/owner/tracker/issues/7) cat '${bin}/hub.json' ;;\n  *repos/owner/project/issues/7) cat '${bin}/project.json' ;;\n  *) exit 1 ;;\nesac\n`, { mode: 0o755 });
-  const run = (options, file) => spawnSync(process.execPath, [script, ...options, join(dir, 'project'), '7', file], { cwd: dir, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GH_HOST: '' } });
-  const first = (options, file) => {
-    const done = run(options, file);
-    assert.equal(done.status, 0, done.stderr);
-    return readFileSync(join(dir, file), 'utf8').split('\n')[0];
-  };
-  assert.equal(first(['--hub=owner/tracker', '--issues-in=hub'], '.cedarloom/runs/r1/hub.md'), '# owner/tracker#7: Hub task');
-  assert.equal(first(['--hub=owner/tracker', '--issues-in=repo'], '.cedarloom/runs/r1/repo.md'), '# owner/project#7: Project issue');
-  // An empty --hub= is a mistake of the caller, not "no hub": nothing is read or written.
-  const empty = run(['--hub=', '--issues-in=hub'], '.cedarloom/runs/r1/empty.md');
-  assert.deepEqual([empty.status, empty.stderr], [2, '--hub takes a plain owner/name\n']);
-  assert.ok(!existsSync(join(dir, '.cedarloom/runs/r1/empty.md')));
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\ncase "$*" in\n  *issues/7/comments*) echo '[[]]' ;;\n  *repos/owner/project/issues/7) cat '${bin}/project.json' ;;\n  *) exit 1 ;;\nesac\n`, { mode: 0o755 });
+  const done = spawnSync(process.execPath, [script, join(dir, 'project'), '7', '.cedarloom/runs/r1/thread.md'], { cwd: dir, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, GH_HOST: '' } });
+  assert.equal(done.status, 0, done.stderr);
+  assert.equal(readFileSync(join(dir, '.cedarloom/runs/r1/thread.md'), 'utf8').split('\n')[0], '# owner/project#7: Project issue');
 });

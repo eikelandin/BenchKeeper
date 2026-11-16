@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { test } from 'node:test';
@@ -120,10 +120,3 @@ test('the checks run their command line when started through a symlinked folder'
   assert.match(out, /skills checked, 0 errors/);
 });
 
-// The coordinator skill also works copied alone, without the questions skill, so it keeps its own copy of the hub rule.
-test('the coordinator skill quotes the questions skill\'s hub rule word for word', () => {
-  const read = (path) => readFileSync(new URL(`../../plugins/${path}`, import.meta.url), 'utf8');
-  const quote = read('cl-orchestration/skills/orchestrating-projects/SKILL.md').match(/as the `questions` skill reads it[^"]*"([^"]+)"/)?.[1];
-  assert.ok(quote?.startsWith('taken only from the plugin option `hub`'), 'the coordinator skill has no quote of the hub rule');
-  assert.ok(read('cl-workflow/skills/questions/SKILL.md').includes(quote), 'the coordinator skill\'s quote differs from the questions skill');
-});

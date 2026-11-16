@@ -77,21 +77,9 @@ Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugi
    - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
    - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
 4. Per issue, with the coordinator (needs `cl-orchestration`):
-   - Label the issues with the `startLabel`.
+   - Label the issues with the `startLabel` (`cedarloom:ready-for-agent` by default).
    - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/orchestrating-projects/orca.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
-   - Where the coordinator's questions go: [Hub repository](#hub-repository).
-
-## Hub repository
-
-One GitHub repository, often private, that can hold the work items and owner questions of all projects, so internal text stays out of product repositories.
-
-| Setting | Where | Default |
-| --- | --- | --- |
-| `hub` (`owner/name`) | option of `cl-workflow` and `cl-orchestration` (`/plugin configure <plugin>@cedarloom` or `/config`) | none |
-| `issuesIn` (`repo` or `hub`) | option of `cl-orchestration` | `repo` |
-| `issues.tracker` (`repo` or `hub`), per project | the project's policy file | `issuesIn` |
-
-Public repositories never mention the hub; the coordinator closes hub issues after the merge. Questions go to the tracker if private, else the hub, else the local queue `.cedarloom/questions/`. Details: [The plugins](docs/plugins.md#hub-repository).
+   - The coordinator's questions go to the project's repository when it is private, else to the local queue `.cedarloom/questions/`; `/cl-workflow:questions` asks them. Labels: [owner questions](docs/plugins.md#owner-questions).
 
 ## Update
 
