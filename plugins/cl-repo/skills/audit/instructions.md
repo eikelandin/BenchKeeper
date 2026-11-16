@@ -25,7 +25,7 @@ When the target is one rule file (CLAUDE.md, AGENTS.md, a rule file), collect it
 
 1. Number every line from 1, blank lines included (`nl -ba`).
 2. Apply the prompt below to the numbered text, using only that text: the line numbers in findings are those numbers. One line can carry more than one kind.
-3. Each item of the answer is a candidate for step 5 of the skill, its kind the pattern.
+3. Each item of the answer is a candidate for step 5 of the skill, its kind the pattern; a finding carries its `why` and its `fix` on its Why line.
 
 ```text
 Below is one instruction file that a coding agent loads at the start of every session, with line numbers. Review it; do not read files or run commands.
