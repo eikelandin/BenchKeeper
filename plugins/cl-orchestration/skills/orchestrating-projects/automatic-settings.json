@@ -8,6 +8,7 @@
       "Edit(//W/.claude/**)", "Edit(//W/.mcp.json)", "Edit(//W/.vscode/**)", "Edit(//W/.idea/**)",
       "Edit(//W/.bashrc)", "Edit(//W/.zshrc)", "Edit(//W/.gitconfig)",
       "Edit(//W/.envrc)", "Edit(//W/.npmrc)", "Edit(//W/.husky/**)",
+      "Edit(//G/commondir)", "Edit(//G/config.worktree)",
       "WebFetch", "WebSearch", "mcp__*", "Bash(gh *)", "Bash(git push *)"
     ]
   },
