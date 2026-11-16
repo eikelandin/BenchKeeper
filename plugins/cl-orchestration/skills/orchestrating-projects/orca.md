@@ -111,6 +111,8 @@ A worker settles with one message. The skill's outcomes map to Orca like this:
 
 Orca has no separate blocked or replan message type: such a report is a `worker_done` that failed, which settles the dispatch so the coordinator can release it. The handoff block is the message body. The worker's start message carries its own `send` command; the spec only says what to report.
 
+An automatic worker cannot run `send` or `ask` from inside the sandbox ([Sandbox on](runners.md#sandbox-on)): its report reaches the coordinator only as the `Worker stopped without reporting` escalation, which fails the probe, so its project runs supervised.
+
 A batch also sends one `--type status` message per issue, when that issue's pull request is up or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
 
 A worker answers a follow-up dispatch with its `worker_done`, and a follow-up message with one `--type status` message; either names the head commit it pushed, or for an automatic worker its staged files ([Commit and push](runners.md#commit-and-push)). That id is a claim: read `<head>` yourself ([review-and-merge.md](review-and-merge.md)).
