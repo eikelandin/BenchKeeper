@@ -50,6 +50,8 @@ test('worker-settings: fills the worktree, the shared .git, its worktrees folder
     assert.deepEqual(settings.permissions.ask, [`Edit(${w}/.github/**)`, 'Edit(//**/.git)', 'Edit(//**/.git/**)']);
     assert.deepEqual(settings.sandbox.network, { strictAllowlist: true, allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
     assert.equal(settings.permissions.defaultMode, 'dontAsk');
+    assert.equal(settings.permissions.disableBypassPermissionsMode, 'disable');
+    assert.deepEqual(settings.sandbox.credentials.files[0], { path: '~/.ssh', mode: 'deny' });
   }
 });
 
@@ -120,6 +122,20 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   }
 });
 
+test('worker-settings --supervised: writes no rule file when the shared .git cannot take the exclude line', () => {
+  for (const [layout, error] of [
+    [(info) => mkdirSync(join(info, 'exclude'), { recursive: true }), /EISDIR/],
+    [(info) => writeFileSync(info, ''), /ENOTDIR/],
+  ]) {
+    const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+    layout(join(base, 'main/.git/info'));
+    const { status, stderr } = run(['--supervised', join(base, 'wt')], base);
+    assert.equal(status, 1);
+    assert.match(stderr, error);
+    assert.equal(existsSync(join(base, 'wt/.claude')), false);
+  }
+});
+
 test('worker-settings: refuses a rule file with a key besides deny or a rule that is no string', () => {
   for (const rules of [{ deny: [], ask: ['Bash(git push *)'] }, { deny: ['Bash(git push *)', 1] }]) {
     assert.throws(() => supervisedSettings(rules), /must hold one key, deny, with a list of rule strings/, JSON.stringify(rules));
@@ -136,9 +152,17 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
   mkdirSync(join(base, 'main/.git/modules/sub'), { recursive: true });
   mkdirSync(join(base, 'sub'));
   writeFileSync(join(base, 'sub/.git'), `gitdir: ${base}/main/.git/modules/sub\n`);
+  // A worker can rewrite its worktree's .git file to name a shared .git it made in the worktree, or the worktree itself.
+  for (const [name, named] of [['own', 'own/inner/.git/worktrees/own'], ['self', 'self/worktrees/self']]) {
+    mkdirSync(join(base, named), { recursive: true });
+    writeFileSync(join(base, name, '.git'), `gitdir: ${base}/${named}\n`);
+  }
   const file = join(base, 'run/settings/1-x.json');
   const inWorktree = [join(base, 'wt/settings.json'), join(base, 'wt/..settings.json')];
   for (const [args, error] of [
+    [[join(base, 'own'), file, 'registry.npmjs.org'], /own\/\.git names a shared \.git inside the worktree/],
+    [[join(base, 'self'), file, 'registry.npmjs.org'], /self\/\.git names a shared \.git inside the worktree/],
+    [['--supervised', join(base, 'own')], /own\/\.git names a shared \.git inside the worktree/],
     [[join(base, 'wt'), file], /^length at sandbox\.allowedDomains/],
     [[join(base, 'wt'), file, '*'], /^pattern at sandbox\.allowedDomains\[0\]/],
     [[join(base, 'wt'), file, 'localhost'], /^pattern at sandbox\.allowedDomains\[0\]/],
@@ -153,7 +177,7 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
     const { status, stderr } = run(args, base);
     assert.equal(status, 1, args.join(' '));
     assert.match(stderr, error, args.join(' '));
-    assert.equal([file, ...inWorktree].some((path) => existsSync(path)), false);
+    assert.equal([file, ...inWorktree, join(base, 'own/.claude')].some((path) => existsSync(path)), false);
   }
 });
 

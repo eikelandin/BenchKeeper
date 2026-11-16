@@ -26,7 +26,9 @@ export function skillEntry(text, plugin) {
   const when = unquote(fm.when) || rest;
   if (!when) throw new Error(`${name}: needs a when field or a second sentence in the description`);
   const user = fm['disable-model-invocation'] === 'true';
-  const start = user ? `you: \`/${plugin}:${name}\` (Codex \`$${plugin}:${name}\`)` : `the agent, or you with \`/${plugin}:${name}\``;
+  // `codex: false` marks a skill that runs only in Claude Code.
+  const codex = fm.codex === 'false' ? '' : ` (Codex \`$${plugin}:${name}\`)`;
+  const start = user ? `you: \`/${plugin}:${name}\`${codex}` : `the agent, or you with \`/${plugin}:${name}\``;
   return { name, plugin, purpose, start, when, writes };
 }
 

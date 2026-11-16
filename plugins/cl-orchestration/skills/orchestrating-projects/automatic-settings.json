@@ -1,6 +1,7 @@
 {
   "permissions": {
     "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
     "blockWritesOutsideWorkingDirectories": true,
     "blockReadsOutsideWorkingDirectories": true,
     "allow": ["Edit(//W/**)"],
@@ -20,6 +21,7 @@
     "network": { "strictAllowlist": true, "allowedDomains": ["registry.npmjs.org"] },
     "credentials": {
       "files": [
+        { "path": "~/.ssh", "mode": "deny" },
         { "path": "~/.aws", "mode": "deny" },
         { "path": "~/.azure", "mode": "deny" },
         { "path": "~/.config/gcloud", "mode": "deny" },

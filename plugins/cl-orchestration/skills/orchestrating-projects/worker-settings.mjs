@@ -6,18 +6,25 @@ import { errorLine, escaped, isMain, validate } from './policy.mjs';
 // A character the permission rule syntax reads as a pattern or a bracket would widen or break every rule with the path in it.
 const PLAIN = /^\/[^*?[\]{}()\\\p{Cc}\p{Cf}\p{Zl}\p{Zp}]*[^/*?[\]{}()\\\p{Cc}\p{Cf}\p{Zl}\p{Zp}]$/u;
 
+const within = (folder, path) => {
+  const inside = relative(folder, path);
+  return inside !== '..' && !inside.startsWith(`..${sep}`) && !isAbsolute(inside);
+};
+
 // A linked worktree's .git is a file that names its folder under the shared .git's worktrees: absolute, or relative to the worktree with worktree.useRelativePaths.
 export function gitCommonDir(worktree, read = (path) => readFileSync(path, 'utf8')) {
   const named = /^gitdir: (.+)\n?$/.exec(read(`${worktree}/.git`))?.[1];
   const folder = named && resolve(worktree, named);
   if (!folder || basename(dirname(folder)) !== 'worktrees') throw new Error(`${escaped(worktree)}/.git names no folder under a shared .git's worktrees: not a linked worktree`);
-  return dirname(dirname(folder));
+  const commonDir = dirname(dirname(folder));
+  // The worker writes its worktree: a shared .git there would point every rule on it at files the worker wrote.
+  if (within(worktree, commonDir)) throw new Error(`${escaped(worktree)}/.git names a shared .git inside the worktree`);
+  return commonDir;
 }
 
 // A Bash deny rule `Bash(<prefix> *)` matches every command that a rule starting with `Bash(<prefix> ` matches.
 const covers = (deny, rule) => deny.includes(rule) || deny.some((d) => d.startsWith('Bash(') && d.endsWith(' *)') && rule.startsWith(d.slice(0, -2)));
 
-// In .claude/settings.local.json a rule path that starts with / counts from the session's starting folder, the worktree, so the file names no host path.
 const EXCLUDED = '/.claude/settings.local.json';
 const listed = (text) => text.split('\n').includes(EXCLUDED);
 const excluded = (exclude) => existsSync(exclude) && listed(readFileSync(exclude, 'utf8'));
@@ -31,6 +38,7 @@ function denyRules(rules) {
   return rules.deny;
 }
 
+// In .claude/settings.local.json a rule path that starts with / counts from the session's starting folder, the worktree, so the file names no host path.
 export function supervisedSettings(rules) {
   const local = (rule) => rule.replace('(//W/', '(/');
   return { permissions: { deny: denyRules(rules).map(local) } };
@@ -85,43 +93,43 @@ if (isMain(import.meta.url)) {
       // The launch's --settings resolves a relative path in the worker's terminal folder, the worktree, not here.
       if (!isAbsolute(file)) throw new Error(`${escaped(file)} is not an absolute path`);
       // The worker writes its worktree: a settings file there would be the worker's to change.
-      const inside = relative(worktree, file);
-      if (inside !== '..' && !inside.startsWith(`..${sep}`) && !isAbsolute(inside)) throw new Error('the settings file must lie outside the worktree');
+      if (within(worktree, file)) throw new Error('the settings file must lie outside the worktree');
       const commonDir = gitCommonDir(worktree);
       settings = workerSettings(read('automatic-settings.json'), rules, worktree, commonDir, readdirSync(`${commonDir}/worktrees`).sort(), domains);
     }
     const text = `${JSON.stringify(settings, null, 2)}\n`;
     // A repository can commit .claude as a link, which would put the file outside the worktree.
     if (supervised && lstatSync(dirname(file), { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`${escaped(dirname(file))} is a link: not written or read`);
-    if (supervised && !check) {
+    if (check) {
+      // Claude Code loads an empty file as no settings and starts without the sandbox, and another parser may read a duplicate key otherwise than JSON.parse, so the file's text must be the one this script writes.
+      if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} is not the settings file this script writes for those arguments`);
+      if (supervised && !excluded(exclude)) throw new Error(`${escaped(exclude)} does not list ${EXCLUDED}: git add would stage the rule file`);
+    } else if (supervised) {
+      const kept = existsSync(file);
+      // A file the repository tracks or a person wrote stays theirs.
+      if (kept && readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} exists with other content: not overwritten`);
       // Only info, never the shared .git itself: a stale .git pointer fails with ENOENT before anything is written.
       try {
         mkdirSync(dirname(exclude));
       } catch (e) {
         if (e.code !== 'EEXIST') throw e;
       }
-    }
-    if (check) {
-      // Claude Code loads an empty file as no settings and starts without the sandbox, and another parser may read a duplicate key otherwise than JSON.parse, so the file's text must be the one this script writes.
-      if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} is not the settings file this script writes for those arguments`);
-      if (supervised && !excluded(exclude)) throw new Error(`${escaped(exclude)} does not list ${EXCLUDED}: git add would stage the rule file`);
-    } else if (supervised && existsSync(file)) {
-      // A file the repository tracks or a person wrote stays theirs.
-      if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} exists with other content: not overwritten`);
-    } else {
-      mkdirSync(dirname(file), { recursive: true });
-      // wx: no write through a dangling link in the worktree.
-      writeFileSync(file, text, { flag: supervised ? 'wx' : 'w' });
-    }
-    if (supervised && !check) {
-      // One descriptor, so the text read is the file appended to.
+      // One descriptor, so the text read is the file appended to, opened before the rule file is written, so an exclude that cannot take the line leaves no rule file.
       const fd = openSync(exclude, 'a+');
       try {
+        if (!kept) {
+          mkdirSync(dirname(file), { recursive: true });
+          // wx: no write through a dangling link in the worktree.
+          writeFileSync(file, text, { flag: 'wx' });
+        }
         const before = readFileSync(fd, 'utf8');
         if (!listed(before)) appendFileSync(fd, `${before && !before.endsWith('\n') ? '\n' : ''}${EXCLUDED}\n`);
       } finally {
         closeSync(fd);
       }
+    } else {
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, text);
     }
   } catch (e) {
     console.error(e.message);
