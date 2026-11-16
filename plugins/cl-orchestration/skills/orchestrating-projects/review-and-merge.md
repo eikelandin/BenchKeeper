@@ -131,7 +131,7 @@ The reviewer's working directory is not the clone, so neither built-in command f
 ## Rounds
 
 - Sensitive change, first round with findings (trial): a fresh `cl-workflow:verify` subagent (another agent: a general subagent briefed with its steps) on `opus` at `high` whatever the reviewer ran on, briefed like the reviewer, marks each Blocking and Important finding confirmed or disputed with evidence. A disputed finding is not sent: it goes with its evidence to the re-review, which keeps or drops it. With nothing to send, that re-review runs at once on the reviewed head.
-- Send a round's Blocking and Important findings in one follow-up to the owning worker, in your own words, each with file and line and the id of the review thread it covers, and the threads file of `<head>` ([Threads](#threads)), by the runner's Follow-up. List Minor findings in the report: no round fixes them. The worker answers once its fix is pushed, or with its evidence where nothing changed: read `<head>` then, and never type the commit id of a message into a command.
+- Send a round's Blocking and Important findings in one follow-up to the owning worker, in your own words, each with file and line and the id of the review thread it covers, and the threads file of `<head>` ([Threads](#threads)), by the follow-up of [Start the run](orca.md#start-the-run). List Minor findings in the report: no round fixes them. The worker answers once its fix is pushed, or with its evidence where nothing changed: read `<head>` then, and never type the commit id of a message into a command.
 - Every fix, and every finding the worker answers with evidence instead of a change, gets a scoped re-review by a fresh `cl-workflow:recheck` subagent (another agent: a general subagent briefed with its steps), started and briefed like the reviewer, on the scratch clone at the new head.
   - It runs on the model of the review it checks, at `high`. After a review on `fable` it runs on `opus`, or on `fable` when the fix changes security or safety logic.
   - The re-review reads the lines changed since the reviewed head (`git -C <scratch path> diff <reviewed head> <head>`) and the earlier findings.
@@ -153,14 +153,14 @@ Read `<head>`. Mark the draft ready, `gh pr ready <n> -R <owner/repo>`, when all
 - the review of record of the reviewed head is posted ([Review of record](#review-of-record))
 - the body passes
 
-A required check that is red on `<head>` after the worker's report goes to the owning worker as a follow-up, once per pull request. Anything else that keeps the pull request a draft with no step of this file to end it (that check red again, a review thread that no trusted author opened) leaves it a draft for the owner: release its worker (the runner's Clean up) and name the pull request and the reason in the report.
+A required check that is red on `<head>` after the worker's report goes to the owning worker as a follow-up, once per pull request. Anything else that keeps the pull request a draft with no step of this file to end it (that check red again, a review thread that no trusted author opened) leaves it a draft for the owner: release its worker ([Clean up](orca.md#clean-up)) and name the pull request and the reason in the report.
 
 The body passes when both of these hold. Read the body and `closingIssuesReferences` with `gh pr view <n> -R <owner/repo> --json body,closingIssuesReferences`.
 
 - GitHub will close no issue for the pull request: `closingIssuesReferences` must be empty. It lists the issues the pull request may close ([PullRequest](https://docs.github.com/en/graphql/reference/pulls)), by a closing keyword in its body or by a link made in its sidebar, which needs no keyword, and GitHub closes them when the pull request merges, whatever `closeIssue` says ([linking a pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)).
 - With the hub as `<tracker>` of a public `<owner/repo>`, `node <skill folder>/hub-mentions.mjs <hub> <owner/repo> <n>` exits 0: no title, body, branch or commit message names the hub. Exit 1 lists the parts to rewrite (a branch: a new pull request); exit 2 merges nothing.
 
-A body that fails goes back to the owning worker as a follow-up; a list that its fix leaves filled is the owner's to clear: the pull request stays a draft, so release its worker (the runner's Clean up) and name the pull request and the reason in the report.
+A body that fails goes back to the owning worker as a follow-up; a list that its fix leaves filled is the owner's to clear: the pull request stays a draft, so release its worker ([Clean up](orca.md#clean-up)) and name the pull request and the reason in the report.
 
 That list does not cover the title or a commit message, so both keep the keyword test ([Merge](#merge), steps 4 and 5). A closing keyword is `close`, `fix` or `resolve`, or one of their forms (`closes`, `closed`, `fixes`, `fixed`, `resolves`, `resolved`), in any case, with or without a colon, before an issue reference: a commit that holds one closes that issue when it reaches the default branch.
 

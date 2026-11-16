@@ -2,7 +2,7 @@
 export const RUNS = '.cedarloom/runs';
 export const FILE = `${RUNS}/handoff.md`;
 export const STATUS = ['<!-- cedarloom:status -->', '<!-- /cedarloom:status -->'];
-const HEADER = "CedarLoom restored this coordinator's handoff file after a context clear or compaction (.cedarloom/runs/handoff.md, below). Before anything else, run its Resume steps: the runner's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
+const HEADER = "CedarLoom restored this coordinator's handoff file after a context clear or compaction (.cedarloom/runs/handoff.md, below). Before anything else, run its Resume steps: Orca's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
 // Claude Code drops additionalContext above 10,000 characters: the header, this much of the file and drift together and
 // the cut line stay below.
 const CAP = 9000;
