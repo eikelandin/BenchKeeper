@@ -30,7 +30,3 @@ Answer with one JSON object and nothing else: {"findings": [{"kind": "...", "lin
 
 FILE
 ```
-
-## Maintenance
-
-The prompt is checked against the fixtures in `test/fixtures/reviewing-rules/` of this plugin by a unit test with a recorded answer. When the prompt changes, run `bash test/fixtures/reviewing-rules/live.sh claude` (or `codex`) in this plugin's folder by hand against a real agent, and record its answers with `--record` once every fixture passes. CI never calls an agent.
