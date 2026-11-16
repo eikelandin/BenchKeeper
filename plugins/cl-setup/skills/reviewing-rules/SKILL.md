@@ -30,3 +30,7 @@ Answer with one JSON object and nothing else: {"findings": [{"kind": "...", "lin
 
 FILE
 ```
+
+## Maintenance
+
+After changing the prompt, run `test/fixtures/reviewing-rules/live.sh` of this plugin by hand (usage in its header): the unit test only replays a recorded answer.
