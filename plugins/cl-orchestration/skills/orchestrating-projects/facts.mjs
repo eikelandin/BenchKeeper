@@ -1,10 +1,10 @@
-// Usage: node facts.mjs write --run <run folder, relative to the working directory> --repo <owner/name> [--repo ...] [--tracker <owner/name> --labels <label,...>] [--accounts]. Writes <run folder>/facts.md from the job files, gh and cswap, exit 0: a source that cannot be read shows "unread" in its section.
+// Usage: node facts.mjs write --run <run folder, relative to the working directory> --repo <owner/name> [--repo ...] [--tracker <owner/name> --labels <label,...>] [--accounts]. Writes <run folder>/facts.md from the job files, gh and cswap, exit 0: a source that cannot be read shows "unread" in its section. With --tracker it also makes the label edit of each open question there that has an answer (approval.mjs apply).
 // Usage: node facts.mjs costs --run <run folder, relative to the working directory> --repo <owner/name> [--repo ...] --since <YYYY-MM-DD> --until <YYYY-MM-DD> [--json]. Per pull request merged in the period: its jobs' summed cost and its fix rounds (changes verdicts), then totals and medians; exit 2 when gh cannot list the merged pull requests.
 // The run folder is .cedarloom/runs/ of the working directory or a folder below it, given relative to the working directory (an absolute path passes only when no link lies on it), not a link; any other exits 2. The tracker is named on the command line only: a public repository must not name a private tracker.
 import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { parseArgs } from 'node:util';
-import { REPO, answer } from './approval.mjs';
+import { REPO, answer, settle } from './approval.mjs';
 import { writers } from './precheck.mjs';
 import { escaped, isMain, json, sh } from './policy.mjs';
 
@@ -114,24 +114,30 @@ function pullSection(repo, list, exec) {
   return [`### ${repo}`, '', ...table(['PR', 'Title', 'Head', 'Mergeable', 'Required checks', 'Open threads', 'Verdict'], rows)];
 }
 
-// Open approvals with one of the labels, and closed ones answered in the last 24 hours.
+// Open questions and the issues answered in the last 24 hours, found by the answer comment whatever their labels; each open question with an answer gets its label edit, as approval.mjs apply makes it.
 function approvalSection(tracker, labels, exec, now) {
   if (!tracker) return ['Not read: no --tracker.'];
-  const fields = ['--label', 'question', '--limit', '200', '--json', 'number,labels,comments,author,body'];
-  const open = data(read(exec, 'gh', ['issue', 'list', '-R', tracker, '--state', 'open', ...fields]));
-  const closed = data(read(exec, 'gh', ['issue', 'list', '-R', tracker, '--state', 'closed', '--search', `closed:>=${new Date(now - DAY).toISOString().slice(0, 10)}`, ...fields]));
-  if (!Array.isArray(open) || !Array.isArray(closed)) return [UNREAD];
+  const fields = ['--limit', '200', '--json', 'number,state,labels,comments,author,body'];
+  const open = data(read(exec, 'gh', ['issue', 'list', '-R', tracker, '--state', 'open', '--label', 'question', ...fields]));
+  const recent = data(read(exec, 'gh', ['issue', 'list', '-R', tracker, '--state', 'all', '--search', `updated:>=${new Date(now - DAY).toISOString().slice(0, 10)}`, ...fields]));
+  if (!Array.isArray(open) || !Array.isArray(recent)) return [UNREAD];
   const wanted = labels.map((l) => l.toLowerCase());
   // A member's answer counts with write access to the tracker, as approval.mjs reads it; a failed lookup reads unread.
   const writes = writers(tracker, exec);
-  const rows = [...open.map((i) => [i, 'open']), ...closed.map((i) => [i, 'closed'])].flatMap(([issue, state]) => {
-    const names = (issue.labels ?? []).map((l) => String(l.name));
-    const project = names.filter((n) => wanted.includes(n.toLowerCase()));
+  const asked = new Set(open.map((i) => i.number));
+  const rows = [...open, ...recent.filter((i) => !asked.has(i.number))].flatMap((issue) => {
+    let names = (issue.labels ?? []).map((l) => String(l.name));
     let given;
     try { given = answer(issue, writes); } catch { given = UNREAD; }
-    if (!project.length || (state === 'closed' && !(now - Date.parse(given?.at) <= DAY))) return [];
+    if (!asked.has(issue.number) && !(now - Date.parse(given?.at) <= DAY)) return [];
+    // Every open question of the tracker, so that an answer the owner commented on GitHub moves on within one run.
+    if (asked.has(issue.number) && given && given !== UNREAD) {
+      try { names = settle(tracker, issue, exec); } catch { names = [...names, 'label edit failed']; }
+    }
+    const project = names.filter((n) => wanted.includes(n.toLowerCase()));
+    if (!project.length) return [];
     const others = names.filter((n) => n.toLowerCase() !== 'question' && !project.includes(n));
-    return [[issue.number, project.join(', '), state === 'open' ? others.join(', ') || 'open' : 'closed', given === UNREAD ? UNREAD : given?.option, utc(given?.at)]];
+    return [[issue.number, project.join(', '), issue.state === 'CLOSED' ? 'closed' : others.join(', ') || 'open', given === UNREAD ? UNREAD : given?.option, utc(given?.at)]];
   });
   return table(['Issue', 'Project', 'State', 'Answer', 'Answered'], rows.sort((a, b) => a[0] - b[0]));
 }
