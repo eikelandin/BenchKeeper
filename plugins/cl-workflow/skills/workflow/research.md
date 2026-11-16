@@ -8,4 +8,4 @@
 - Every external claim carries an official source URL or the mark "unverified". Debated or uncertain topics get a confidence level and name what is disputed.
 - Benchmarks and evaluations: independent or vendor-run, version, harness, model and effort, task count, runs per arm, deltas next to the spread, advertised claims next to measured ones.
 - A question that needs running code: a throwaway spike in the scratch directory (a prototype skill, when installed).
-- Subagent brief: the question in one sentence, what is already known, the sources to trust, the return format (answer, source URL per claim, confidence), and the scope limit (read-only, no further subagents).
+- Subagent brief: the question in one sentence, the decision it feeds and the evidence that settles it, what is already known, the sources to trust, the return format (answer, source URL per claim, confidence), and the scope limit (read-only, no further subagents).

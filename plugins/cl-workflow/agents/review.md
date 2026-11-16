@@ -30,5 +30,5 @@ Return as your final message the scope line (branch or diff range, and the issue
 - **Blocking**: wrong behavior, security, data loss, an acceptance row unmet.
 - **Important**: a likely defect, a missing test the project's test rule calls for, or code the code rules in the repository's instructions (the CedarLoom block or an `AGENTS.md` Code section) reject: a guard for a case that cannot happen, a layer or option for one user that the task does not call for, a parallel copy of existing logic, code under a new test that reaches for time, randomness or I/O directly.
 - **Minor**: style, naming.
-A finding whose only fix would add a layer, an option, a guard or a test, each for a case that cannot happen, is dropped before the report; a Blocking finding, a finding on validation where data enters, or a missing test the project's test rule calls for is never dropped.
-Then the claims you could not verify and what you did not check.
+A finding whose only fix would add a layer, an option, a guard or a test, each for a case that cannot happen, is dropped before the report; a Blocking finding, a finding on validation where data enters, or a missing test the project's test rule calls for is never dropped. A defect the change neither made nor exposed is a follow-up, not a finding, unless it is Blocking.
+Then the follow-ups, the claims you could not verify and what you did not check.
