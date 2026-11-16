@@ -59,6 +59,17 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 
 The role guard refuses merges, releases and pushes to the default branch in every session without `CEDARLOOM_ROLE=coordinator` in its environment, your own sessions included. Start only the coordinator's session with it, for example `CEDARLOOM_ROLE=coordinator claude` ([The plugins](docs/plugins.md)).
 
+## Optional: Ponytail
+
+[Ponytail](https://github.com/DietrichGebert/ponytail) is a separate plugin that CedarLoom does not need or install: it steers the agent to write only what the task needs, without cutting validation, error handling, security or accessibility. Install it from its own marketplace, as two separate prompts:
+
+```text
+/plugin marketplace add DietrichGebert/ponytail
+/plugin install ponytail@ponytail
+```
+
+Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugin add ponytail@ponytail`.
+
 ## Typical flow
 
 1. [Install](#install) the `cedarloom` bundle; `cl-workflow` plus `cl-setup` is enough without the coordinator. Update with the commands under [Update](#update).
@@ -102,10 +113,6 @@ Repeat the second line for each installed plugin, or in a session open `/plugin`
 ```
 
 Removing the marketplace uninstalls every plugin installed from it. Files the skills wrote into your repositories stay, for example `AGENTS.md`, `docs/agents/orchestration.json` and the `.cedarloom/runs` folder: delete them yourself if you no longer want them.
-
-## Not in 0.1
-
-The command-line tool and the browser app are planned for 0.2.
 
 ## More
 

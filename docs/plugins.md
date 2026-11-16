@@ -29,6 +29,8 @@ Turn it on: set `tierBand` to `true` for `cl-workflow@cedarloom` in the plugin's
 
 Ponytail draws a band of its own, so with both on the two stack. `/ponytail band off` hides Ponytail's.
 
+[Ponytail](https://github.com/DietrichGebert/ponytail) steers the agent to write only what the task needs, without cutting validation, error handling, security or accessibility; install it with `/plugin marketplace add DietrichGebert/ponytail`, then `/plugin install ponytail@ponytail` ([README](../README.md#optional-ponytail)).
+
 ## Terminal questions
 
 By default a Claude Code session with the cl-workflow plugin on never uses the question tool (`AskUserQuestion`) or plan mode (`EnterPlanMode`).

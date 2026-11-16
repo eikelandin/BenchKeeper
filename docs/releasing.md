@@ -1,6 +1,6 @@
 # Releasing
 
-BenchKeeper releases only when the owner merges the release pull request or starts a release workflow by hand. No workflow merges that pull request or enables auto-merge on it.
+CedarLoom releases only when the owner merges the release pull request or starts a release workflow by hand. No workflow merges that pull request or enables auto-merge on it.
 
 A release ships the plugins only, and no release publishes to npm.
 
