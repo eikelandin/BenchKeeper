@@ -153,18 +153,17 @@ Automatic: not reached while an automatic worker cannot `send` or `ask` ([Worker
 
 ## Watch
 
-The mail types are `worker_done,escalation,question,status`. Orca wakes the coordinator when mail arrives, a `worker_done`, an `escalation` or a `question`, whatever its agent. A `status` message wakes it too: its terminal is told "You have 1 orchestration message" (unverified: observed, not in Orca's documentation).
+The mail types are `worker_done,escalation,question,status`. Orca wakes the coordinator when mail arrives, a `worker_done`, an `escalation` or a `question`. A `status` message wakes it too: its terminal is told "You have 1 orchestration message" (unverified: observed, not in Orca's documentation).
 
-How the coordinator waits, by its agent:
+How the coordinator waits:
 
-- **Any agent.** The coordinator never polls, but for the foreground wait of an agent with no background wake (below), and never runs `check --wait` in the background: a background wait keeps a task alive at every turn end, so the plugin never clears an idle coordinator.
-- **Claude Code.** End the turn after starting or messaging workers. At run start, create one recurring session cron (`CronCreate`) every 10 minutes on minutes off the hour (`3-59/10 * * * *`). Its prompt names the run id and the absolute path of this file, and lists the four wake-up checks below, so a wake runs them without reading a file and a silent worker is seen without mail.
+- **Always.** The coordinator never polls, but for the foreground wait without session crons (below), and never runs `check --wait` in the background: a background wait keeps a task alive at every turn end, so the plugin never clears an idle coordinator.
+- **With session crons.** End the turn after starting or messaging workers. At run start, create one recurring session cron (`CronCreate`) every 10 minutes on minutes off the hour (`3-59/10 * * * *`). Its prompt names the run id and the absolute path of this file, and lists the four wake-up checks below, so a wake runs them without reading a file and a silent worker is seen without mail.
   - The cron fires only while the session is idle and survives `/clear`.
   - It expires after 7 days, and an expired cron cannot wake the session, so name its expiry date in the report of each wake and replace it before then.
   - To replace it: at the first wake within 2 days of that date, or when `CronList` no longer shows it, `CronDelete` it and create it again as at run start, with the same schedule and a new expiry date. A run that only waits for new issues (`keepRunning`) then keeps waking with no owner restart.
   - Delete it (`CronDelete`) when the run closes.
-  - Without session crons (`CronCreate` missing, or `CLAUDE_CODE_DISABLE_CRON` set), wait as an agent with no background wake does.
-- **An agent with no background wake** (Claude Code without session crons). It runs `check --wait` for those types with `--timeout-ms 600000` in the foreground, never looped faster than once a minute, and runs the wake-up checks when it returns.
+- **Without session crons** (`CronCreate` missing, or `CLAUDE_CODE_DISABLE_CRON` set). It runs `check --wait` for those types with `--timeout-ms 600000` in the foreground, never looped faster than once a minute, and runs the wake-up checks when it returns.
 
 A wait's deadline ([SKILL.md](SKILL.md#waiting)) is checked at a wake: it is a point to report at and ends no run.
 
@@ -227,13 +226,13 @@ The CedarLoom plugin hands the handoff file back after a `/clear` or compaction 
 
 The file's Resume section holds these steps, in this order, with the run id and the absolute path of this skill's folder filled in:
 
-1. `ORCA orchestration check --json`, always first: it returns the mail that arrived meanwhile. Orca types a wake only once per unread message, and a wake can merge into the resume prompt. Act on its output only after step 2.
+1. The [Detect](runners.md#runners) step again: when it fails, start nothing and tell the owner the runner and the reason. Then `ORCA orchestration check --json`, before any other `orchestration` command: it returns the mail that arrived meanwhile. Orca types a wake only once per unread message, and a wake can merge into the resume prompt. Act on its output only after step 2.
 2. Read `<skill folder>/SKILL.md` and `<skill folder>/orca.md` in full, then the reference file that the mail of step 1 or the Next section's step needs. A `/clear` empties the context, the skill included, and a compaction returns only the start of it. Take the hub and `<issues in>` from the `Hub:` line, as [Names](SKILL.md#names) says.
 3. When `check` said no run is bound: `ORCA orchestration run-use --id <run id> --json`, then `check` again.
 4. `ORCA orchestration run-current --json`
 5. `ORCA orchestration task-list --ready --brief --json`
 6. `ORCA orchestration inbox --terminal run:<run id> --limit 50 --json`: the mail already handled.
-7. Claude Code only: `CronList`. When it no longer shows the run's stall-check cron (a restarted process loses it), or that cron expires within 2 days, replace it as the Watch section of `<skill folder>/orca.md` says.
+7. With session crons: `CronList`. When it no longer shows the run's stall-check cron (a restarted process loses it), or that cron expires within 2 days, replace it as the Watch section of `<skill folder>/orca.md` says.
 
 ## Clean up
 

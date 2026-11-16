@@ -37,7 +37,7 @@ Each runner file has these sections, under its own headings where the file says 
 
 | Runner | File | Detect |
 | --- | --- | --- |
-| `claude-code` (built in) | [claude-code.md](claude-code.md) | the session is Claude Code with background agents and session crons |
+| `claude-code` | [claude-code.md](claude-code.md) | the session is Claude Code with background agents and session crons |
 | `orca` | [orca.md](orca.md) | the session is Claude Code, an Orca executable is found, and `<that executable> skills get orchestration` succeeds |
 
 ## Modes
