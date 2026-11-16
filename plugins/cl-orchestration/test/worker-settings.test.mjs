@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { supervisedSettings } from '../skills/orchestrating-projects/worker-settings.mjs';
 
 const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/worker-settings.mjs', import.meta.url));
 const run = (args, cwd) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd });
@@ -41,12 +42,12 @@ test('worker-settings: fills the worktree, the shared .git, its worktrees folder
       `Edit(${folders}/*/commondir)`, `Edit(${folders}/other/commondir)`, `Edit(${folders}/${name}/commondir)`,
       `Edit(${folders}/*/config.worktree)`, `Edit(${folders}/other/config.worktree)`, `Edit(${folders}/${name}/config.worktree)`,
     ]);
-    // The worker rules that Bash(gh *), Bash(git push *), WebFetch and the .claude deny already match are left out.
-    assert.deepEqual(settings.permissions.deny.slice(-6), ['mcp__*', 'Bash(gh *)', 'Bash(git push *)', 'Read(.env)', 'Read(.env.*)', 'Read(secrets/**)']);
-    assert.deepEqual(settings.permissions.ask, [
+    // The worker rules that Bash(gh *), Bash(git push *), WebFetch and the .claude deny already match are left out; Edit rules stay ask, so the sandbox leaves .git to git.
+    assert.deepEqual(settings.permissions.deny.slice(-13), [
+      'mcp__*', 'Bash(gh *)', 'Bash(git push *)', 'Read(.env)', 'Read(.env.*)', 'Read(secrets/**)',
       'Bash(rm -r*)', 'Bash(rm -R*)', 'Bash(rm -fr*)', 'Bash(rm -fR*)', 'Bash(rm * -r*)', 'Bash(rm * -R*)', 'Bash(rm *--recursive*)',
-      `Edit(${w}/.github/**)`, 'Edit(//**/.git)', 'Edit(//**/.git/**)',
     ]);
+    assert.deepEqual(settings.permissions.ask, [`Edit(${w}/.github/**)`, 'Edit(//**/.git)', 'Edit(//**/.git/**)']);
     assert.deepEqual(settings.sandbox.network, { strictAllowlist: true, allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
     assert.equal(settings.permissions.defaultMode, 'dontAsk');
   }
@@ -62,11 +63,12 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   const written = run(args, base);
   assert.equal(written.status, 0, written.stderr);
   const { permissions } = JSON.parse(readFileSync(file, 'utf8'));
-  assert.deepEqual(Object.keys(permissions), ['deny', 'ask']);
+  // No ask list: where Orca answers the worker's prompts, an ask match runs.
+  assert.deepEqual(Object.keys(permissions), ['deny']);
   // A rule that ends in :* is a prefix rule, so the : refspec deny must end otherwise.
   assert.ok(permissions.deny.includes('Bash(gh pr merge *)') && permissions.deny.includes('Bash(git push * :**)') && permissions.deny.includes('Read(.env)'));
-  assert.deepEqual(permissions.ask.slice(0, 3), ['Bash(git push *)', 'Bash(gh pr create *)', 'Bash(gh pr comment *)']);
-  assert.deepEqual(permissions.ask.slice(-5), ['Edit(/.claude/**)', 'Edit(/.github/**)', 'Edit(//**/.git)', 'Edit(//**/.git/**)', 'WebFetch']);
+  assert.ok(permissions.deny.includes('Bash(git push *)') && permissions.deny.includes('Bash(gh pr create *)') && permissions.deny.includes('Bash(gh pr comment *)'));
+  assert.deepEqual(permissions.deny.slice(-5), ['Edit(/.claude/**)', 'Edit(/.github/**)', 'Edit(//**/.git)', 'Edit(//**/.git/**)', 'WebFetch']);
   assert.equal(run(args, base).status, 0);
   assert.equal(readFileSync(exclude, 'utf8'), '*.log\n/.claude/settings.local.json\n');
   const checked = run(['--check', ...args], base);
@@ -115,6 +117,12 @@ test('worker-settings --supervised: writes the worker rules without a host path 
     assert.equal(status, 1, folder);
     assert.match(stderr, error, folder);
     assert.deepEqual(readdirSync(join(base, 'outside')), [], folder);
+  }
+});
+
+test('worker-settings: refuses a rule file with a key besides deny or a rule that is no string', () => {
+  for (const rules of [{ deny: [], ask: ['Bash(git push *)'] }, { deny: ['Bash(git push *)', 1] }]) {
+    assert.throws(() => supervisedSettings(rules), /must hold one key, deny, with a list of rule strings/, JSON.stringify(rules));
   }
 });
 
