@@ -164,7 +164,7 @@ How the coordinator waits, by its agent:
   - To replace it: at the first wake within 2 days of that date, or when `CronList` no longer shows it, `CronDelete` it and create it again as at run start, with the same schedule and a new expiry date. A run that only waits for new issues (`keepRunning`) then keeps waking with no owner restart.
   - Delete it (`CronDelete`) when the run closes.
   - Without session crons (`CronCreate` missing, or `CLAUDE_CODE_DISABLE_CRON` set), wait as an agent with no background wake does.
-- **An agent with no background wake** (Codex, and Claude Code without session crons). It runs `check --wait` for those types with `--timeout-ms 600000` in the foreground, never looped faster than once a minute, and runs the wake-up checks when it returns.
+- **An agent with no background wake** (Claude Code without session crons). It runs `check --wait` for those types with `--timeout-ms 600000` in the foreground, never looped faster than once a minute, and runs the wake-up checks when it returns.
 
 A wait's deadline ([SKILL.md](SKILL.md#waiting)) is checked at a wake: it is a point to report at and ends no run.
 
@@ -219,7 +219,7 @@ A worker on another agent stays `block` (unverified: which key declines its dial
 
 ## Resume
 
-The CedarLoom plugin hands the handoff file back after a `/clear` or compaction only in the session its `Session:` line names, for a Claude Code or a Codex coordinator (Codex once its hook is trusted, and after a compaction only: a Codex `/clear` starts a new session id).
+The CedarLoom plugin hands the handoff file back after a `/clear` or compaction only in the session its `Session:` line names, a Claude Code coordinator ([Detect](runners.md#runners)).
 
 - When that Claude Code coordinator ends a turn idle (no background task; a session cron does not count) above the plugin option `rotateAtTokens`, 200,000 tokens by default, the plugin clears it with `/clear` and submits a prompt to run the Resume steps.
 - `rotateAtPercent` above 0 sets a percent of the context window instead, and both at 0 turn it off.
@@ -274,7 +274,7 @@ A follow-up puts a worker that already reported back to work (an automatic worke
 The rules of a scheduled run for any runner: [recurring-runs.md](recurring-runs.md). With Orca:
 
 ```text
-ORCA automations create --name <name> --trigger <cron> --provider <claude|codex> --repo path:<coordinator project> --precheck "node <skill folder>/precheck.mjs <its arguments in SKILL.md, Loop>" --prompt "<the skill invocation>" --json
+ORCA automations create --name <name> --trigger <cron> --provider claude --repo path:<coordinator project> --precheck "node <skill folder>/precheck.mjs <its arguments in SKILL.md, Loop>" --prompt "<the skill invocation>" --json
 ORCA automations runs --id <automation id> --limit 5 --json
 ```
 

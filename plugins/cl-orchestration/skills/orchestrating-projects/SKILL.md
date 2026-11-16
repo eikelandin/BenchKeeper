@@ -229,7 +229,7 @@ Hub: <hub, or none>; issues in <issues in>
 - `Models:` has one entry per alias the run's sessions use.
 - `Hub:` holds `<hub>` and `<issues in>` as [Names](#names) reads them at the start; a missing line means no hub.
 - The block between `<!-- cedarloom:status -->` and `<!-- /cedarloom:status -->` belongs to the plugin's hooks.
-- A file that already names another session belongs to another coordinator: keep no handoff file in this folder (this coordinator then gets no restore or clear), leave that file as it is and name it in the report, since a session that ended leaves its file behind. Only when the owner asks this session to resume that run, write your id into its `Session:` line, then follow the runner's Resume.
+- A file that already names another session belongs to another coordinator: keep no handoff file in this folder (this coordinator then gets no restore or clear), leave that file as it is and name it in the report, since a session that ended leaves its file behind. Only when the owner asks this session to resume that run and its runner's Detect step answers here ([runners.md](runners.md#choosing-the-runner)), write your id into its `Session:` line, then follow the runner's Resume.
 - Delete the file when the run closes, and only when it names your session.
 - When the plugin hands the file back, and when it clears an idle coordinator: the runner's Resume.
 

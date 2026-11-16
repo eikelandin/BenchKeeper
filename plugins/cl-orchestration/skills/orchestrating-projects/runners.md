@@ -4,7 +4,7 @@ A runner starts the workers, carries messages between them and the coordinator, 
 
 ## Choosing the runner
 
-The coordinator chooses once, when the run starts, and writes the name into the handoff file's `Runner:` line. A resumed run keeps the runner of that line.
+The coordinator chooses once, when the run starts, and writes the name into the handoff file's `Runner:` line. A resumed run keeps the runner of that line when its Detect step answers in the resuming session; otherwise start nothing and tell the owner the runner and the reason.
 
 1. **Run argument.** `--runner <name>` before the project paths.
 2. **Plugin option.** `runner`, as [SKILL.md](SKILL.md) reads it: empty means auto.
