@@ -2,7 +2,7 @@
   "name": "cl-orchestration",
   "displayName": "CedarLoom orchestration",
   "version": "6.27.0",
-  "description": "Coordinates the issues of several projects from one session: worker jobs, reviews and merge checks, and a handoff file that a cleared or compacted coordinator resumes from.",
+  "description": "Coordinates the issues of several projects from one session: worker jobs started through Orca 1.4.259 or later, reviews and merge checks, and a handoff file that a cleared or compacted coordinator resumes from.",
   "author": {
     "name": "eikelandin",
     "url": "https://github.com/eikelandin"
@@ -25,12 +25,6 @@
       "default": 0,
       "min": 0,
       "max": 100
-    },
-    "runner": {
-      "type": "string",
-      "title": "Runner that starts the workers",
-      "description": "Empty by default: auto, which takes orca when its Detect step answers, else starts nothing. orca sets it; a set runner that fails its Detect step starts nothing. A run's --runner argument wins.",
-      "default": ""
     },
     "hub": {
       "type": "string",

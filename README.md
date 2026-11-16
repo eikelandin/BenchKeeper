@@ -14,7 +14,7 @@ CedarLoom gives Claude Code a workflow: it sizes the planning, checks and review
 - [Claude Code](https://code.claude.com/docs/en/setup) 2.1.295 or later.
 - [Node.js](https://nodejs.org/) on the PATH: the plugins' hooks run `node`. CI runs the plugin tests on Node.js 22.
 - Git and the [GitHub CLI](https://cli.github.com/) (`gh`) for setting up repositories and for coordinating issue work.
-- For `cl-orchestration`: [Orca](https://github.com/stablyai/orca) with its `orchestration` skill, which runs each worker in a terminal of its own; the coordinator starts workers only through Orca. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
+- For `cl-orchestration`: [Orca](https://github.com/stablyai/orca) 1.4.259 or later ([release](https://github.com/stablyai/orca/releases/tag/v1.4.259)), which runs each worker in a terminal of its own; the coordinator starts workers only through Orca and reads its `orchestration` guide with `orca skills get orchestration`. Run unattended workers in Claude Code's [sandbox](https://code.claude.com/docs/en/sandboxing) or a dev container with a network allow-list: it limits what a misled worker can reach or send.
 
 ## Install
 
@@ -78,7 +78,7 @@ Codex: `codex plugin marketplace add DietrichGebert/ponytail`, then `codex plugi
    - Keep the repository in shape with `/cl-setup:maintaining-repos`, and run `/cl-setup:audit`, `/cl-setup:improve` and `/cl-setup:debloat` on its instructions, docs or code.
 4. Per issue, with the coordinator (needs `cl-orchestration`):
    - Label the issues with the `startLabel`.
-   - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts a worker per issue through its [runner](plugins/cl-orchestration/skills/orchestrating-projects/runners.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
+   - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:orchestrating-projects <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/orchestrating-projects/orca.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard lets no other session merge or release.
    - Where the coordinator's questions go: [Hub repository](#hub-repository).
 
 ## Hub repository

@@ -13,7 +13,7 @@ test('options: every one the skills read is declared here, and read only in a SK
     const body = readFileSync(new URL(`skills/${file}`, root), 'utf8').replace(/^---\n[\s\S]*?\n---\n/, '');
     for (const [, key] of body.matchAll(/\$\{user_config\.(\w+)\}/g)) reads.push(`${file.replaceAll('\\', '/')} ${key}`);
   }
-  assert.deepEqual(reads, ['orchestrating-projects/SKILL.md runner', 'orchestrating-projects/SKILL.md hub', 'orchestrating-projects/SKILL.md issuesIn']);
+  assert.deepEqual(reads, ['orchestrating-projects/SKILL.md hub', 'orchestrating-projects/SKILL.md issuesIn']);
   for (const read of reads) assert.ok(manifest.userConfig[read.split(' ')[1]], read);
 });
 

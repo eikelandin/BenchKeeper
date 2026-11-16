@@ -118,7 +118,7 @@ async function status($: EngineInterface, text: string, event: string, tokens: n
 const note = ($: EngineInterface, text: string) => $.session.append({ message: { type: 'system', content: [{ type: 'text', text }] } })
 
 async function rotate($: EngineInterface, why: string, now: number, seen: number, before: number | null) {
-  // A prompt queued during the judged turn (a runner's wake) has started a new one: give up and let its Stop judge again.
+  // A prompt queued during the judged turn (an Orca wake) has started a new one: give up and let its Stop judge again.
   if (turns !== seen) {
     lastEnd = before
     return
