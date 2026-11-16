@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "blockWritesOutsideWorkingDirectories": true,
+    "blockReadsOutsideWorkingDirectories": true,
+    "allow": ["Edit(//W/**)"],
+    "deny": [
+      "Edit(//W/.claude/**)", "Edit(//W/.mcp.json)", "Edit(//W/.vscode/**)", "Edit(//W/.idea/**)",
+      "Edit(//W/.bashrc)", "Edit(//W/.zshrc)", "Edit(//W/.gitconfig)",
+      "Edit(//W/.envrc)", "Edit(//W/.npmrc)", "Edit(//W/.husky/**)",
+      "Edit(//C/commondir)", "Edit(//C/config.worktree)", "Edit(//C/worktrees/*/commondir)", "Edit(//C/worktrees/*/config.worktree)",
+      "WebFetch", "WebSearch", "mcp__*", "Bash(gh *)", "Bash(git push *)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "network": { "strictAllowlist": true, "allowedDomains": ["registry.npmjs.org"] },
+    "credentials": {
+      "files": [
+        { "path": "~/.aws", "mode": "deny" },
+        { "path": "~/.azure", "mode": "deny" },
+        { "path": "~/.config/gcloud", "mode": "deny" },
+        { "path": "~/.kube", "mode": "deny" },
+        { "path": "~/.docker/config.json", "mode": "deny" },
+        { "path": "~/.netrc", "mode": "deny" },
+        { "path": "~/.gnupg", "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "GH_TOKEN", "mode": "deny" }, { "name": "GITHUB_TOKEN", "mode": "deny" },
+        { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" }
+      ]
+    }
+  }
+}

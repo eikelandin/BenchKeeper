@@ -92,6 +92,8 @@ export function validate(doc) {
   if (kind(doc) !== 'object') return [{ rule: 'not-object', path: '', message: 'must be a JSON object' }];
   const errors = [];
   check(supported(inlined(shipped('./orchestration.schema.json'))), doc, '', errors);
+  // A rule over two keys, which the keywords check() implements cannot state: the network allow list of automatic workers comes from this file alone.
+  if (doc.mode === 'automatic' && !(kind(doc.sandbox) === 'object' && Object.hasOwn(doc.sandbox, 'allowedDomains'))) errors.push({ rule: 'required', path: 'sandbox.allowedDomains', message: 'is required when mode is automatic: the hosts an automatic worker may reach' });
   return errors.map((e) => (e.rule === 'unknown-key' && e.path === 'issues.repository' ? REFUSED_REPOSITORY : e));
 }
 
@@ -112,7 +114,7 @@ export function effective(file, version = pluginVersion()) {
   if (!errors.length && doc.minPlugin && !version) errors.push({ rule: 'range', path: 'minPlugin', message: 'cannot be checked: the version of this plugin is unknown (no .claude-plugin/plugin.json two folders above the skill)' });
   else if (!errors.length && doc.minPlugin && older(version, doc.minPlugin)) errors.push({ rule: 'range', path: 'minPlugin', message: `must be at most ${version}, the version of this plugin` });
   if (errors.length) return { policy: null, errors, warnings };
-  const { merge = {}, review = {}, issues = {}, models = {} } = doc;
+  const { merge = {}, review = {}, issues = {}, models = {}, sandbox = {} } = doc;
   return {
     errors,
     warnings,
@@ -136,6 +138,8 @@ export function effective(file, version = pluginVersion()) {
       issuesPerWorker: doc.issuesPerWorker ?? 1,
       keepRunning: doc.keepRunning ?? false,
       permissionPrompts: doc.permissionPrompts ?? 'block',
+      mode: doc.mode ?? 'supervised',
+      sandbox: { allowedDomains: sandbox.allowedDomains ?? [] },
       riskyPaths: doc.riskyPaths ?? [],
       review: { depth: review.depth ?? 'high', sensitiveDepth: review.sensitiveDepth ?? 'high', sensitivePaths: review.sensitivePaths ?? [] },
       issues: { tracker: named ? 'repo' : issues.tracker ?? null, labels: issues.labels ?? [] },
