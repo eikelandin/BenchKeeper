@@ -2,7 +2,7 @@
 
 This is the spec of the issue runs this skill coordinates.
 
-Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for the claude-code runner leaves out the Acknowledge line ([claude-code.md](claude-code.md#start)). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
+Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker changes the lines that section names, and a spec for the claude-code runner leaves out the Acknowledge line ([claude-code.md](claude-code.md#start)). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
 
 What the lines take, policy fields as the reader prints them:
 
@@ -102,6 +102,22 @@ With the hub as `<tracker>` of a public `<owner/repo>`, the spec names no hub, h
 - Flow: the draft pull request's body describes the change, with no issue reference.
 - Blocked, Needs replan and No change needed: what they comment on the issue goes into the report instead ([SKILL.md](SKILL.md#outcomes)).
 - Report: the handoff `Issue:` line takes the task's title.
+
+## Automatic mode
+
+A worker of an automatic project ([runners.md](runners.md#modes)) cannot commit, push or run `gh`, and has one issue. These lines change:
+
+- Agent: "permission mode `dontAsk`, in the sandbox its settings file sets" in place of "permission mode the agent's default".
+- Trusted authors: the `gh api` check is the coordinator's, done for the Thread block.
+- Branch: without "fetch it" and the merge of origin/<default branch>: the worker reaches no GitHub host, so the coordinator runs `git -C <project path> fetch origin` right before the start, and a merge is the coordinator's ([Commit and push](runners.md#commit-and-push)).
+- You may: "create the branch named above, stage changes to the owned paths with `git add`, resolve the conflicts of a merge the coordinator started, and run checks" in place of the rest of the line: a merge is a commit too.
+- You may not: also "commit, merge, push or run `gh`, also where the worker rules say to (a stop request: stage and report)"; "start with a flag that bypasses or skips permission prompts" stays.
+- Flow, Quick depth: "stage" in place of "commit". Every depth: "once the work is staged, report: the coordinator commits it, pushes the branch and opens the draft pull request, with your commit message as its body" in place of the push, pull request and checks steps.
+- Decisions: "take the recommended default only for a safe, reversible choice and list it in the report. `dontAsk` only refuses tool calls that no allow rule lists; it decides no question: an owner-only decision (money, legal, anything public, deletes, repository settings, secrets and access, a security risk, a choice not clearly safe and reversible) stops the item, and you report BLOCKED with the question." The owner's answer comes to the same session.
+- Blocked, Needs replan, No change needed and Follow-up: what they comment on the issue, and the replies to review threads, go into the report or answer instead, which the coordinator posts. A change to a path the settings file denies (`.claude`, `.mcp.json`, `.envrc`, `.npmrc`, `.husky` and the others of [Sandbox on](runners.md#sandbox-on)) is BLOCKED.
+- Follow-up: stage the fix and answer with the staged files and a commit message, and with a new title or body where one was asked.
+- Report: What changed takes the branch, the staged files and a commit message whose body refers to the issue as `<tracker>#<number>`, with no closing keyword.
+- A new line after Authority: "Bash calls: pass only `command` and `description`. The sandbox runs a command without a prompt, but `dontAsk` refuses a `git -c` option, a leading `VAR=` assignment, `make VAR=...`, `eval`, a Monitor command and a multi-line `printf ... > file` call: write files with the file tools and use other forms."
 
 ## Batches
 

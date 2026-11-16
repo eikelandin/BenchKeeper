@@ -53,7 +53,7 @@ At each wake-up, in this order:
 
 ## Dialogs
 
-Supervised only: every worker runs in this session's default permission mode, and its permission prompts appear in this session, naming the worker. They are the owner's: the coordinator answers none. A grant that lasts beyond one call applies to the whole session, the coordinator's included. `permissionPrompts` `decline` does not apply, since there is no worker terminal.
+Supervised only ([modes](runners.md#modes)): a worker shares this session's mode and sandbox, so the automatic bounds cannot apply to it, and a project whose policy says automatic runs supervised here: say so in the report. Every worker runs in this session's default permission mode, and its permission prompts appear in this session, naming the worker. They are the owner's: the coordinator answers none. A grant that lasts beyond one call applies to the whole session, the coordinator's included. `permissionPrompts` `decline` does not apply, since there is no worker terminal.
 
 ## Write scope
 

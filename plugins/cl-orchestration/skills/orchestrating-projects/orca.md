@@ -14,7 +14,7 @@ The sections of the [runner interface](runners.md#interface), in this file:
 | Follow-up | the `send` of [Start the run](#start-the-run); the worker answers as [Worker reports](#worker-reports) says |
 | Watch | [Watch](#watch) |
 | Dialogs | [A permission dialog](#a-permission-dialog) |
-| Write scope | the worktree; anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)) |
+| Write scope | the worktree; supervised, anything else prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)); automatic, the bounds of [Sandbox on](runners.md#sandbox-on) |
 | Resume | [Resume](#resume) |
 | Clean up | [Clean up](#clean-up) |
 | Host limit | [Host limit](#host-limit) |
@@ -36,7 +36,8 @@ ORCA orchestration worker-start --spec-file <filled spec file> --terminal <termi
 A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled spec file> --worktree new-top-level --repo path:<project path> --base-branch <default branch> --name <number>-<slug> --agent codex --model "<model>" --effort <effort> --keep-open --json`.
 
 - `--autocompact 200k` caps the worker's context at 200,000 tokens before it compacts, and `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` turns off the next-prompt suggestions no one reads in a worker terminal. `env` sets the variable in any login shell.
-- No permission-bypass flag anywhere in the launch.
+- No permission-bypass flag anywhere in the launch. Supervised ([modes](runners.md#modes)), the `claude` command is as above: the default permission mode, with the prompts in the worker's terminal ([A permission dialog](#a-permission-dialog)).
+- Automatic, for a Claude Code worker only (a Codex worker of an automatic project runs supervised): write its settings file first ([Sandbox on](runners.md#sandbox-on)), `<id>` being `<number>-<slug>`, and add `--permission-mode dontAsk --settings '<run folder>/settings/<id>.json'` to the `claude` command. Before each such worker, pass [Automatic start](runners.md#automatic-start); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. A failed check or step runs the project supervised.
 - Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so issue text is never read by the shell.
 - The model and effort are those of the spec's `Agent:` line, the model as the reader printed it, inside single quotes in the terminal command. Leave out what that line gives as the agent default, and the effort whenever the model is left out.
 - The worker takes its task only once its agent reached its idle prompt. A `terminal wait` that times out or ends in another state starts no worker: read its screen once (`ORCA terminal read --terminal <terminal> --screen --json`). Such a start has a worktree and a terminal but no dispatch, so neither `worker-list` nor [Clean up](#clean-up) sees them:
@@ -132,6 +133,8 @@ Acknowledge a delivery only after its outcome is handled (`check --ack <delivery
 Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof. A worker blocked by a hook or waiting at a prompt stays `ready`, so a state watcher never fires for it. For the stall check, compare the time of the last commit on its branch, its PR and its last message with `stallMinutes`; when exceeded, `worker-read` its last output. Proof that it stopped without a report is a final agent turn that ended with no `worker_done`. Then `worker-stop` it and handle it as blocked; act on the `nextAction` that `worker-list` gives for the stopped dispatch, by the rule above, before releasing it. Without that proof, keep waiting.
 
 ## A permission dialog
+
+An automatic worker shows none: under `dontAsk` a call that would prompt is denied. A dialog in its terminal (a trust question, a login) is the owner's.
 
 At the stall check, with `permissionPrompts` `decline`, decline a permission dialog of a Claude Code worker, only from Bash or Zsh (below), and only when both of these show it:
 

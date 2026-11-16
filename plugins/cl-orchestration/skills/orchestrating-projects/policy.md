@@ -26,6 +26,8 @@ Take each project's policy from the reader, never from the JSON file: `node <ski
 | `issuesPerWorker` | pickable issues of the project that one worker takes as its batch | 1 |
 | `keepRunning` | the run stays open for this project and picks up issues labeled later | false |
 | `permissionPrompts` | `block` or `decline` at a permission dialog in a worker's terminal ([Rules](SKILL.md#rules)) | `block` |
+| `mode` | `supervised` or `automatic` ([modes](runners.md#modes)): supervised workers start in the default permission mode and every question to the owner waits for the owner; automatic workers start in `dontAsk` inside the sandbox, on a runner that offers it. The run argument `--mode supervised` lowers it; nothing raises it. An older plugin refuses the key, so a policy that sets it, or `sandbox`, names the first plugin version with them in `minPlugin` | `supervised` |
+| `sandbox.allowedDomains` | the hosts an automatic worker's commands may reach, required when `mode` is `automatic`: what the project's own tools fetch, each a host name, or `*.` before a domain. No GitHub host for git: the coordinator pushes | none |
 | `review.depth`, `review.sensitiveDepth` | the review level of a routine and of a sensitive change (`low`, `medium`, `high`, `xhigh`) | both `high` |
 | `riskyPaths` | paths whose change has high impact: the risk class is at least medium and the change sensitive ([Risk class](SKILL.md#risk-class)). An older plugin refuses the key, so a policy that sets it, or `merge.autoMergeMax`, names the first plugin version with them in `minPlugin` | none |
 | `review.sensitivePaths` | paths that make a change sensitive, besides the built-in classes ([review-and-merge.md](review-and-merge.md#sensitive-or-routine)) | none |
