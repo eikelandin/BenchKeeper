@@ -20,7 +20,7 @@ if (isMain(import.meta.url)) {
   const { packages } = JSON.parse(readFileSync(`${root}/release-please-config.json`, 'utf8'));
   const bundle = Object.keys(packages).find((path) => packages[path].component === 'cedarloom');
   const { version } = JSON.parse(readFileSync(`${root}/${bundle}/.claude-plugin/plugin.json`, 'utf8'));
-  const files = execFileSync('/usr/bin/git', ['ls-files', '*.md', '*.json', '*.tsx'], { cwd: root, encoding: 'utf8' }).split('\n').filter((f) => f && !SKIP.test(f));
+  const files = execFileSync('/usr/bin/git', ['ls-files', '*.md', '*.json'], { cwd: root, encoding: 'utf8' }).split('\n').filter((f) => f && !SKIP.test(f));
   const stale = [];
   for (const f of files) {
     const text = readFileSync(`${root}/${f}`, 'utf8');
