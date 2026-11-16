@@ -1,4 +1,4 @@
-// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>..., both paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match. With --supervised <worktree path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
+// Usage: node worker-settings.mjs <worktree path> <settings file> <domain>..., both paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the shared .git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match, an Edit rule as ask. With --supervised <worktree path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
 import { appendFileSync, closeSync, existsSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
@@ -24,7 +24,7 @@ const excluded = (exclude) => existsSync(exclude) && listed(readFileSync(exclude
 
 export function supervisedSettings(rules) {
   const local = (rule) => rule.replace('(//W/', '(/');
-  return { permissions: { deny: rules.deny.map(local), ask: rules.ask.map(local) } };
+  return { permissions: { deny: rules.deny.map(local) } };
 }
 
 // In a --settings file a rule path that starts with / counts from the file's folder, so an absolute path takes a second /.
@@ -37,8 +37,11 @@ export function workerSettings(template, rules, worktree, commonDir, worktreeFol
   // The sandbox keeps a folder from being renamed, and so swapped for a copy, only where a rule names its path, and on Linux it skips a pattern rule for writes.
   const perFolder = (rule) => (rule.includes('(//C/worktrees/*/') ? [rule, ...worktreeFolders.map((name) => rule.replace('/worktrees/*/', () => `/worktrees/${name}/`))] : [rule]);
   const { permissions, sandbox } = template;
-  const deny = [...permissions.deny, ...rules.deny.filter((rule) => !covers(permissions.deny, rule))];
-  const ask = rules.ask.filter((rule) => !covers(deny, rule));
+  const added = rules.deny.filter((rule) => !covers(permissions.deny, rule));
+  // The sandbox closes an Edit deny's paths to Bash too, git's own writes to .git and a checkout's files included; as ask, dontAsk refuses the file tools alone.
+  const fileRule = (rule) => rule.startsWith('Edit(');
+  const deny = [...permissions.deny, ...added.filter((rule) => !fileRule(rule))];
+  const ask = added.filter(fileRule);
   return {
     ...template,
     permissions: { ...permissions, allow: permissions.allow.map(fill), deny: deny.flatMap(perFolder).map(fill), ask: ask.map(fill) },
