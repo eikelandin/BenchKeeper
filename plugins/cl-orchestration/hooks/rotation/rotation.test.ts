@@ -76,11 +76,11 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, sessionId = 's1', sto
 }
 const PRECOMPACT = { trigger: 'auto', custom_instructions: null } as const
 const typed = (text: string) => ({ text, wait: false, origin: { kind: 'composer' }, context: ['other'] }) as const
-const ended = (reason: 'clear' | 'resume') => ({ reason, sessionId: 's1', resume: { id: 's1' } })
+const ended = (reason: 'clear' | 'resume', from = 's1') => ({ reason, sessionId: from, resume: { id: from } })
 
-// What the model reads beside the first prompt after a /clear, below the entry of another plugin.
-async function cleared($: Engine) {
-  await $.session.end(ended('clear'))
+// What the model reads beside the first prompt after a /clear of the session `from`, below the entry of another plugin.
+async function cleared($: Engine, from?: string) {
+  await $.session.end(ended('clear', from))
   return (await $.prompt.submit(typed('go on'))).context ?? []
 }
 
@@ -400,7 +400,7 @@ for (const [name, setup] of refused) {
   test(`a file that ${name} is not restored, stamped or cleared for`, async ($, on) => {
     const e = engine(on, setup)
     const file = e.files[PATH]
-    expect(await cleared($)).toEqual(['other'])
+    expect(await cleared($, setup.sessionId)).toEqual(['other'])
     await $.classic.PreCompact(PRECOMPACT)
     await $.classic.Stop(IDLE)
     await e.clock.advance(1000)

@@ -103,6 +103,13 @@ async function drifted($: EngineInterface, text: string) {
     return ''
   }
 }
+// After a clear: moves the file to the new session id and returns the text that hands it back, or null.
+async function handBack($: EngineInterface) {
+  cleared = false
+  await takeOver($).catch(() => undefined)
+  const text = await vetted($)
+  return text === null ? null : restored(text, await drifted($, text))
+}
 const stamp = (ms: number) => new Date(ms).toISOString()
 
 // Rewrites the status line of the vetted handoff text. Its last fields carry when the coordinator last wrote the file: the
@@ -133,8 +140,13 @@ async function rotate($: EngineInterface, why: string, now: number, seen: number
     const clearing = async () => {
       await $.command.run({ command: 'clear' })
       if (expired) return
-      const submitted = await $.prompt.submit({ text: resume(why) })
-      if (submitted.drop !== undefined) throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
+      // The prompt carries the file itself: on some versions the plugin's own prompt.submit hook does not add it here.
+      const back = await handBack($)
+      const submitted = await $.prompt.submit({ text: resume(why), ...(back !== null && { context: [back] }) })
+      if (submitted.drop !== undefined) {
+        cleared = true
+        throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
+      }
     }
     const late = new Promise<never>((_, fail) => {
       watchdog = $.clock.after(WATCHDOG_MS, () => {
@@ -205,11 +217,9 @@ export const register: Register = (on, options) => {
   // A slash command's context may never reach the model, so the file waits for the next prompt.
   on('prompt.submit', async ($, e, next) => {
     if (!cleared || e.command) return next(e)
-    cleared = false
-    await takeOver($).catch(() => undefined)
-    const text = await vetted($)
-    if (text === null) return next(e)
-    const result = await next({ ...e, context: [...(e.context ?? []), restored(text, await drifted($, text))] })
+    const back = await handBack($)
+    if (back === null) return next(e)
+    const result = await next({ ...e, context: [...(e.context ?? []), back] })
     // A dropped prompt never reaches the model, so the next one carries the file.
     if (result.drop !== undefined) cleared = true
     return result
