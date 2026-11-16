@@ -72,7 +72,7 @@ The coordinator (`orchestrating-projects`) starts and merges nothing in a projec
   - `cedarloom:ready-for-agent`: the coordinator may start the issue.
   - `cedarloom:needs-human`: a question or approval waits for the owner.
   - `cedarloom:in-progress`: a worker holds the issue, so it never starts twice.
-  - `cedarloom:deferred`: the owner parked it and the question queue skips it.
+  - `cedarloom:deferred`: the owner parked it: it does not start and the question queue skips it.
   - Rejected work is closed as not planned, with no label.
 - `merge.allowed`: `false`, the user merges; `true` lets the coordinator merge a reviewed pull request. With `true`, `merge.requiredChecks` lists check names that run on pull requests, taken from a recent one (`gh pr checks <n> --json name --jq '.[].name'`), never a job that runs only on pushes to the default branch, and only those the user keeps.
 - `closeIssue`: `true`, the coordinator closes an issue after its pull request merged; `false` leaves that to the user.

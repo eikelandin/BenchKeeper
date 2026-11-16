@@ -4,7 +4,7 @@ description: "Asks you the open owner questions (this private repository's issue
 disable-model-invocation: true
 argument-hint: "[project name | deferred]"
 when: "On request, while you sit at the terminal to answer the open questions; it allows terminal questions for the rest of the session."
-writes: "A comment and new labels on each issue you answer or defer in this repository, and the cedarloom:deferred label there when it lacks it; status and answer lines in the local queue; the window file /cl-workflow:ask keeps, open for the rest of the session."
+writes: "A comment and new labels on each issue you answer or defer in this repository, a close as not planned of each one you reject, and the cedarloom:deferred label there when it lacks it; status and answer lines in the local queue; the window file /cl-workflow:ask keeps, open for the rest of the session."
 ---
 
 # Question queue
@@ -15,7 +15,7 @@ writes: "A comment and new labels on each issue you answer or defer in this repo
 
 Arguments: $ARGUMENTS (Codex: the words after the skill name).
 
-`<repo>` below is the current repository in `owner/name` form. Ask its question issues if `gh repo view --json nameWithOwner,visibility` shows `PRIVATE` or `INTERNAL` (`nameWithOwner` is `<repo>`), then the local queue; a public repository holds no question issues, so ask only the local queue there.
+`<repo>` below is the current repository in `owner/name` form. Ask its question issues if `gh repo view --json nameWithOwner,visibility` shows `PRIVATE` or `INTERNAL` (`nameWithOwner` is `<repo>`), then the local queue; where the command fails or shows a public repository, ask only the local queue: a public repository holds no question issues.
 
 **Local queue.** `.cedarloom/questions/*.md` here, by name, first line `Status: open` (argument `deferred`: `Status: deferred`; a project name: only `<name>-*`), asked like issues (header: file name). Answer: set `Status: answered`, append `Owner answer (<YYYY-MM-DD>): <option label>. <free text>`. Defer: set `Status: deferred`, append `Deferred by the owner on <YYYY-MM-DD>.` and any free text. Change nothing else.
 
@@ -26,6 +26,7 @@ Arguments: $ARGUMENTS (Codex: the words after the skill name).
    - options: the issue's options in their order (table rows or checkboxes), the recommended one first with " (Recommended)"; label at most about five words, the rest in the description. The tool takes two to four: with more, offer the recommended one and the next three and name the others in the question; with one, add "Something else" and ask for its text in chat when it is picked without text. An issue without options stays out of the call: ask it in chat and record the reply as free text. No Defer option and no mention of deferring: the user types "defer" as free text.
 3. **Record** every answer of the call at once. Pass comment text through `--body-file -` with a quoted heredoc whose delimiter appears nowhere in the text (`<<'END_OF_ANSWER'`), never inside a quoted argument, as answers and labels can hold quotes, `$` or backticks. A label edit that fails after its comment is retried alone, never with the comment.
    - Answer: comment "Owner answer (<YYYY-MM-DD>): <option label>. <free text>", then, where the `orchestrating-projects` skill is installed, `node <that skill folder>/approval.mjs apply <repo> <n>`. Exit 0: it took `cedarloom:needs-human` and `cedarloom:deferred` off, and `cedarloom:ready-for-agent` too when the body holds an Approval table, else put `cedarloom:ready-for-agent` on; when the printed `option` is not the one you recorded, say so. Exit 1: say the answer was not read as the owner's (this account is neither the owner nor a member with write access, or a `Head:` comment followed it). Exit 2: name its line. Change no label yourself after it runs. Without that skill, run `gh issue edit <n> -R <repo> --remove-label cedarloom:needs-human`, plus `--remove-label cedarloom:deferred` when the issue has that label and `--add-label cedarloom:ready-for-agent` when the body holds no Approval table.
+   - Reject (an issue whose body holds no Approval table, answered with an option that drops the work): comment the answer as above, then `gh issue close <n> -R <repo> --reason "not planned"`, and run no `approval.mjs apply`.
    - Defer (free text "defer", with or without a reason): comment "Deferred by the owner on <YYYY-MM-DD>." plus any free text, then `gh issue edit <n> -R <repo> --add-label cedarloom:deferred`. When `<repo>` has no `cedarloom:deferred` label yet, create it first: `gh label create cedarloom:deferred -R <repo> --color c5def5 --description "Owner deferred: the question queue skips it until the label is removed"`.
    - Free text that is a counter-question or a request ("eli5", "what", "compare"): answer it in chat with sources, then ask that issue again. Record only real answers.
 4. **Repeat** from step 2 until the user stops or the queue is empty; when a list of 50 is done, list again with `--limit` 50 higher and skip the issues this run asked. End with: answered (issue numbers), deferred, still queued, and which answers need follow-up work.

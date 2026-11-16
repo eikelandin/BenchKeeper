@@ -1,6 +1,7 @@
 // Usage: node precheck.mjs <project paths...>. Sample precheck for a scheduled coordinator run: exit 0 when a project has an issue to pick, else 1. It starts and merges nothing.
-// Pickable: open, carries startLabel and every issues.labels entry, not labeled cedarloom:needs-human (an owner question) or cedarloom:in-progress (a worker holds it), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
+// Pickable: open, carries startLabel and every issues.labels entry, not labeled cedarloom:needs-human (an owner question), cedarloom:in-progress (a worker holds it) or cedarloom:deferred (the owner parked it), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
 // An issue that several of the given projects list starts in none of them: it is printed once on stderr, as "several projects: <owner/repo>#<number> (<paths>)".
+import { parseArgs } from 'node:util';
 import { errorLine, escaped, isMain, read, sh } from './policy.mjs';
 
 // MEMBER is any member of the owning organization and COLLABORATOR any invited collaborator: either may have only the Read role, so each counts only with write access.
@@ -22,8 +23,8 @@ export const trusts = (policy, writes) => {
   return (i) => i.author_association === 'OWNER' || trusted.has(i.user?.login) || (ASSOCIATED.includes(i.author_association) && writes(i.user?.login));
 };
 
-// An issue with one of these waits for the owner, also after it gained the start label, or is held by a worker.
-const HELD = ['cedarloom:needs-human', 'cedarloom:in-progress'];
+// An issue with one of these waits for the owner, also after it gained the start label, is held by a worker or is parked.
+const HELD = ['cedarloom:needs-human', 'cedarloom:in-progress', 'cedarloom:deferred'];
 
 // writes(login) is asked last, so only for an issue that is pickable otherwise.
 export function pickable(policy, issues, pulls, writes = () => false) {
@@ -112,8 +113,12 @@ export function report(dirs, pick) {
   return { out: out.map((line) => escaped(line)), err: err.map((line) => escaped(line)), code: out.length ? 0 : 1 };
 }
 
+// The project paths; an option fails, so an old schedule's arguments are not read as a path.
+export const projectsOf = (argv) => parseArgs({ args: argv, allowPositionals: true }).positionals;
+
 if (isMain(import.meta.url)) {
-  const dirs = process.argv.slice(2);
+  let dirs;
+  try { dirs = projectsOf(process.argv.slice(2)); } catch (e) { console.error(e.message); process.exit(1); }
   if (!dirs.length) { console.error('usage: node precheck.mjs <project paths...>'); process.exit(1); }
   const { out, err, code } = report(dirs, (dir) => picks(dir, sh, process.env));
   for (const line of err) console.error(line);

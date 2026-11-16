@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { check, distinct, pickable, report } from '../skills/orchestrating-projects/precheck.mjs';
+import { check, distinct, pickable, projectsOf, report } from '../skills/orchestrating-projects/precheck.mjs';
 
 const POLICY = { startLabel: 'agent-ready', trustedAuthors: ['helper[bot]'] };
 const issue = (number, extra = {}) => ({ number, author_association: 'OWNER', user: { login: 'owner' }, labels: [{ name: 'agent-ready' }], ...extra });
@@ -32,9 +32,14 @@ test('precheck: an issue needs every issues.labels entry', () => {
   assert.deepEqual(pickable(policy, issues, []), [12]);
 });
 
-test('precheck: an issue that waits for the owner or that a worker holds does not start, also once it carries the start label', () => {
-  const issues = [issue(1), issue(2, { labels: [{ name: 'agent-ready' }, { name: 'CedarLoom:Needs-Human' }] }), issue(3, { labels: [{ name: 'cedarloom:needs-human' }, { name: 'agent-ready' }] }), issue(4, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:in-progress' }] })];
+test('precheck: an issue that waits for the owner, that a worker holds or that the owner parked does not start, also once it carries the start label', () => {
+  const issues = [issue(1), issue(2, { labels: [{ name: 'agent-ready' }, { name: 'CedarLoom:Needs-Human' }] }), issue(3, { labels: [{ name: 'cedarloom:needs-human' }, { name: 'agent-ready' }] }), issue(4, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:in-progress' }] }), issue(5, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:deferred' }] })];
   assert.deepEqual(pickable(POLICY, issues, []), [1]);
+});
+
+test('precheck: the command line takes project paths only, so an option of an old schedule fails instead of being read as a path', () => {
+  assert.deepEqual(projectsOf(['/a', '/b']), ['/a', '/b']);
+  for (const argv of [['--hub=owner/tracker', '/a'], ['--issues-in', 'repo', '/a']]) assert.throws(() => projectsOf(argv), /--hub|--issues-in/);
 });
 
 test('precheck: an issue that several projects list starts in none of them', () => {

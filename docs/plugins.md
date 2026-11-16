@@ -56,10 +56,10 @@ The coordinator of `/cl-orchestration:orchestrating-projects` files an owner que
 | `cedarloom` | CedarLoom may read and plan the issue and ask on it; it does not start work |
 | `cedarloom:ready-for-agent` | the coordinator may start the issue (the default `startLabel`) |
 | `cedarloom:needs-human` | a question or approval waits for the owner |
-| `cedarloom:in-progress` | a worker holds the issue, so it never starts twice |
-| `cedarloom:deferred` | the owner parked it and the question queue skips it |
+| `cedarloom:in-progress` | a worker holds the issue, so it never starts twice; a label left after its worker ended without a pull request (a host restart) holds the issue until you take it off: `gh issue edit <number> -R <owner/repo> --remove-label cedarloom:in-progress` |
+| `cedarloom:deferred` | the owner parked it: it does not start and the question queue skips it |
 
-Rejected work is closed as not planned, with no label.
+Rejected work is closed as not planned, with no label. Create each label in the repository before the first run: `gh label create <name> --description "<meaning>"`.
 
 - `/cl-workflow:questions` asks this repository's `cedarloom:needs-human` issues if it is private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name, but two such segments in a row, as in `*/*`, match no folder). Like the rest of the guard it does not try to catch a command written to get around it (`.c*/q*`, braces, variables, bracket classes, look-alike letters, a tool's own folder option such as `git -C`), nor one that acts on `.cedarloom` itself, such as `rm -rf .cedarloom`. A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
 
