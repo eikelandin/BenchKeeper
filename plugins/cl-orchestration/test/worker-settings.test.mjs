@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -10,9 +10,9 @@ import { supervisedSettings } from '../skills/orchestrating-projects/worker-sett
 const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/worker-settings.mjs', import.meta.url));
 const run = (args, cwd) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', cwd });
 
-// A linked worktree as git lays it out: the worktree's .git file names its folder under the main checkout's .git.
+// A linked worktree as git lays it out: the worktree's .git file names its folder under the main checkout's .git. The real path, since the rules take the shared .git's (the macOS temporary folder is a link).
 function worktree(name, gitdirLine) {
-  const base = mkdtempSync(join(tmpdir(), 'worker-settings-'));
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'worker-settings-')));
   mkdirSync(join(base, 'main/.git/worktrees', name), { recursive: true });
   mkdirSync(join(base, name));
   writeFileSync(join(base, name, '.git'), gitdirLine(base));
@@ -20,18 +20,19 @@ function worktree(name, gitdirLine) {
 }
 
 test('worker-settings: fills the worktree, the shared .git, its worktrees folders and the hosts into the template', () => {
-  for (const [name, line] of [
+  for (const [name, line, project = 'main'] of [
     ['wt', (base) => `gitdir: ${base}/main/.git/worktrees/wt\n`],
     ['wt', () => 'gitdir: ../main/.git/worktrees/wt\n'],
-    // Another spelling of the project's own folder passes, and the rules take the project path's spelling.
+    // Another spelling of the project's own folder passes, in the .git file or as the project path, and the rules take the real path.
     ['wt', (base) => `gitdir: ${base}/alias/.git/worktrees/wt\n`],
+    ['wt', (base) => `gitdir: ${base}/main/.git/worktrees/wt\n`, 'alias'],
     ['w$$t', (base) => `gitdir: ${base}/main/.git/worktrees/w$$t\n`],
   ]) {
     const base = worktree(name, line);
     symlinkSync(join(base, 'main'), join(base, 'alias'));
     mkdirSync(join(base, 'main/.git/worktrees/other'));
     const file = join(base, 'run/settings/1-x.json');
-    const { status, stderr } = run([join(base, name), join(base, 'main'), file, 'registry.npmjs.org', '*.pythonhosted.org']);
+    const { status, stderr } = run([join(base, name), join(base, project), file, 'registry.npmjs.org', '*.pythonhosted.org']);
     assert.equal(status, 0, stderr);
     const settings = JSON.parse(readFileSync(file, 'utf8'));
     const w = `/${base}/${name}`;
@@ -58,7 +59,7 @@ test('worker-settings: fills the worktree, the shared .git, its worktrees folder
     assert.equal(settings.permissions.defaultMode, 'dontAsk');
     assert.equal(settings.permissions.disableBypassPermissionsMode, 'disable');
     assert.deepEqual(settings.sandbox.credentials.files[0], { path: '~/.ssh', mode: 'deny' });
-    assert.deepEqual(settings.sandbox.credentials.envVars.slice(-2), [{ name: 'ORCA_PAIRING_CODE', mode: 'deny' }, { name: 'ORCA_AGENT_SESSION_SPAWN_TOKEN', mode: 'deny' }]);
+    assert.deepEqual(settings.sandbox.credentials.envVars.slice(-3), [{ name: 'ORCA_PAIRING_CODE', mode: 'deny' }, { name: 'ORCA_REMOTE_PAIRING', mode: 'deny' }, { name: 'ORCA_AGENT_SESSION_SPAWN_TOKEN', mode: 'deny' }]);
   }
 });
 
@@ -176,6 +177,26 @@ test('worker-settings --supervised: appends the exclude line through no link', (
   }
 });
 
+test('worker-settings --supervised: reads the exclude file through no link and refuses a hard link', () => {
+  const written = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  assert.equal(run(['--supervised', join(written, 'wt'), join(written, 'main')], written).status, 0);
+  const rules = readFileSync(join(written, 'wt/.claude/settings.local.json'), 'utf8');
+  for (const [link, error] of [[symlinkSync, /exclude is a link: not written or read/], [linkSync, /exclude has another name \(a hard link\)/]]) {
+    const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+    mkdirSync(join(base, 'wt/.claude'));
+    writeFileSync(join(base, 'wt/.claude/settings.local.json'), rules);
+    mkdirSync(join(base, 'main/.git/info'));
+    writeFileSync(join(base, 'listed'), '/.claude/settings.local.json\n');
+    link(join(base, 'listed'), join(base, 'main/.git/info/exclude'));
+    const modes = link === linkSync ? [['--check'], []] : [['--check']];
+    for (const extra of modes) {
+      const { status, stderr } = run([...extra, '--supervised', join(base, 'wt'), join(base, 'main')], base);
+      assert.equal(status, 1, `${link.name} ${extra}`);
+      assert.match(stderr, error, `${link.name} ${extra}`);
+    }
+  }
+});
+
 test('worker-settings: refuses a rule file with a key besides deny or a rule that is no string', () => {
   for (const rules of [{ deny: [], ask: ['Bash(git push *)'] }, { deny: ['Bash(git push *)', 1] }]) {
     assert.throws(() => supervisedSettings(rules), /must hold one key, deny, with a list of rule strings/, JSON.stringify(rules));
@@ -201,6 +222,20 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
     mkdirSync(join(base, named), { recursive: true });
     writeFileSync(join(base, name, '.git'), `gitdir: ${base}/${named}\n`);
   }
+  // Git follows a link before it applies a `..`: a link in the worktree's own folder, or directly under worktrees, leads to a folder the worker made; and a missing folder or a file under worktrees.
+  mkdirSync(join(base, 'elsewhere/a/fake/sub'), { recursive: true });
+  mkdirSync(join(base, 'elsewhere/evil'));
+  mkdirSync(join(base, 'main/.git/worktrees/dotdot'));
+  symlinkSync(join(base, 'elsewhere/a/fake/sub'), join(base, 'main/.git/worktrees/dotdot/L'));
+  symlinkSync(join(base, 'elsewhere/evil'), join(base, 'main/.git/worktrees/evil'));
+  writeFileSync(join(base, 'main/.git/worktrees/afile'), '');
+  for (const [name, named] of [['dotdot', 'main/.git/worktrees/dotdot/L/..'], ['evil', 'main/.git/worktrees/evil'], ['missing', 'main/.git/worktrees/missing'], ['afile', 'main/.git/worktrees/afile']]) {
+    mkdirSync(join(base, name));
+    writeFileSync(join(base, name, '.git'), `gitdir: ${base}/${named}\n`);
+  }
+  // A project whose worktrees folder is a link to the real project's.
+  mkdirSync(join(base, 'linkedproj/.git'), { recursive: true });
+  symlinkSync(join(base, 'main/.git/worktrees'), join(base, 'linkedproj/.git/worktrees'));
   // A worktree in a folder named worktrees, as in <repo>/.claude/worktrees/<name>, naming itself.
   const nested = join(base, 'repo/.claude/worktrees/nested');
   mkdirSync(nested, { recursive: true });
@@ -208,7 +243,7 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
   const project = join(base, 'main');
   const file = join(base, 'run/settings/1-x.json');
   const inWorktree = [join(base, 'wt/settings.json'), join(base, 'wt/..settings.json')];
-  const forged = [...['own', 'link', 'self', 'fake'].map((name) => join(base, name)), nested];
+  const forged = [...['own', 'link', 'self', 'fake', 'dotdot', 'evil', 'missing', 'afile'].map((name) => join(base, name)), nested];
   for (const [args, error] of [
     ...forged.flatMap((folder) => [
       [[folder, project, file, 'registry.npmjs.org'], /\.git names no folder under .*main\/\.git\/worktrees: not a linked worktree of that project/],
@@ -222,6 +257,9 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
     [['wt', project, file, 'registry.npmjs.org'], /^wt is not an absolute path without a pattern character/],
     [[join(base, 'wt'), 'main', file, 'registry.npmjs.org'], /^main is not an absolute path/],
     [[join(base, 'sub'), project, file, 'registry.npmjs.org'], /not a linked worktree of that project/],
+    [[join(base, 'wt'), join(base, 'linkedproj'), file, 'registry.npmjs.org'], /names no folder under .*linkedproj\/\.git\/worktrees: not a linked worktree of that project/],
+    // The project path names a linked worktree, whose .git is a file.
+    [[join(base, 'wt'), join(base, 'wt'), file, 'registry.npmjs.org'], /names no folder under .*wt\/\.git\/worktrees: not a linked worktree of that project/],
     // Resolved from here it is the run folder's file, but the launch would read it in the worktree.
     [[join(base, 'wt'), project, 'run/settings/1-x.json', 'registry.npmjs.org'], /^run\/settings\/1-x\.json is not an absolute path/],
     ...inWorktree.map((inside) => [[join(base, 'wt'), project, inside, 'registry.npmjs.org'], /^the settings file must lie outside the worktree/]),

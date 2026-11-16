@@ -38,7 +38,8 @@
       "envVars": [
         { "name": "GH_TOKEN", "mode": "deny" }, { "name": "GITHUB_TOKEN", "mode": "deny" },
         { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" },
-        { "name": "ORCA_PAIRING_CODE", "mode": "deny" }, { "name": "ORCA_AGENT_SESSION_SPAWN_TOKEN", "mode": "deny" }
+        { "name": "ORCA_PAIRING_CODE", "mode": "deny" }, { "name": "ORCA_REMOTE_PAIRING", "mode": "deny" },
+        { "name": "ORCA_AGENT_SESSION_SPAWN_TOKEN", "mode": "deny" }
       ]
     }
   }

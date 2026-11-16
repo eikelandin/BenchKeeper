@@ -1,5 +1,5 @@
-// Usage: node worker-settings.mjs <worktree path> <project path> <settings file> <domain>..., the paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as <project path>/.git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match, an Edit rule as ask. With --supervised <worktree path> <project path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree of that project, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
-import { appendFileSync, closeSync, constants, existsSync, fstatSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+// Usage: node worker-settings.mjs <worktree path> <project path> <settings file> <domain>..., the paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the real path of <project path>/.git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match, an Edit rule as ask. With --supervised <worktree path> <project path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree of that project, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
+import { appendFileSync, closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
 
@@ -11,18 +11,40 @@ const within = (folder, path) => {
   return inside !== '..' && !inside.startsWith(`..${sep}`) && !isAbsolute(inside);
 };
 
+const realPath = (path) => {
+  try {
+    return realpathSync.native(path);
+  } catch (e) {
+    if (e.code === 'ENOENT' || e.code === 'ENOTDIR') return undefined;
+    throw e;
+  }
+};
+
 // A linked worktree's .git is a file that names its folder under the shared .git's worktrees: absolute, or relative to the worktree with worktree.useRelativePaths.
 export function gitCommonDir(worktree, project, read = (path) => readFileSync(path, 'utf8')) {
   const named = /^gitdir: (.+)\n?$/.exec(read(`${worktree}/.git`))?.[1];
-  const folder = named && resolve(worktree, named);
-  const commonDir = resolve(project, '.git');
-  // The worker can rewrite its .git file: by file identity, so no other spelling of a folder (letter case, /System/Volumes/Data, a link) and no folder the worker made counts as the project's, and the rules take the project's spelling.
-  const anchor = lstatSync(`${commonDir}/worktrees`, { throwIfNoEntry: false });
-  const parent = folder && statSync(dirname(folder), { throwIfNoEntry: false });
-  if (!anchor?.isDirectory() || !parent || parent.dev !== anchor.dev || parent.ino !== anchor.ino || !statSync(folder, { throwIfNoEntry: false })?.isDirectory()) {
-    throw new Error(`${escaped(worktree)}/.git names no folder under ${escaped(commonDir)}/worktrees: not a linked worktree of that project`);
+  // Git opens the named path as written, so the kernel follows each link before it applies a `..`.
+  const folder = named && realPath(isAbsolute(named) ? named : `${worktree}/${named}`);
+  // The sandbox matches an existing rule path by its real path and keeps the spelling of one that does not exist, such as commondir.
+  const commonDir = realPath(resolve(project, '.git'));
+  // The worker can rewrite its .git file: by file identity, so no other spelling of a folder (letter case, /System/Volumes/Data, a link) and no folder outside the project's worktrees folder counts as the project's.
+  let anchor;
+  try {
+    anchor = commonDir && lstatSync(`${commonDir}/worktrees`, { throwIfNoEntry: false });
+  } catch (e) {
+    // The project path's .git is a file: it is a linked worktree itself.
+    if (e.code !== 'ENOTDIR') throw e;
+  }
+  const parent = folder && statSync(dirname(folder));
+  if (!anchor?.isDirectory() || !parent || parent.dev !== anchor.dev || parent.ino !== anchor.ino || !statSync(folder).isDirectory()) {
+    throw new Error(`${escaped(worktree)}/.git names no folder under ${escaped(resolve(project, '.git'))}/worktrees: not a linked worktree of that project`);
   }
   return commonDir;
+}
+
+// O_NOFOLLOW refuses a symbolic link only; a hard link shares the file with a name elsewhere.
+function refuseHardLink(fd, file) {
+  if (fstatSync(fd).nlink > 1) throw new Error(`${escaped(file)} has another name (a hard link): not written or read`);
 }
 
 // A link or another kind of file would let the text read differ from the file Claude Code loads; O_NONBLOCK, so a FIFO does not hang the open.
@@ -37,6 +59,7 @@ function readRegular(file) {
   }
   try {
     if (!fstatSync(fd).isFile()) throw new Error(`${escaped(file)} is not a regular file: not written or read`);
+    refuseHardLink(fd, file);
     return readFileSync(fd, 'utf8');
   } finally {
     closeSync(fd);
@@ -48,7 +71,10 @@ const covers = (deny, rule) => deny.includes(rule) || deny.some((d) => d.startsW
 
 const EXCLUDED = '/.claude/settings.local.json';
 const listed = (text) => text.split('\n').includes(EXCLUDED);
-const excluded = (exclude) => existsSync(exclude) && listed(readFileSync(exclude, 'utf8'));
+const excluded = (exclude) => {
+  const text = readRegular(exclude);
+  return text !== undefined && listed(text);
+};
 
 // A rule under any other key, or not a string, would reach neither settings file without an error.
 function denyRules(rules) {
@@ -143,6 +169,7 @@ if (isMain(import.meta.url)) {
       // One descriptor, so the text read is the file appended to, opened before the rule file is written, so an exclude that cannot take the line leaves no rule file.
       const fd = openSync(exclude, constants.O_RDWR | constants.O_APPEND | constants.O_CREAT | constants.O_NOFOLLOW);
       try {
+        refuseHardLink(fd, exclude);
         if (current === undefined) {
           mkdirSync(dirname(file), { recursive: true });
           // wx: no write through a dangling link in the worktree.
