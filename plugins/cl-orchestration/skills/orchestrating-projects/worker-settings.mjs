@@ -105,9 +105,14 @@ if (isMain(import.meta.url)) {
       if (readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} is not the settings file this script writes for those arguments`);
       if (supervised && !excluded(exclude)) throw new Error(`${escaped(exclude)} does not list ${EXCLUDED}: git add would stage the rule file`);
     } else if (supervised) {
-      const kept = existsSync(file);
+      let current;
+      try {
+        current = readFileSync(file, 'utf8');
+      } catch (e) {
+        if (e.code !== 'ENOENT') throw e;
+      }
       // A file the repository tracks or a person wrote stays theirs.
-      if (kept && readFileSync(file, 'utf8') !== text) throw new Error(`${escaped(file)} exists with other content: not overwritten`);
+      if (current !== undefined && current !== text) throw new Error(`${escaped(file)} exists with other content: not overwritten`);
       // Only info, never the shared .git itself: a stale .git pointer fails with ENOENT before anything is written.
       try {
         mkdirSync(dirname(exclude));
@@ -117,7 +122,7 @@ if (isMain(import.meta.url)) {
       // One descriptor, so the text read is the file appended to, opened before the rule file is written, so an exclude that cannot take the line leaves no rule file.
       const fd = openSync(exclude, 'a+');
       try {
-        if (!kept) {
+        if (current === undefined) {
           mkdirSync(dirname(file), { recursive: true });
           // wx: no write through a dangling link in the worktree.
           writeFileSync(file, text, { flag: 'wx' });
