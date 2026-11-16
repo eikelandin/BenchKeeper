@@ -1,6 +1,7 @@
 // Usage: node approval.mjs <file>, the file in .cedarloom/runs/ of the working directory (the run folder, approvals.md); any other path exits 2. Checks an approval or owner question against approval-template.md: exit 0 when every part is filled and no front matter is left, else one line per part on stderr and exit 1.
 // Usage: node approval.mjs answer <file>, the file in the run folder as above. Reads the owner's answer from a filed approval, the file holding what `gh issue view <n> -R <repository> --json labels,comments,author,body,url` printed: the answer as JSON and exit 0, exit 1 while there is none, or exit 2 with one line when the file cannot be read as that output.
 // Usage: node approval.mjs file <file> <project>, the file in the run folder: checks it as above and files it as the next question of the local queue, .cedarloom/questions/<project>-<n>.md, printing { file }.
+// Usage: node approval.mjs apply <owner/name> <number>. Reads the issue with gh and its owner's answer as the answer mode does; on an answer takes question, ready-for-human and deferred off and, unless the body holds an Approval table, puts ready-for-agent on, then prints { option, text, at, labels } and exits 0; exit 1 while there is none, exit 2 with one line on an error.
 // Usage: node approval.mjs queue: { file, status, option, text, at } of each question in the local queue as JSON, or exit 2 with one line.
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -115,6 +116,26 @@ const fullAnswer = (body, at) => {
   return { option: found[2].trim().slice(0, 200), text: (rest.startsWith('.') ? rest.slice(1) : rest).trim(), at: at ?? found[1] };
 };
 
+// The labels of a question that waits for the owner (approvals.md, Labels and title).
+const ASKING = ['question', 'ready-for-human', 'deferred'];
+
+// gh refuses to remove a label the repository lacks, so only the issue's own go; an approval (an Approval table) gets no ready-for-agent, as its work lives in the issue or pull request it names.
+export function settle(repo, issue, exec) {
+  const labels = issue.labels.map((label) => String(label.name));
+  const off = labels.filter((name) => ASKING.includes(name.toLowerCase()));
+  const approval = tables(issue.body.replace(COMMENT, ''), 'Approval').length > 0;
+  const on = approval || labels.some((name) => name.toLowerCase() === 'ready-for-agent') ? [] : ['ready-for-agent'];
+  if (off.length || on.length) exec('gh', ['issue', 'edit', String(issue.number), '-R', repo, ...off.flatMap((name) => ['--remove-label', name]), ...on.flatMap((name) => ['--add-label', name])]);
+  return [...labels.filter((name) => !off.includes(name)), ...on];
+}
+
+// { option, text, at, labels } of the owner's answer on issue number of repo after its label edit, or null with no edit. exec(cmd, args) gives stdout or throws.
+export function apply(repo, number, exec) {
+  const issue = JSON.parse(exec('gh', ['issue', 'view', String(number), '-R', repo, '--json', 'number,labels,comments,author,body']));
+  const found = answer(issue, writers(repo, exec));
+  return found && { ...found, labels: settle(repo, issue, exec) };
+}
+
 // The local question queue (approvals.md): a folder that is a link is refused, as the run folder is.
 const QUEUE = join('.cedarloom', 'questions');
 function queueDir(create) {
@@ -184,13 +205,14 @@ if (isMain(import.meta.url)) {
   process.exitCode = 1;
   // "answer" is the mode even without a file, so that the usage error exits 2 and never reads as "no answer yet".
   const args = process.argv.slice(2);
-  const mode = ['answer', 'file', 'queue'].includes(args[0]) ? args.shift() : 'check';
+  const mode = ['answer', 'apply', 'file', 'queue'].includes(args[0]) ? args.shift() : 'check';
   const [file, project] = args;
   try {
-    if (args.length !== { check: 1, answer: 1, file: 2, queue: 0 }[mode]) throw new Error('usage: node approval.mjs [answer] <file>, node approval.mjs file <file> <project>, or node approval.mjs queue');
-    // The queue mode reads no file of the command line.
-    const real = mode === 'queue' ? null : inRuns(file);
-    if (mode !== 'queue' && !real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
+    if (args.length !== { check: 1, answer: 1, apply: 2, file: 2, queue: 0 }[mode]) throw new Error('usage: node approval.mjs [answer] <file>, node approval.mjs apply <owner/name> <number>, node approval.mjs file <file> <project>, or node approval.mjs queue');
+    if (mode === 'apply' && !(REPO.test(file) && /^[1-9]\d*$/.test(project))) throw new Error(`no repository as owner/name and issue number: ${args.join(' ')}`);
+    const reads = ['check', 'answer', 'file'].includes(mode);
+    const real = reads ? inRuns(file) : null;
+    if (reads && !real) { process.exitCode = 2; throw new Error(`refused: ${file} is no file in .cedarloom/runs/ of the working directory`); }
     const text = real ? readFileSync(real, 'utf8') : '';
     const issue = mode === 'answer' ? JSON.parse(text) : null;
     // A member's access is asked of the repository the approval is filed in, which only the issue's URL names.
@@ -201,16 +223,16 @@ if (isMain(import.meta.url)) {
     let writes = writers(repo, (cmd, args) => sh('.', cmd, args));
     if (!repo) writes = () => { throw new Error('the file holds no issue url: it must be what gh issue view --json labels,comments,author,body,url printed'); };
     else if (host.toLowerCase() !== gh) writes = () => { throw new Error(`the issue is on ${host}, and gh asks ${gh}: set GH_HOST for an approval on another host`); };
-    const found = mode === 'answer' ? answer(issue, writes) : mode === 'queue' ? readQueue() : null;
+    const found = mode === 'answer' ? answer(issue, writes) : mode === 'apply' ? apply(file, project, (cmd, cmdArgs) => sh('.', cmd, cmdArgs)) : mode === 'queue' ? readQueue() : null;
     if (found) console.log(json(found));
-    const lacks = mode === 'answer' || mode === 'queue' ? [] : missing(text);
+    const lacks = mode === 'check' || mode === 'file' ? missing(text) : [];
     if (mode === 'file' && !lacks.length) console.log(json({ file: fileQuestion(text, project, (cmd, cmdArgs) => sh('.', cmd, cmdArgs)) }));
     for (const name of lacks) {
       if (name === FRONT) say('remove the front matter: its labels go on the command line');
       else if (name === 'Recommended') say('missing, unfilled or not starting with the label of the first option row, such as (a): Recommended');
       else say(`missing or unfilled: ${name}`);
     }
-    if (mode === 'answer' ? found : !lacks.length) process.exitCode = 0;
+    if (mode === 'answer' || mode === 'apply' ? found : !lacks.length) process.exitCode = 0;
   } catch (e) {
     say(e.message);
     // An answer that cannot be read is an error, not "no answer yet".
