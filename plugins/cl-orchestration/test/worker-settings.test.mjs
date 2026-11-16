@@ -74,3 +74,26 @@ test('worker-settings: writes no file for a path, a host or a worktree it cannot
     assert.equal([file, ...inWorktree].some((path) => existsSync(path)), false);
   }
 });
+
+test('worker-settings --check: passes the file the script wrote, refuses it emptied, unparsable or without its sandbox', () => {
+  const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  const file = join(base, 'run/settings/1-x.json');
+  const args = [join(base, 'wt'), file, 'registry.npmjs.org'];
+  assert.equal(run(args, base).status, 0);
+  const written = readFileSync(file, 'utf8');
+  const passed = run(['--check', ...args], base);
+  assert.equal(passed.status, 0, passed.stderr);
+  const withoutSandbox = JSON.parse(written);
+  delete withoutSandbox.sandbox;
+  for (const [content, error] of [
+    ['', /is not a readable JSON file/],
+    [written.slice(0, -20), /is not a readable JSON file/],
+    [JSON.stringify(withoutSandbox), /is not the settings file this script writes/],
+  ]) {
+    writeFileSync(file, content);
+    const { status, stderr } = run(['--check', ...args], base);
+    assert.equal(status, 1, JSON.stringify(content.slice(0, 40)));
+    assert.match(stderr, error);
+    assert.equal(readFileSync(file, 'utf8'), content);
+  }
+});
