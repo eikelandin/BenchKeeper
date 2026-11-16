@@ -215,7 +215,7 @@ Hub: <hub, or none>; issues in <issues in>
 <the runner's resume steps, its Resume section>
 
 ## Decisions
-<each decision; `(owner)` marks the ones the owner took in an answer ([Owner-only decisions](#owner-only-decisions)), the others were taken on the owner's behalf or read from the policy or `AGENTS.md`, with file and line>
+<each decision; `(owner)` marks the ones the owner took in an answer ([Owner-only decisions](#owner-only-decisions)), the others were taken on the owner's behalf, readings of the policy or `AGENTS.md` among them, with file and line>
 
 ## Open
 <open questions and risks>
