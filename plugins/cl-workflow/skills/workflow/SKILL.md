@@ -7,7 +7,7 @@ writes: "The depth line `Depth: <depth> (<reason>)` and the risk line `Risk: <cl
 # Workflow
 
 Every depth:
-- Before the first edit, state the assumptions you work from and the check that proves each step done (a test, a command, a screenshot); loop until those checks pass.
+- Before the first edit, state the assumptions you work from and the check that proves each step done (a test, a command, a screenshot); loop until those checks pass, and stop and report on the stuck signals of step 6 of [the implement agent](../../agents/implement.md).
 - Keep validation at trust boundaries, error handling that prevents data loss, and security checks.
 - A step here or in the playbooks that asks or waits on the user does so in the session only while the user allows terminal questions. Otherwise its questions go with your recommendations into one issue per task in the issue tracker the project names, else the report; take each recommendation that is safe and reversible (an item without one waits), and go on.
 - An installed skill may run a step of this skill or its playbooks in more detail (diagnosis, a test first, prototypes, interface design): these texts set its floor and gates and win where the two differ. Reviews, research notes and pull request text follow these playbooks.
@@ -36,7 +36,7 @@ Every depth:
    - Standard and deep, and any risky change: also [software.md](software.md), deep also [deep.md](deep.md).
    - Docs pass: [docs.md](docs.md). Research: [research.md](research.md).
    - Branches, commits and pull requests follow the project's own convention (`AGENTS.md`, a contributing guide, the history).
-   - A pull request body holds the depth line, the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (the `Risk:` line, then what could break, who is affected) and How to revert.
+   - A pull request body opens with one or two sentences on what changes and why, then holds the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (as [risk.md](risk.md) says, then what could break, who is affected) and How to revert.
    - Two or more independent items that each need more than a few files or searches: one subagent per item in parallel, then one merged report. Smaller items run in this session.
 
    The playbooks hold the detail; these are the steps, in order:

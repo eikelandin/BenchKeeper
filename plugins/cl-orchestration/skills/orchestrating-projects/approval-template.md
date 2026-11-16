@@ -1,14 +1,20 @@
----
-name: Approval or owner question
-about: A decision the owner makes before agents act. Every approval uses this layout.
-labels: cedarloom:needs-human
----
+What: <the decision in one sentence>
 
-What: <the decision in one sentence; link the plan or report>
+Context: <what led to the question and what is known, in two to five sentences; link the plan or report>
+
+| Option | Impact | Trade-off |
+|---|---|---|
+| (a) <option> (Recommended) | <what happens> | <what it costs or rules out> |
+| (b) <option> | <what happens> | <what it costs or rules out> |
+| (c) Hold | Nothing changes | <what keeps waiting> |
+
+Recommended: (a) <option>, because <reason>
+Source: <URL, or file and line>
+Confidence: <high, medium or low>
+Why now: <what waits on it>
 
 | Approval | |
 |---|---|
-| Recommended | (a) <option>, confidence <high, medium or low> |
 | Work if approved | <n PRs, each under 1,000 lines, in owner/repo; order> |
 | Runs on | <orchestrator model and effort>; phases: plan <model effort>, implement <model effort>, test <model effort>, review <model effort, depth> |
 | Review | <fresh reviewer per PR and its level; plus the security review where it applies> |
@@ -16,12 +22,5 @@ What: <the decision in one sentence; link the plan or report>
 | Owner steps | <bench, deploy, login, purchase; or none> |
 | Cost | <sessions and an estimate; mark unverified> |
 | Undo | <how each part is reversed> |
-| Answer | <in the local queue: run /cl-workflow:questions; in a repository: run /cl-workflow:questions in a clone of it, or comment on this issue "a" or "b" alone, or "Owner answer (date): a." with "b" in place of "a" and your own text after it> |
 
-| Option | What happens | Trade-off |
-|---|---|---|
-| (a) <recommended> (Recommended) | | |
-| (b) | | |
-| (c) Hold | Nothing changes | |
-
-Why now: <what waits on it>
+Answer: <in the local queue: run /cl-workflow:questions; in a repository: run /cl-workflow:questions in a clone of it, or comment on this issue "a" or "b" alone, or "Owner answer (date): a." with "b" in place of "a" and your own text after it>

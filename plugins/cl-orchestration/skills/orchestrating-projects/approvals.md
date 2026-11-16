@@ -4,7 +4,7 @@ How an owner decision reaches the owner outside the session ([SKILL.md](SKILL.md
 
 ## The text
 
-Copy [approval-template.md](approval-template.md) without its front matter into the run folder and fill each `<...>`:
+Copy [approval-template.md](approval-template.md) into the run folder and fill each `<...>`:
 
 - What: the decision in one sentence, starting with its gate and subject: `design` with the issue as `<owner/repo>#<number>` (an issue held before its worker starts, [SKILL.md](SKILL.md#risk-class)); `merge` or `owner-only` (an owner-only file or a release) with the pull request as `<owner/repo>#<n>`; any other owner decision with one word of your own and its issue or pull request.
 - Runs on: the reader's `models` for the worker at the task's depth and each phase (a sensitive change: plan and review from `models.sensitive`), a phase it omits by the field table ([policy.md](policy.md)), `inherit` as the worker's. Review: `review.*`. Merges: `merge.*`.
