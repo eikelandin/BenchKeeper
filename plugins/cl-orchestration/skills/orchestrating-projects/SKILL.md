@@ -90,7 +90,7 @@ Every session of a run has one role: the owner, the coordinator (this session), 
    - A coordinator that waits on its own ([Waiting](#waiting)) wakes at least every 10 minutes.
 5. **React** to each outcome ([Outcomes](#outcomes)), clean up, then return to 1 for every project with a free slot, within both caps.
    - A waiting follow-up takes a free slot before any pick.
-   - The run closes when no worker is active, no PR waits for a review, a merge or its default-branch watch, and no project has an issue to pick, after a last [Reconciliation](#reconciliation).
+   - The run closes when no worker is active, no PR waits for a review, a merge or its default-branch watch, and no project has an issue to pick (a project that the worktree rule of [Sandbox on](runners.md#sandbox-on) holds has none), after a last [Reconciliation](#reconciliation).
    - A project with `keepRunning` keeps the run open until the owner stops it: each wake-up also picks in that project.
 6. **Report** per project: issue, outcome, evidence, and what was skipped or not checked.
 
