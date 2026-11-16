@@ -85,7 +85,7 @@ The rules in this file come from the [permissions](https://code.claude.com/docs/
 - `disableBypassPermissionsMode` works from any scope, including your own settings.
 - A rule is not a security boundary around the program: a deny covers the usual invocation, not every form. The boundaries that hold are the repository's GitHub rulesets and the token's own rights.
 
-Merges stay on the deterministic path: a script that checks `merge.*` of the policy ([recurring runs](../plugins/cl-orchestration/skills/orchestrating-projects/recurring-runs.md)). The cycle has no merge right. Workers the cycle starts run supervised whatever the project's [mode](../plugins/cl-orchestration/skills/orchestrating-projects/runners.md#modes), since the cycle can neither write an automatic worker's settings file nor commit and push its change, and the cycle passes no flag that bypasses or skips permission prompts. On Orca, a worker's prompts depend on Orca's agent permission setting, the user's choice ([Orca notes](../plugins/cl-orca/skills/runner/orca.md#start-the-run)).
+Merges stay on the deterministic path: a script that checks `merge.*` of the policy ([recurring runs](../plugins/cl-orchestration/skills/orchestrating-projects/recurring-runs.md)). The cycle has no merge right. Workers the cycle starts run supervised whatever the project's [mode](../plugins/cl-orchestration/skills/orchestrating-projects/runners.md#modes), since the cycle can neither write an automatic worker's settings file nor commit and push its change, and the cycle passes no flag that bypasses or skips permission prompts. On Orca, a worker's prompts depend on Orca's agent permission setting, the user's choice ([Orca notes](../plugins/cl-orchestration/skills/orchestrating-projects/orca.md#start-the-run)).
 
 ## Test before you enable it
 
@@ -96,7 +96,7 @@ Merges stay on the deterministic path: a script that checks `merge.*` of the pol
 
 ## Runtime-specific: Orca
 
-The commands below follow the runtime's guide (`orca skills get orchestration`) and the cl-orca plugin's [Orca notes](../plugins/cl-orca/skills/runner/orca.md).
+The commands below follow the runtime's guide (`orca skills get orchestration`) and the `orchestrating-projects` skill's [Orca notes](../plugins/cl-orchestration/skills/orchestrating-projects/orca.md).
 
 - A restart resumes the same run: `orchestration run-use --id <run id>`. Never create a new run on restart.
 - Only the terminal bound to the run consumes its inbox (observed; not stated in the runtime's guide: unverified). Start the loop in that terminal: resume the run, then start the loop.
