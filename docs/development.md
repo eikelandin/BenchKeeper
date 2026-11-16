@@ -12,7 +12,6 @@ How the checks and the workflows of this repository work.
 - `checks-core`: `actionlint`, `zizmor` (a checkout keeps its credentials only with a `zizmor: ignore[artipacked]` reason), no em dash or emoji in text files outside the `.agents/` and `.claude/` folders, the `.github/scripts/` tests and checks (skill lint, plugin boundary, generated docs, version pins), and the token budget (`token-budget.mjs check --budget-only`).
 - The plugin boundary check (`.github/scripts/plugin-boundary.mjs`) fails when a tracked file under `plugins/*/` (the generated `CHANGELOG.md` apart) holds a path that leaves its plugin folder (a `../` path resolved from the file's folder, `${CLAUDE_PLUGIN_ROOT}/..`), imports a package that is neither a `node:` module nor `claude-code`, or has a hook matcher in `hooks/*.json` whose `^<prefix>:` is not the plugin's name in `.claude-plugin/plugin.json`.
 - Actions are pinned to commit SHAs with a version comment. Dependabot (`.github/dependabot.yml`) updates the `uses:` pins weekly. By hand: the actionlint image digest, `node-version` in every workflow (Node 22), the dev container image (bump its tag and digest together), and the Claude Code pin of the `plugin-checks` job (`.github/claude-code/package.json` and its lockfile, the npm `stable` tag).
-- SonarCloud: automatic analysis, no workflow. The gate on new code is set by the owner in SonarCloud: 0 open issues, duplication not above the recorded baseline. It has no coverage condition.
 
 ## Plugin mod types
 
