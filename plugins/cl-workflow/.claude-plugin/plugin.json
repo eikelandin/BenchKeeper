@@ -16,12 +16,6 @@
       "title": "Status band above the prompt (terminal and desktop app)",
       "description": "Off by default. Adds two rows above the prompt in the Claude Code terminal and desktop app: project, branch and Ponytail's level when it is installed, then the last test run and lint or type check, and ASK while terminal questions are allowed. It reads your working folder, git, one Ponytail flag file and the commands and edits of the main loop; it stores and sends nothing. Turn it off by setting this option to false. The VS Code extension does not draw it.",
       "default": false
-    },
-    "hub": {
-      "type": "string",
-      "title": "Hub repository for questions and issues (owner/name)",
-      "description": "Empty by default: no hub. One GitHub repository, best a private one, for the owner questions of projects whose own repository is public, and for work items where cl-orchestration's issuesIn or a project's policy chooses the hub. Set the same value in cl-orchestration's hub option. /cl-workflow:questions asks the hub's question issues, then this private repository's, then the local queue.",
-      "default": ""
     }
   }
 }

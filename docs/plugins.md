@@ -4,8 +4,8 @@ What the CedarLoom plugins add to a Claude Code session besides their skills, an
 
 | Plugin | Hooks | Settings |
 |---|---|---|
-| `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand`, [`hub`](#hub-repository) |
-| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent`, [`hub`, `issuesIn`](#hub-repository) |
+| `cl-workflow` | [Terminal questions](#terminal-questions), [role guard](#role-guard), [status band](#the-status-band) | `tierBand` |
+| `cl-orchestration` | [Coordinator context rotation](#coordinator-context-rotation) | `rotateAtTokens`, `rotateAtPercent` |
 | `cl-setup` | none | none |
 
 Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options with `/plugin` (Installed tab, Configure options) or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session.
@@ -38,7 +38,7 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 - The plugin's `PreToolUse` hook refuses both with the rule as its reason: open questions with recommendations go into one issue per task in the issue tracker the project names, else the report; safe, reversible recommendations are taken and the work goes on; no chat-text interviews either.
 - A `SessionStart` hook adds that rule as one line at start, resume, `/clear`, compaction and fork.
 - `/cl-workflow:ask` allows both for 30 minutes, `for <n>m` or `for <n>h`, `until HH:MM` (local time), and `off` ends the window early.
-- `/cl-workflow:questions`, the question queue, allows both for the rest of the session, as running it means you sit at the terminal; `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. It asks you the open `question` issues of the [hub repository](#hub-repository) in batches, comments each answer, and labels the ones you defer `deferred` so the queue skips them.
+- `/cl-workflow:questions`, the question queue, allows both for the rest of the session, as running it means you sit at the terminal; `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. It asks you the open [owner questions](#owner-questions) in batches, comments each answer, and labels the ones you defer `cedarloom:deferred` so the queue skips them.
 - A window ends at its time or when Claude Code quits. `/clear`, compaction and a fork keep it, while a new Claude Code process or a resumed conversation starts with questions off.
 - A `UserPromptExpansion` hook sets the window, and that event fires only when a typed command expands ([hooks reference](https://code.claude.com/docs/en/hooks#userpromptexpansion)). So the same text in a scheduled task sets nothing (checked with a cron job, Claude Code 2.1.316), nor, by that reference, in a `/loop` iteration or a message from another session; the skill is user-only.
 - The window is one file per Claude Code process in the plugin's data folder (`ask/<CLAUDE_PID>.json`, the window's end), and `CLAUDE_PID` is set in the Bash tool too, so a model that writes that file opens the window: the hooks stop a model that forgets the rule, not one that works around it.
@@ -47,26 +47,25 @@ By default a Claude Code session with the cl-workflow plugin on never uses the q
 - Setting `disableAllHooks` turns the hooks off.
 - Codex runs none of these hooks, so there `/cl-workflow:ask` changes nothing.
 
-## Hub repository
+## Owner questions
 
-The hub is one GitHub repository, often private, that holds the work items of the projects whose `issuesIn` option or `issues.tracker` policy selects it, and the owner questions of those projects and of projects whose tracker is public. The coordinator of `/cl-orchestration:orchestrating-projects` files such a question there as an issue in the approval layout (labels `question`, `ready-for-human`, `project:<name>`), and `/cl-workflow:questions` asks them in any session.
+The coordinator of `/cl-orchestration:orchestrating-projects` files an owner question in the approval layout as an issue of the project's repository, labeled `cedarloom:needs-human`, when that repository is private with issues on; else it writes it to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A question never goes to a public repository.
 
-- Set it: the option `hub`, as `owner/name`, of both `cl-workflow@cedarloom` and `cl-orchestration@cedarloom`, to the same value. Run `/plugin configure cl-workflow@cedarloom` and `/plugin configure cl-orchestration@cedarloom` ([configuration dialog](https://code.claude.com/docs/en/plugins/components#when-the-configuration-dialog-appears)), or the plugins' rows in `/config` (Claude Code v2.1.269 or later, [user configuration](https://code.claude.com/docs/en/plugins-reference#user-configuration)), then start a new session. The plugins reference does not say a skill can read another plugin's options, so each has its own.
-- Claude Code keeps the value in your user settings (`pluginConfigs`) and ignores that key in project settings ([settings reference](https://code.claude.com/docs/en/settings-reference#pluginconfigs)). The skills read it nowhere else but, after a clear, the coordinator's own handoff file that the plugin's checks pass, so no repository can redirect work or questions.
+| Label | Meaning |
+| --- | --- |
+| `cedarloom` | CedarLoom may read and plan the issue and ask on it; it does not start work |
+| `cedarloom:ready-for-agent` | the coordinator may start the issue (the default `startLabel`) |
+| `cedarloom:needs-human` | a question or approval waits for the owner |
+| `cedarloom:in-progress` | a worker holds the issue, so it never starts twice; a label left after its worker ended without a pull request (a host restart) holds the issue until you take it off: `gh issue edit <number> -R <owner/repo> --remove-label cedarloom:in-progress` |
+| `cedarloom:deferred` | the owner parked it: it does not start and the question queue skips it |
 
-| Setting | Where | Default |
-| --- | --- | --- |
-| `hub` | option of both plugins | none |
-| `issuesIn`: `repo` or `hub` holds work items, follow-up issues and questions | option of `cl-orchestration` (Claude Code v2.1.271 or later) | `repo` |
-| `issues.tracker`: the same, per project; never another repository | the project's `docs/agents/orchestration.json` | `issuesIn` |
+Rejected work is closed as not planned, with no label. Create each label in the repository before the first run: `gh label create <name> --description "<meaning>"`.
 
-- Public repositories never mention the hub (a check refuses such a merge); the coordinator closes a hub issue after the merge, linking the pull request.
-- A question goes to the tracker if private with issues on, else to the hub; without one (a value that is no plain `owner/name` is named as rejected), to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. Never to a public repository (from a public hub: the coordinator's report).
-- Without a hub, `/cl-workflow:questions` asks this repository's question issues if private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name, but two such segments in a row, as in `*/*`, match no folder). Like the rest of the guard it does not try to catch a command written to get around it (`.c*/q*`, braces, variables, bracket classes, look-alike letters, a tool's own folder option such as `git -C`), nor one that acts on `.cedarloom` itself, such as `rm -rf .cedarloom`. A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
+- `/cl-workflow:questions` asks this repository's `cedarloom:needs-human` issues if it is private, then the local queue, where it writes the answer line the coordinator reads. That line counts as the owner's: the [role guard](#role-guard) lets only that session, no subagent, write the queue or reach it in a command; the coordinator files through `approval.mjs file`. A command reaches the queue when its text names `.cedarloom/questions` or when a word or redirection target, read as the shell decodes it from the session folder and from each folder a `cd`, `pushd` or `Set-Location` before it names, lies in it (`*`, `?` and `[...]` count as any name, but two such segments in a row, as in `*/*`, match no folder). Like the rest of the guard it does not try to catch a command written to get around it (`.c*/q*`, braces, variables, bracket classes, look-alike letters, a tool's own folder option such as `git -C`), nor one that acts on `.cedarloom` itself, such as `rm -rf .cedarloom`. A session whose folder lies in the queue writes nothing there. No session writes the window files of `/cl-workflow:ask` or starts `claude` with `/cl-workflow:questions` or `/questions` in its command line: `claude -p` expands such a command ([headless mode](https://code.claude.com/docs/en/headless)), and no hook input tells that session from one where you typed it.
 
 ## Role guard
 
-Only the coordinator merges, releases and changes shared repository state. In every other Claude Code session with the cl-workflow plugin on, and in every subagent, its `PreToolUse` hook for the Bash, Monitor and PowerShell tools (and the edit tools, for the [local queue](#hub-repository)) denies the following (a Monitor call on a WebSocket runs no command and passes):
+Only the coordinator merges, releases and changes shared repository state. In every other Claude Code session with the cl-workflow plugin on, and in every subagent, its `PreToolUse` hook for the Bash, Monitor and PowerShell tools (and the edit tools, for the [local queue](#owner-questions)) denies the following (a Monitor call on a WebSocket runs no command and passes):
 
 - merging and direct commits (`gh pr merge`, `gh repo sync`, its local form without a repository included, the merge, `merge-upstream` and `contents` endpoints of `gh api` with a method other than GET, and its merge and `createCommitOnBranch` mutations, sent to the `graphql` endpoint in any case, with leading or trailing slashes, a query or a fragment, or as its full URL) and releases (`gh release` except `list`, `view`, `download` and `verify`, `gh workflow run`, and the `dispatches` endpoints of `gh api`)
 - tag pushes (`git push --tags`, `--follow-tags`, `--mirror`, `tag <name>`, or a refspec that is under `refs/tags/`, names a tag of the repository, or names a version such as `v1.2.0` and is no local branch) and pushes to the default branch (`main`, `master`, the branch `refs/remotes/<remote>/HEAD` names, or the current branch's push target for a `git push` without a refspec), `--all` and `--branches` included, and pushes to a remote whose default branch the hook cannot read: a URL, a path, or a remote without `refs/remotes/<remote>/HEAD` (`git remote set-head <remote> --auto` sets it); a push that names no remote goes where git sends it: the branch's `pushRemote`, `remote.pushDefault`, the branch's remote, the sole remote, else `origin`; git takes a unique prefix of a long option, so `--tag` counts as `--tags`
@@ -111,7 +110,7 @@ Issue and pull request text can carry instructions. `/cl-orchestration:orchestra
 
 | Text | How it reaches an agent | Check |
 |---|---|---|
-| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it. With the hub as tracker (`issues.tracker`, else `--issues-in`, is `hub`, with `--hub`), the issue and access come from the hub | `thread.test.mjs` |
+| Issue title, body and comments | `thread.mjs` writes the trusted thread and counts the comments left out; the spec's `Thread:` block carries it | `thread.test.mjs` |
 | Unresolved review threads | `thread.mjs --pull` writes each thread a trusted author opened, with its trusted comments, and counts the rest; the reviewer's brief and the worker's follow-up carry it. Access counts in the project's repository | `thread.test.mjs` |
 | Any other comment or review | not passed: the spec and `rules/worker.md` tell workers and reviewers to read none themselves | wording only |
 

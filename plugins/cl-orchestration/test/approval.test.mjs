@@ -81,7 +81,7 @@ const CASES = [
   ['two options with one label', swap('| (b) Hold |', '| (a) Hold |'), ['Options']],
   ['two options with one label in two cases', swap('| (b) Hold |', '| (A) Hold |'), ['Options']],
   ['an option without a label', swap('| (b) Hold |', '| Hold |'), ['Options']],
-  ['front matter left in', `---\nlabels: question, ready-for-human\n---\n\n${FILLED}`, ['Front matter']],
+  ['front matter left in', `---\nlabels: cedarloom:needs-human\n---\n\n${FILLED}`, ['Front matter']],
   // Every part of the template holds a placeholder: the Answer row depends on where the issue lands.
   ['the unfilled template', readFileSync(new URL(`${SKILL}approval-template.md`, import.meta.url), 'utf8'),
     ['Front matter', 'What', 'Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer', 'Options', 'Why now']],
@@ -151,7 +151,7 @@ const ANSWERS = [
   ['free text that is no label is none', [said('a, go ahead', '2026-11-11T10:00:00Z'), said('(a', '2026-11-11T10:30:00Z'), said('Looks good', '2026-11-11T11:00:00Z')], null],
   ['an option without a full stop is cut at 200 characters', [said(`Owner answer (2026-11-11): ${'x'.repeat(300)}`, '2026-11-11T10:00:00Z')], { option: 'x'.repeat(200), text: '', at: '2026-11-11T10:00:00Z' }],
 ];
-for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'question' }], author: { login: 'owner' }, body, comments }, writes), expected));
+for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'cedarloom:needs-human' }], author: { login: 'owner' }, body, comments }, writes), expected));
 
 test('approval: the command line counts a member\'s answer only with write access to the repository the issue URL names', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
@@ -178,10 +178,10 @@ test('approval: the command line counts a member\'s answer only with write acces
   assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
 });
 
-test('approval: apply moves a question the owner answered to ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
+test('approval: apply moves a question the owner answered to cedarloom:ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
-  const labels = [{ name: 'question' }, { name: 'ready-for-human' }, { name: 'Deferred' }, { name: 'project:app' }];
+  const labels = [{ name: 'cedarloom:needs-human' }, { name: 'CedarLoom:Deferred' }, { name: 'bug' }];
   const run = (comments, { body = 'Which export format?', tags = labels, args = [] } = {}) => {
     writeFileSync(join(bin, 'issue.json'), JSON.stringify({ number: 12, labels: tags, author: { login: 'coordinator' }, body, comments }));
     writeFileSync(join(bin, 'log'), '');
@@ -192,17 +192,17 @@ test('approval: apply moves a question the owner answered to ready-for-agent, an
   // The answer the questions skill has just posted.
   const answered = run([SECOND]);
   assert.equal(answered.status, 0, answered.stderr);
-  assert.deepEqual(JSON.parse(answered.stdout), { ...GO, labels: ['project:app', 'ready-for-agent'] });
-  assert.deepEqual(answered.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-human --remove-label Deferred --add-label ready-for-agent']);
+  assert.deepEqual(JSON.parse(answered.stdout), { ...GO, labels: ['bug', 'cedarloom:ready-for-agent'] });
+  assert.deepEqual(answered.edits, ['issue edit 12 -R owner/tracker --remove-label cedarloom:needs-human --remove-label CedarLoom:Deferred --add-label cedarloom:ready-for-agent']);
   // An approval's work lives in what it names: it gets no start label.
   const approval = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED });
   assert.equal(approval.status, 0, approval.stderr);
-  assert.deepEqual(approval.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-human --remove-label Deferred']);
+  assert.deepEqual(approval.edits, ['issue edit 12 -R owner/tracker --remove-label cedarloom:needs-human --remove-label CedarLoom:Deferred']);
   // An approval that carries the start label loses it, or the precheck lists it as work to start.
-  const started = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED, tags: [{ name: 'question' }, { name: 'ready-for-agent' }, { name: 'project:app' }] });
+  const started = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED, tags: [{ name: 'cedarloom:needs-human' }, { name: 'cedarloom:ready-for-agent' }, { name: 'bug' }] });
   assert.equal(started.status, 0, started.stderr);
-  assert.deepEqual(JSON.parse(started.stdout), { option: 'a', text: '', at: '2026-11-11T10:00:00Z', labels: ['project:app'] });
-  assert.deepEqual(started.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-agent']);
+  assert.deepEqual(JSON.parse(started.stdout), { option: 'a', text: '', at: '2026-11-11T10:00:00Z', labels: ['bug'] });
+  assert.deepEqual(started.edits, ['issue edit 12 -R owner/tracker --remove-label cedarloom:needs-human --remove-label cedarloom:ready-for-agent']);
   for (const comments of [[], [{ ...SECOND, authorAssociation: 'COLLABORATOR' }], [{ ...SECOND, authorAssociation: 'MEMBER' }]]) {
     const open = run(comments);
     assert.deepEqual([open.status, open.stdout, open.edits], [1, '', []]);
@@ -237,7 +237,7 @@ test('approval: the command line refuses a file outside the run folder with exit
   assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
 });
 
-test('approval: without a hub or a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
+test('approval: without a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   // The working folder of the coordinator can be a subfolder of a repository.
   const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));

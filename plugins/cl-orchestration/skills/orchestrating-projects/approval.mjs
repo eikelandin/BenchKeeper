@@ -1,7 +1,7 @@
 // Usage: node approval.mjs <file>, the file in .cedarloom/runs/ of the working directory (the run folder, approvals.md); any other path exits 2. Checks an approval or owner question against approval-template.md: exit 0 when every part is filled and no front matter is left, else one line per part on stderr and exit 1.
 // Usage: node approval.mjs answer <file>, the file in the run folder as above. Reads the owner's answer from a filed approval, the file holding what `gh issue view <n> -R <repository> --json labels,comments,author,body,url` printed: the answer as JSON and exit 0, exit 1 while there is none, or exit 2 with one line when the file cannot be read as that output.
 // Usage: node approval.mjs file <file> <project>, the file in the run folder: checks it as above and files it as the next question of the local queue, .cedarloom/questions/<project>-<n>.md, printing { file }.
-// Usage: node approval.mjs apply <owner/name> <number>. Reads the issue with gh and its owner's answer as the answer mode does; on an answer takes question, ready-for-human and deferred off, and ready-for-agent too when the body holds an Approval table, else puts ready-for-agent on, then prints { option, text, at, labels } and exits 0; exit 1 while there is none, exit 2 with one line on an error.
+// Usage: node approval.mjs apply <owner/name> <number>. Reads the issue with gh and its owner's answer as the answer mode does; on an answer takes cedarloom:needs-human and cedarloom:deferred off, and cedarloom:ready-for-agent too when the body holds an Approval table, else puts cedarloom:ready-for-agent on, then prints { option, text, at, labels } and exits 0; exit 1 while there is none, exit 2 with one line on an error.
 // Usage: node approval.mjs queue: { file, status, option, text, at } of each question in the local queue as JSON, or exit 2 with one line.
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
@@ -116,16 +116,17 @@ const fullAnswer = (body, at) => {
   return { option: found[2].trim().slice(0, 200), text: (rest.startsWith('.') ? rest.slice(1) : rest).trim(), at: at ?? found[1] };
 };
 
-// The labels of a question that waits for the owner (approvals.md, Labels and title).
-const ASKING = ['question', 'ready-for-human', 'deferred'];
+// The labels of a question that waits for the owner, and the default startLabel (approvals.md, Labels and title).
+const ASKING = ['cedarloom:needs-human', 'cedarloom:deferred'];
+const START = 'cedarloom:ready-for-agent';
 
-// gh refuses to remove a label the repository lacks, so only the issue's own go; an approval (an Approval table) gets no ready-for-agent and loses one it has, as its work lives in the issue or pull request it names.
+// gh refuses to remove a label the repository lacks, so only the issue's own go; an approval (an Approval table) gets no start label and loses one it has, as its work lives in the issue or pull request it names.
 export function settle(repo, issue, exec) {
   const labels = issue.labels.map((label) => String(label.name));
   const approval = tables(issue.body.replace(COMMENT, ''), 'Approval').length > 0;
-  // Without question, an approval that kept ready-for-agent would read as work to start (precheck.mjs pickable).
-  const off = labels.filter((name) => [...ASKING, ...(approval ? ['ready-for-agent'] : [])].includes(name.toLowerCase()));
-  const on = approval || labels.some((name) => name.toLowerCase() === 'ready-for-agent') ? [] : ['ready-for-agent'];
+  // Without cedarloom:needs-human, an approval that kept the start label would read as work to start (precheck.mjs pickable).
+  const off = labels.filter((name) => [...ASKING, ...(approval ? [START] : [])].includes(name.toLowerCase()));
+  const on = approval || labels.some((name) => name.toLowerCase() === START) ? [] : [START];
   if (off.length || on.length) exec('gh', ['issue', 'edit', String(issue.number), '-R', repo, ...off.flatMap((name) => ['--remove-label', name]), ...on.flatMap((name) => ['--add-label', name])]);
   return [...labels.filter((name) => !off.includes(name)), ...on];
 }

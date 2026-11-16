@@ -25,7 +25,7 @@ const DEFAULTS = {
   sandbox: { allowedDomains: [] },
   riskyPaths: [],
   review: { depth: 'high', sensitiveDepth: 'high', sensitivePaths: [] },
-  issues: { tracker: null, labels: [] },
+  issues: { labels: [] },
   minPlugin: null,
   models: {
     worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, deep: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
@@ -71,16 +71,14 @@ test('policy: a key the schema does not name gives no policy, a // comment key p
   assert.deepEqual(commented.policy.merge, { ...DEFAULTS.merge, allowed: true });
 });
 
-test('policy: issues.tracker chooses repo or hub; a file that names another repository is refused and keeps the project repository', () => {
-  assert.equal(effective({ issues: { tracker: 'hub' } }, '6.26.0').policy.issues.tracker, 'hub');
-  assert.equal(effective({ issues: { tracker: 'repo' } }, '6.26.0').policy.issues.tracker, 'repo');
-  const named = effective({ startLabel: 'go', issues: { repository: 'owner/tracker', tracker: 'hub', labels: ['project-a'] } }, '6.26.0');
+test('policy: a file that names another repository is refused and keeps the project repository', () => {
+  const named = effective({ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['project-a'] } }, '6.26.0');
   assert.deepEqual(named.errors, []);
-  assert.deepEqual(named.policy.issues, { tracker: 'repo', labels: ['project-a'] });
+  assert.deepEqual(named.policy.issues, { labels: ['project-a'] });
   assert.deepEqual(rules(named.warnings), [['refused', 'issues.repository']]);
-  assert.match(named.warnings[0].message, /never another repository; the tracker is the project repository/);
-  // A wrong tracker beside it is still named.
-  assert.deepEqual(rules(effective({ issues: { repository: 'owner/tracker', tracker: 'bogus' } }, '6.26.0').errors), [['enum', 'issues.tracker']]);
+  assert.match(named.warnings[0].message, /names no other repository; the tracker is the project repository/);
+  // A file that chooses another tracker is still named.
+  assert.deepEqual(rules(effective({ issues: { repository: 'owner/tracker', tracker: 'hub' } }, '6.26.0').errors), [['unknown-key', 'issues.tracker']]);
 });
 
 test('policy: mode is supervised unless the file sets automatic, which takes its hosts from sandbox.allowedDomains', () => {
@@ -139,7 +137,6 @@ const REFUSED = [
   ...PATH_LISTS.flatMap(([group, list]) => NO_PATHS.map((path) => [{ [group]: { [list]: [path] } }, 'pattern', `${group}.${list}[0]`])),
   ...NO_PATHS.map((path) => [{ riskyPaths: [path] }, 'pattern', 'riskyPaths[0]']),
   [{ merge: { autoMergeMax: 'high' } }, 'enum', 'merge.autoMergeMax'],
-  ...['owner/tracker', 'Hub', ''].map((tracker) => [{ issues: { tracker } }, 'enum', 'issues.tracker']),
   // The editor refuses what the reader drops.
   [{ issues: { repository: 'owner/tracker' } }, 'refused', 'issues.repository'],
   [{ models: { phases: { review: { model: 'some-model-20260101' } } } }, 'enum', 'models.phases.review.model'],

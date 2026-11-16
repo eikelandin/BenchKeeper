@@ -97,7 +97,7 @@ export function validate(doc) {
   return errors.map((e) => (e.rule === 'unknown-key' && e.path === 'issues.repository' ? REFUSED_REPOSITORY : e));
 }
 
-const REFUSED_REPOSITORY = { rule: 'refused', path: 'issues.repository', message: 'is refused: a policy file chooses only issues.tracker (repo or hub), never another repository; the tracker is the project repository' };
+const REFUSED_REPOSITORY = { rule: 'refused', path: 'issues.repository', message: 'is refused: a policy file names no other repository; the tracker is the project repository' };
 
 const older = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
 // Comment keys explain the file to its reader; the policy holds only what the coordinator acts on.
@@ -142,7 +142,7 @@ export function effective(file, version = pluginVersion()) {
       sandbox: { allowedDomains: sandbox.allowedDomains ?? [] },
       riskyPaths: doc.riskyPaths ?? [],
       review: { depth: review.depth ?? 'high', sensitiveDepth: review.sensitiveDepth ?? 'high', sensitivePaths: review.sensitivePaths ?? [] },
-      issues: { tracker: named ? 'repo' : issues.tracker ?? null, labels: issues.labels ?? [] },
+      issues: { labels: issues.labels ?? [] },
       minPlugin: doc.minPlugin ?? null,
       models: {
         worker: Object.fromEntries(Object.entries(DEPTHS).map(([depth, [model, effort]]) => [depth, { model: models.worker?.model ?? model, effort: models.worker?.effort ?? effort }])),
