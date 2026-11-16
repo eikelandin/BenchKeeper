@@ -18,7 +18,7 @@ A Claude Code worker starts in a worktree of its own, then by its project's [mod
 ORCA worktree create --name <number>-<slug> --repo path:<project path> --base-branch <default branch> --no-parent --setup run --json
 ```
 
-Supervised: Orca's own launch, on the host's default Claude Code login. Supervised prompts depend on Orca's agent permission setting, the user's choice in Orca's Settings, Agents, Agent Permissions: the launch adds that setting's flag. Orca ships it at "full-access" (Orca 1.4.254), which adds `--dangerously-skip-permissions` for Claude Code and `--dangerously-bypass-approvals-and-sandbox` for Codex, which also turns off Codex's sandbox: on a host where nobody changed it, a supervised worker shows no permission prompt, a Claude Code one none but the ask matches of its rule file ([Worker rules](modes.md#worker-rules)). Of the skill's flags it passes only `--model` and `--effort`, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
+Supervised: Orca's own launch, on the host's default Claude Code login. Supervised prompts depend on Orca's agent permission setting, the user's choice in Orca's Settings, Agents, Agent Permissions: the launch adds that setting's flag. Orca ships it at "full-access" (Orca 1.4.254), which adds `--dangerously-skip-permissions` for Claude Code and `--dangerously-bypass-approvals-and-sandbox` for Codex, which also turns off Codex's sandbox: on a host where nobody changed it, a supervised worker shows no permission prompt. A Claude Code worker starts in a structured (chat) session, Orca's default for new agent tabs, with `--permission-prompt-tool=stdio` and no terminal: Orca answers its prompts by that setting, so under full access an ask match runs with no prompt (observed with Orca 1.4.259, not documented), and only the deny rules of its rule file bind it ([Worker rules](modes.md#worker-rules)). Of the skill's flags it passes only `--model` and `--effort`, so the worker runs without `--autocompact 200k` and with prompt suggestions on, and it cannot unset `CEDARLOOM_ROLE`: a worker that inherits the variable passes the role guard as the coordinator. Unverified: which source reaches the worker's terminal, a shell profile, Orca's environment or the `worker-start` call, which runs in the coordinator's environment. So each supervised Claude Code worker measures it. Its spec takes this line after `Acknowledge:`:
 
 ```text
 Role check: right after the heartbeat, before any other command, run `printenv CEDARLOOM_ROLE`. It must print nothing. A value it prints is Blocked (below): name the variable in the report.
@@ -30,7 +30,7 @@ After such a report, start no further supervised Claude Code worker in the run a
 ORCA orchestration worker-start --spec-file <filled spec file> --worktree path:<worktree path> --agent claude --model '<model>' --effort <effort> --keep-open --json
 ```
 
-Before each such `worker-start`, write and check its rule file ([Worker rules](modes.md#worker-rules)). Its spec takes this line after the role check:
+Before each such `worker-start`, write and check its rule file ([Worker rules](modes.md#worker-rules)). Its spec changes as [Supervised Claude Code worker on Orca](spec-template.md#supervised-claude-code-worker-on-orca) says, and takes this line after the role check:
 
 ```text
 Rule file: `.claude/settings.local.json` in this worktree is the coordinator's. Never stage, commit, change or delete it.
@@ -47,7 +47,7 @@ ORCA orchestration worker-start --spec-file <filled spec file> --terminal <termi
 A Codex worker starts with `ORCA orchestration worker-start --spec-file <filled spec file> --worktree new-top-level --repo path:<project path> --base-branch <default branch> --name <number>-<slug> --agent codex --model "<model>" --effort <effort> --keep-open --json`.
 
 - `--autocompact 200k` caps the worker's context at 200,000 tokens before it compacts, and `CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION=false` turns off the next-prompt suggestions no one reads in a worker terminal. `env` sets the variable in any login shell.
-- No launch line in this file carries a permission-bypass flag. A supervised or Codex worker gets the flag of Orca's agent permission setting (above, Orca 1.4.254; for Codex under "full-access", `--dangerously-bypass-approvals-and-sandbox`, which also turns off Codex's sandbox); the prompts that setting leaves appear in its terminal ([A permission dialog](#a-permission-dialog)). An automatic worker's `terminal create --command` line is the coordinator's alone: that setting adds nothing to it.
+- No launch line in this file carries a permission-bypass flag. A supervised or Codex worker gets the flag of Orca's agent permission setting (above, Orca 1.4.254; for Codex under "full-access", `--dangerously-bypass-approvals-and-sandbox`, which also turns off Codex's sandbox). A structured worker's prompts go to Orca, which answers them by that setting; only a worker in a terminal shows the prompts that setting leaves there ([A permission dialog](#a-permission-dialog)). An automatic worker's `terminal create --command` line is the coordinator's alone: that setting adds nothing to it.
 - Automatic is for a Claude Code worker only (a Codex worker of an automatic project takes the [fallback](#fallback-to-supervised)): write its settings file first ([Sandbox on](modes.md#sandbox-on)), `<id>` being `<number>-<slug>`. Before each such worker, pass [Automatic start](modes.md#automatic-start); the probe worker starts the same way in a worktree `probe-<r>` with the probe as its spec, and is released and its worktree removed after it. The `--check` read of check 2 is the last command before every `terminal create` of an automatic worker, a retry and a follow-up included. A failed check or probe step takes the [fallback](#fallback-to-supervised), except a failed `--check` read of an item, which makes that item BLOCKED and starts no worker.
 - Write the filled spec to a file in the run folder and pass that file with `--spec-file`, so issue text is never read by the shell.
 - The model and effort are those of the spec's `Agent:` line, the model as the reader printed it, inside single quotes. Leave out what that line gives as the agent default, and the effort whenever the model is left out.
@@ -80,7 +80,7 @@ A worker on `fable` that already reported gets no follow-up: release it and star
 
 ### Fallback to supervised
 
-An automatic project whose [Automatic start](modes.md#automatic-start) failed runs supervised for the rest of the run, and so does a Codex worker of an automatic project. Such a worker starts as a supervised one (above): it has none of the automatic bounds (no sandbox, no network allow list, no `dontAsk`, no settings file) and runs with Orca's agent permission setting, under the shipped "full-access" with no permission prompt, except that a Claude Code one gets the worktree rule file of [Worker rules](modes.md#worker-rules) as every supervised one does, so its deny matches are refused and its ask matches prompt. Write that in the handoff's `Mode:` line and the report: the project, the failed check or step, and that its workers run without the automatic bounds under Orca's setting.
+An automatic project whose [Automatic start](modes.md#automatic-start) failed runs supervised for the rest of the run, and so does a Codex worker of an automatic project. Such a worker starts as a supervised one (above): it has none of the automatic bounds (no sandbox, no network allow list, no `dontAsk`, no settings file) and runs with Orca's agent permission setting, under the shipped "full-access" with no permission prompt, except that a Claude Code one gets the worktree rule file of [Worker rules](modes.md#worker-rules) as every supervised one does, so its deny matches are refused. Write that in the handoff's `Mode:` line and the report: the project, the failed check or step, and that its workers run without the automatic bounds under Orca's setting.
 
 ## Acknowledgement
 
@@ -103,7 +103,7 @@ A worker settles with one message. The [outcomes](SKILL.md#outcomes) map to Orca
 | Outcome | Message from the worker |
 |---|---|
 | DONE, and no change needed | `--type worker_done --outcome succeeded` |
-| BLOCKED | `--type worker_done --outcome failed` with a subject that starts `BLOCKED:`, after an issue comment |
+| BLOCKED | `--type worker_done --outcome failed` with a subject that starts `BLOCKED:`, after an issue comment (a Claude Code worker: the comment in the report) |
 | NEEDS_REPLAN | `--type worker_done --outcome failed` with a subject that starts `NEEDS_REPLAN:` |
 | failed | `--type worker_done --outcome failed`, any other subject |
 
@@ -111,9 +111,9 @@ Orca has no separate blocked or replan message type: such a report is a `worker_
 
 An automatic worker cannot run `send` or `ask` from inside the sandbox ([Sandbox on](modes.md#sandbox-on)): its report reaches the coordinator only as the `Worker stopped without reporting` escalation with its last output, which fails the probe, so its project takes the [fallback](#fallback-to-supervised). `orca orchestration send` and `ask` fail with `runtime_unavailable` (Orca 1.4.254, Claude Code v2.1.325): the CLI reads `orca-runtime.json` in the home folder, which the read block closes, and would then connect to Orca's socket, which the sandbox closes too (unverified: read from the CLI's source and the settings reference, not run). Neither is opened: that file holds Orca's one auth token, with which `orca terminal create --command` runs any command on the host outside the sandbox.
 
-A batch also sends one `--type status` message per issue, when that issue's pull request is up or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
+A batch also sends one `--type status` message per issue, when that issue's pull request is up (a Claude Code worker: its change committed) or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
 
-A supervised worker answers a follow-up dispatch with its `worker_done`, and a follow-up message with one `--type status` message; either names the head commit it pushed. An automatic worker's follow-up is a new start, and its report names its staged files ([Commit and push](modes.md#commit-and-push)). That id is a claim: read `<head>` yourself ([review-and-merge.md](review-and-merge.md)).
+A supervised worker answers a follow-up dispatch with its `worker_done`, and a follow-up message with one `--type status` message; either names its head commit, which a Claude Code worker committed for the coordinator to push and a Codex worker pushed ([Commit and push](modes.md#commit-and-push)). An automatic worker's follow-up is a new start, and its report names its staged files ([Commit and push](modes.md#commit-and-push)). That id is a claim: read `<head>` yourself ([review-and-merge.md](review-and-merge.md)).
 
 ## Questions
 
@@ -174,7 +174,9 @@ Liveness, in the guide's terms: `ready` or `unverifiable` is absence, not proof.
 
 An automatic worker shows none: under `dontAsk` a call that would prompt is denied. A dialog in its terminal (a trust question, a login) is the owner's.
 
-At the stall check, with `permissionPrompts` `decline`, decline a permission dialog of a Claude Code worker, only from Bash or Zsh (below), and only when both of these show it:
+A structured worker shows none either: it has no terminal, and Orca answers its prompts by its agent permission setting ([Start the run](#start-the-run)), so nothing here declines a call and the deny rules of its rule file are its bound. Only a worker in a terminal can show a permission dialog, under an agent permission setting other than full access (unverified: which Orca setting starts a supervised worker in a terminal).
+
+At the stall check, with `permissionPrompts` `decline`, decline a permission dialog of a Claude Code worker in a terminal, only from Bash or Zsh (below), and only when both of these show it:
 
 ```text
 ORCA orchestration worker-show --dispatch <dispatch id> --json --full
