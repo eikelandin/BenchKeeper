@@ -67,7 +67,7 @@ A repository that commits an `AGENTS.md` without the block: merge nothing into i
 
 The coordinator (`orchestrating-projects`) starts and merges nothing in a project without `docs/agents/orchestration.json` on its default branch. When the file is absent, propose it as a plan item with these answers (ask, recommending the first value named), and an empty `docs/agents/worker-rules.md` (extra rules for the coordinator's workers) when that is absent too. Both are committed in a shared and in a local setup, and from then on both are the owner's to edit: never propose a change to an existing one.
 
-- `startLabel`: the label that lets the coordinator start an issue, `cedarloom:ready-for-agent` unless the user names another. The plugins read this label set; a label that does not exist yet is the user's to create, give the commands (`gh label create <name> --description "<meaning>"`):
+- `startLabel`: the label that lets the coordinator start an issue, `cedarloom:ready-for-agent` unless the user names another. The label set: a label that does not exist yet is the user's to create, give the commands (`gh label create <name> --description "<meaning>"`):
   - `cedarloom`: CedarLoom may read and plan the issue and ask on it; it does not start work.
   - `cedarloom:ready-for-agent`: the coordinator may start the issue.
   - `cedarloom:needs-human`: a question or approval waits for the owner.
