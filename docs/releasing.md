@@ -8,9 +8,9 @@ A release ships the plugins only, and no release publishes to npm.
 
 | Component | Files | Version | Tag | Changelog |
 | --- | --- | --- | --- | --- |
-| Plugins | `plugins/<name>/`: the bundle `cedarloom` and the plugins `cl-workflow`, `cl-setup`, `cl-orchestration` and `cl-orca` | one version for all five (`linked-versions`), in each plugin's `.claude-plugin/plugin.json` and, where a plugin ships for Codex, its `.codex-plugin/plugin.json`. Below 1.0 (`bump-minor-pre-major`) `feat` and breaking changes raise the minor version, `fix` and `perf` the patch | `cedarloom-v<x.y.z>` for the bundle and the Release, `cedarloom-<name>-v<x.y.z>` for each plugin | `plugins/<name>/CHANGELOG.md`; the Release holds the sections of all five |
+| Plugins | `plugins/<name>/`: the bundle `cedarloom` and the plugins `cl-workflow`, `cl-setup` and `cl-orchestration` | one version for all four (`linked-versions`), in each plugin's `.claude-plugin/plugin.json` and, where a plugin ships for Codex, its `.codex-plugin/plugin.json`. Below 1.0 (`bump-minor-pre-major`) `feat` and breaking changes raise the minor version, `fix` and `perf` the patch | `cedarloom-v<x.y.z>` for the bundle and the Release, `cedarloom-<name>-v<x.y.z>` for each plugin | `plugins/<name>/CHANGELOG.md`; the Release holds the sections of all four |
 
-The first release is 0.1.0, set with `release-as` on each plugin in `release-please-config.json`. Remove those five lines after that release: while they stay, every release pull request proposes 0.1.0 again.
+The first release is 0.1.0, set with `release-as` on each plugin in `release-please-config.json`. Remove those four lines after that release: while they stay, every release pull request proposes 0.1.0 again.
 
 `CHANGELOG.md` at the repository root (up to 6.25) and the tags `setup-v*` and `app-v*` (up to 6.27) belong to the legacy app.
 
