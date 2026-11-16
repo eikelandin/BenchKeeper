@@ -33,17 +33,14 @@ CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/
 | [plugins/cl-setup/skills/improve](../plugins/cl-setup/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-setup:improve`, user-invoked |
 | [plugins/cl-setup/skills/debloat](../plugins/cl-setup/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-setup/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-setup:debloat`, user-invoked; the script also runs the `token-budget` CI job |
 | [CHANGELOG.md](../CHANGELOG.md) | the changelog up to 6.25 and the tags `setup-v*` and `app-v*` up to 6.27; each plugin keeps its own in `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`), see [Releasing](releasing.md) | not linked |
-| [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
 
 ## How this stack was selected
 
-<!-- generated:reasons -->
 - Checks by depth: every change runs the checks and reviews its depth names: the tests of the touched code after each edit, a review before pushing for standard and deep work.
 - Long checks last: the full suite, end-to-end tests and builds run once after the last edit, in a subagent that returns only failures and key lines.
 - Simplicity: the optional Ponytail pack adds a plugin that steers the agent to the smallest complete change.
 - Skills by level: the full flow runs only for deep work. Small changes load one targeted skill.
 - One install: one machine setup covers every repository. Each repository adds only its tracker, docs and stack.
-<!-- /generated:reasons -->
 
 ## Recommended tools (optional)
 
@@ -51,15 +48,12 @@ Not installed by CedarLoom.
 
 **Parallel agents: pick one.** Orca, Nimbalyst and cmux each manage several agent sessions side by side. Running two duplicates the sessions and worktrees they track for the same repositories.
 
-<!-- generated:tools -->
 | Tool | Platforms | Gives you | Choose it when |
 |---|---|---|---|
 | [Orca](https://github.com/stablyai/orca) | macOS, Windows, Linux | one git worktree per agent, the same prompt across agents; terminal splits, SSH remote worktrees, mobile app; the app offers its `orca-cli` and `orchestration` skills | you want terminal-based parallel agents with worktrees, remote machines or mobile access |
 | [Nimbalyst](https://github.com/Nimbalyst/nimbalyst) | macOS, Windows, Linux | parallel sessions on a kanban board, one-click worktree per session; every agent edit arrives as a diff you approve or reject; visual editors (Markdown, CSV, mockups, diagrams), task tracking, iOS app | you review changes visually and work on docs, mockups and tasks next to the agents |
 | [cmux](https://github.com/manaflow-ai/cmux) | macOS only | Ghostty-based terminal with vertical tabs; notifications when an agent needs input and a sidebar with branch, PR status and ports; browser pane inside the terminal | you are on macOS and want a terminal without a separate app |
-<!-- /generated:tools -->
 
-<!-- generated:openhands -->
 **Unattended or isolated runs: [OpenHands](https://github.com/OpenHands/OpenHands).** A self-hosted agent server with a web UI that runs work without you at the terminal.
 
 - Each conversation can run in its own Docker container (`OH_CONVERSATION_RUNTIME=docker`), an isolation option the CedarLoom plugins do not provide.
@@ -67,4 +61,3 @@ Not installed by CedarLoom.
 - Automations on a schedule or on webhook events (GitHub, Slack, Linear), for example splitting GitHub issues into tasks.
 - Without a sandbox, the local agent has full access to your filesystem.
 - Unverified: whether agents inside its containers load the CedarLoom plugins, which are installed on the host.
-<!-- /generated:openhands -->
