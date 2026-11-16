@@ -43,6 +43,12 @@ After such a report, start no further supervised Claude Code worker in the run a
 ORCA orchestration worker-start --spec-file <filled spec file> --worktree path:<worktree path> --agent claude --model '<model>' --effort <effort> --keep-open --json
 ```
 
+Before each such `worker-start`, write and check its rule file ([Worker rules](runners.md#worker-rules)). Its spec takes this line after the role check:
+
+```text
+Rule file: `.claude/settings.local.json` in this worktree is the runner's. Never stage, commit, change or delete it.
+```
+
 Automatic: a terminal of its own, so that its launch carries the settings below; `worker-start` has no flag for them, and its `--model` and `--effort` do not combine with `--terminal`. `worker-start` on a session that is not idle yet fails with `agent_unconfigured`, hence the wait:
 
 ```text
@@ -232,7 +238,7 @@ ORCA orchestration worker-release --dispatch <dispatch id> --json
 ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 ```
 
-The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
+The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. Before it, delete a supervised Claude Code worker's rule file, `<worktree path>/.claude/settings.local.json`: as an untracked file it may make git refuse the removal (unverified: whether Orca forces it). `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
 A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). With Orca, such a worker's `worker-read` output shows input that neither a `send` nor a dispatch of the coordinator (the start, a follow-up) carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the runner's message command and, with a follow-up dispatch, the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 

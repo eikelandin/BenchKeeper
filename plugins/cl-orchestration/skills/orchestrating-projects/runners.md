@@ -57,6 +57,20 @@ A gate holds one item for the owner while the other items go on ([Owner-only dec
 - Coordinator side: put each such question to the owner once, in your own words, as an approval whose What starts with `question` and names the issue and the decision ([approvals.md](approvals.md)), and record it in `## Open` with the worker (its id and, where it asked, the question's id) in place of the head. A BLOCKED report keeps its worktree and branch ([Outcomes](SKILL.md#outcomes)).
 - After the answer the runner's Gates section brings it to the same worker, or where its session ended to a new start in its worktree with the gate form of the spec's Branch line ([spec-template.md](spec-template.md)) and the answer under `Shared context:` as a line of its own marked `(owner)` ([Owner-only decisions](SKILL.md#owner-only-decisions)). Either counts like a follow-up for the caps ([SKILL.md](SKILL.md#loop), step 5). The item goes on and ends with a new report. An answer that holds, and no answer, keep it blocked: list it in the report.
 
+### Worker rules
+
+[worker-rules.json](worker-rules.json) is one deny and ask list for each Claude Code worker that runs in a session of its own. Deny wins over ask and ask over allow, across every settings scope, so a broad allow rule in the user settings lifts neither ([permissions](https://code.claude.com/docs/en/permissions#manage-permissions)). Both still act under `--dangerously-skip-permissions`, which Orca's full-access setting adds to its own launch ([permission modes](https://code.claude.com/docs/en/permission-modes#actions-no-mode-auto-approves)).
+
+| Rules | Supervised | Automatic |
+| --- | --- | --- |
+| Deny: `gh pr merge`, `gh release`, `gh repo create`, `delete` and `edit`; `git push` with `--force`, `-f`, a `+` refspec, `--delete`, `-d`, a `:` refspec, `--mirror` or `--prune`; reading `.env`, `.env.*` and `secrets/` | refused | refused |
+| Ask: `git push`, `gh pr create`, `gh pr comment`, `gh issue` writes, `rm -r` (`-R`, `-fr`, `--recursive`), edits under `.claude/`, `.github/` and any `.git`, `WebFetch` | a prompt in the worker's terminal | refused (`dontAsk`): push and pull request stay with the coordinator ([Commit and push](#commit-and-push)) |
+
+- Supervised (Orca): before each `worker-start` of a Claude Code worker, `node <skill folder>/worker-settings.mjs --supervised <worktree path>` writes the list as `<worktree path>/.claude/settings.local.json`, then the same command with `--check` before `--supervised` must exit 0. Claude Code reads that file in the folder it starts in beside the main checkout's and applies the permission rules of both ([settings](https://code.claude.com/docs/en/settings#where-claude-code-keeps-the-local-file-in-a-git-repository)). Deny and ask rules need no workspace trust. A rule path that starts with `/` counts from the worktree, so the file names no host path. The script never overwrites another file there: any failure starts no worker and makes the item BLOCKED. The file is never committed ([orca.md](orca.md#start-the-run)).
+- Automatic: `worker-settings.mjs` adds the list to the settings file ([Sandbox on](#sandbox-on)), minus a rule that the template's deny list already matches (`Bash(gh *)`, `Bash(git push *)`, `WebFetch`, `.claude`).
+- `claude-code`: a worker runs in the coordinator's session with its settings, so no rule file reaches it.
+- A Bash rule matches the command as written: `git -C . push`, `gh api` and `/bin/rm` pass it ([permissions](https://code.claude.com/docs/en/permissions#bash-rule-limits)). An ask rule wins over an allow rule, so every `WebFetch` asks, also to a listed host. Under full access a supervised worker's Bash can still rewrite its rule file.
+
 ### Sandbox on
 
 The worker's settings file is written by `node <skill folder>/worker-settings.mjs <worktree path> <run folder>/settings/<id>.json <domain>...`, both paths absolute, the domains being the policy's `sandbox.allowedDomains`, never by hand: [automatic-settings.json](automatic-settings.json) with `//W/` as the worktree, `//C/` as the shared `.git` (two levels above the folder the worktree's `.git` file names) and the domains as `sandbox.network.allowedDomains`. The worker cannot write the file: the file tools, the sandbox and `dontAsk` keep it to its worktree.
@@ -75,7 +89,7 @@ The worker's settings file is written by `node <skill folder>/worker-settings.mj
   - Supervised workers stay open for follow-ups as the runner says.
 
   The `commondir` read of [Commit and push](#commit-and-push) is the second check. Unverified: the sandbox's part of this is read from the [sandbox runtime](https://github.com/anthropic-experimental/sandbox-runtime)'s README and source, not run, and which runtime version Claude Code carries is not known.
-- Lists of rules and folders merge across every settings scope the worker loads, so the bounds are the template plus the user's and the main checkout's entries.
+- Lists of rules and folders merge across every settings scope the worker loads, so the bounds are the template and the [Worker rules](#worker-rules) plus the user's and the main checkout's entries.
 
 ### Automatic start
 
