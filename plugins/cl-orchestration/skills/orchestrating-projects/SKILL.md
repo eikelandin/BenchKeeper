@@ -224,7 +224,7 @@ Hub: <hub, or none>; issues in <issues in>
 
 - Create it when the run starts, once the folder is ignored. Rewrite it after each decision, settlement, merge or gate, and before ending a turn in which any of them changed.
 - Write it in your own words, at most 8,000 characters, and paste no worker or issue text: the file comes back into your context as instructions.
-- `Session:` holds your session id: `${CLAUDE_SESSION_ID}`, or the output of `echo "$CLAUDE_CODE_SESSION_ID"` when this skill was read from disk. A Codex session holds no run: the start condition needs Claude Code ([Start the run](orca.md#start-the-run)). The plugin acts only for the session this line names, so not for another session in the same folder, and not at all without the line. After a `/clear` it moves the line to the new id itself when its `SessionStart` handler runs; after a `/clear` where that handler does not run, it hands nothing back until the owner asks you to resume the run.
+- `Session:` holds your session id: `${CLAUDE_SESSION_ID}`, or the output of `echo "$CLAUDE_CODE_SESSION_ID"` when this skill was read from disk. A Codex session holds no run: the start condition needs Claude Code ([Start the run](orca.md#start-the-run)). The plugin acts only for the session this line names, so not for another session in the same folder, and not at all without the line. After a `/clear` it moves the line to the new id itself and hands the file back with the first prompt that is no slash command.
 - `Models:` has one entry per alias the run's sessions use.
 - `Hub:` holds `<hub>` and `<issues in>` as [Names](#names) reads them at the start; a missing line means no hub.
 - The block between `<!-- cedarloom:status -->` and `<!-- /cedarloom:status -->` belongs to the plugin's hooks.

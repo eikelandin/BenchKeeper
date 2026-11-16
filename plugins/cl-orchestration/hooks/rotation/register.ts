@@ -1,12 +1,13 @@
 // Coordinator context rotation (orchestrating-projects): when the session's project root holds the coordinator's handoff
 // file and the file names this session's id, an idle Stop above the plugin's threshold clears the context with /clear and
-// submits a resume prompt, and a clear or compaction hands the file back to the model, with the git drift since the
-// coordinator wrote it. Otherwise every hook here passes. It reads and writes that one file, reads git, and sends nothing.
+// submits a resume prompt, and the first prompt after a clear hands the file back to the model, with the git drift since
+// the coordinator wrote it (restore.mjs, a SessionStart command hook, does so after a compaction). Otherwise every hook
+// here passes. It reads and writes that one file, reads git, and sends nothing.
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import { FILE, RUNS, STATUS, STATUS_ARGS, TOP_ARGS, changedPaths, claimed, commitArgs, drift, editedAt, fingerprint, mine, restored, stamped, statusBlock } from './handoff.mjs'
 
-// A second /clear while the restore hook of the first still runs cuts that hook off and loses its context.
+// A second /clear before the resume prompt of the first has carried the file back would start over an empty context.
 const GAP_MS = 10 * 60 * 1000
 // Longer than the gap, so a slow clear still resumes; past it, a clear that never settles no longer holds rotation off.
 const WATCHDOG_MS = 15 * 60 * 1000
@@ -22,6 +23,8 @@ let noted = false
 let turns = 0
 // This process's session id at its last main-loop turn: a clear starts a new id, which takes the file over from this one.
 let previous: string | null = null
+// Set by a /clear until the next prompt that is no slash command carries the file back.
+let cleared = false
 
 // The text with its status block holding only this line, the block appended when the text has none.
 export function withStatus(text: string, line: string): string {
@@ -185,17 +188,31 @@ export const register: Register = (on, options) => {
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) {
       turns++
+      // The id changed without a prompt this module saw (a slash command after a clear, or another engine path).
+      await takeOver($).catch(() => undefined)
       previous = (await $.session.id()) || null
     }
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('classic.SessionStart', { source: ['clear', 'compact'] }, async ($, e, next) => {
-    const result = await next(e)
+  // No $ calls: all session.end hooks share 1.5 s. /resume and /branch (reason resume) never take the file over.
+  on('session.end', ($, e, next) => {
+    cleared = e.reason === 'clear'
+    previous = cleared ? e.sessionId || null : null
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // A slash command's context may never reach the model, so the file waits for the next prompt.
+  on('prompt.submit', async ($, e, next) => {
+    if (!cleared || e.command) return next(e)
+    cleared = false
     await takeOver($).catch(() => undefined)
     const text = await vetted($)
-    if (text === null) return result
-    return { ...result, additionalContext: [...(result.additionalContext ?? []), restored(text, await drifted($, text))] }
+    if (text === null) return next(e)
+    const result = await next({ ...e, context: [...(e.context ?? []), restored(text, await drifted($, text))] })
+    // A dropped prompt never reaches the model, so the next one carries the file.
+    if (result.drop !== undefined) cleared = true
+    return result
   }).catch(($, e, next) => next(e))
 
   on('classic.PreCompact', async ($, e, next) => {

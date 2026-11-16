@@ -18,9 +18,10 @@ const folder = ({ text = OWNED, git = true } = {}) => {
   writeFileSync(join(root, RUNS, 'handoff.md'), text);
   return root;
 };
-// What the hook prints for a SessionStart after a clear in that folder, the way Codex runs it.
-const restore = (root, { session = 's-a', input = JSON.stringify({ hook_event_name: 'SessionStart', source: 'compact', session_id: session, cwd: root }) } = {}) => {
-  const r = spawnSync(process.execPath, [HOOK], { input, encoding: 'utf8' });
+// What the hook prints for a SessionStart after a compaction in that folder: the way Codex runs it, or with a project folder
+// the way Claude Code runs it.
+const restore = (root, { session = 's-a', project = '', input = JSON.stringify({ hook_event_name: 'SessionStart', source: 'compact', session_id: session, cwd: root }) } = {}) => {
+  const r = spawnSync(process.execPath, [HOOK], { input, encoding: 'utf8', env: { ...process.env, CLAUDE_PROJECT_DIR: project } });
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? '' : JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
 };
@@ -28,6 +29,12 @@ const restore = (root, { session = 's-a', input = JSON.stringify({ hook_event_na
 test('restore hook: hands back the file its session owns, cut to stay below 10,000 characters', () => {
   assert.match(restore(folder()), /\n# Handoff\nSession: s-a\n\n## Next\nwatch #12\n$/);
   assert.ok(restore(folder({ text: OWNED + 'x'.repeat(20_000) })).length < 10_000);
+});
+
+test('restore hook: in Claude Code, reads the project folder, not the folder a shell cd moved to', () => {
+  const root = folder();
+  mkdirSync(join(root, 'clone'));
+  assert.match(restore(join(root, 'clone'), { project: root }), /\n# Handoff\nSession: s-a\n\n## Next\nwatch #12\n$/);
 });
 
 test('restore hook: the drift counts from the edited stamp of the status line, with paths from the repository root', () => {
