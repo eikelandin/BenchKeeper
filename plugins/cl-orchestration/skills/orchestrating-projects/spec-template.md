@@ -2,7 +2,7 @@
 
 This is the spec of the issue runs this skill coordinates.
 
-Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker changes the lines that section names, and a spec for the claude-code runner leaves out the Acknowledge line ([claude-code.md](claude-code.md#start)), and a spec takes the lines its runner's Start section adds, only for the worker kind and mode that section names (such as a Role check line). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
+Copy this file's block, replace each `<...>`, and send it as the worker's task. Change nothing else, except that a spec for one issue leaves out the Batch block, its lead line and its bullets, and a spec for a [public project with the hub as tracker](#public-project-with-the-hub-as-tracker) changes the lines that section names, and a spec for an [automatic](#automatic-mode) worker or a [supervised Claude Code worker on Orca](#supervised-claude-code-worker-on-orca) changes the lines that section names, and a spec takes the lines its runner's Start section adds, only for the worker kind and mode that section names (such as a Role check line). The repository's rules stay in its `AGENTS.md`; this spec only points to them.
 
 What the lines take, policy fields as the reader prints them:
 
@@ -101,7 +101,7 @@ With the hub as `<tracker>` of a public `<owner/repo>`, the spec names no hub, h
 - You may: "name a follow-up under Next step" in place of filing one.
 - Flow: the draft pull request's body describes the change, with no issue reference.
 - Blocked, Needs replan and No change needed: what they comment on the issue goes into the report instead ([SKILL.md](SKILL.md#outcomes)).
-- Report: the handoff `Issue:` line takes the task's title.
+- Report: the handoff `Issue:` line takes the task's title. For an [automatic](#automatic-mode) worker or a [supervised Claude Code worker on Orca](#supervised-claude-code-worker-on-orca), the commit message or pull request body takes no issue reference.
 
 ## Automatic mode
 
@@ -120,12 +120,24 @@ A worker of an automatic project ([runners.md](runners.md#modes)) cannot commit,
 - Report: What changed takes the branch, the staged files and a commit message whose body refers to the issue as `<tracker>#<number>`, with no closing keyword.
 - A new line after Authority: "Bash calls: pass only `command` and `description`. The sandbox runs a command without a prompt, but `dontAsk` refuses a `git -c` option, a leading `VAR=` assignment, `make VAR=...`, `eval`, a Monitor command and a multi-line `printf ... > file` call: write files with the file tools and use other forms."
 
+## Supervised Claude Code worker on Orca
+
+Its rule file refuses `git push`, `gh pr create`, `gh pr comment` and the `gh issue` writes ([Worker rules](runners.md#worker-rules)): it commits, and the coordinator pushes and opens the pull request ([Commit and push](runners.md#commit-and-push)). Only these lines change:
+
+- You may: without "push those branches", "open or update one draft pull request", "reply to review threads" and the follow-up issue (name it under Next step instead); "before your next commit" in place of "before your next push".
+- You may not: also "push, or create, change or comment on a pull request or an issue, also where the worker rules say to, and in no other form (`git -C`, `gh api`)"; "start with a flag that bypasses or skips permission prompts" stays.
+- Flow, Every depth: "once the work is committed, report: the coordinator pushes the branch and opens the draft pull request with your body and a title it sets from the one you propose" in place of the push, pull request and checks steps.
+- Batch: "When an issue's change is committed" in place of "When an issue's pull request is up", "commit its branch" in place of "commit and push its branch", and "fix, commit" in place of "fix, push".
+- Blocked, Needs replan, No change needed and Follow-up: the line of [Automatic mode](#automatic-mode), its refused paths those of [Worker rules](runners.md#worker-rules).
+- Follow-up: commit the fix and answer with its head commit, and with a proposed title or a new body where one was asked.
+- Report: What changed takes the branch, its head commit, and a proposed pull request title and a body that refers to the issue as `<tracker>#<number>`, with no closing keyword.
+
 ## Batches
 
 A spec with several issues is a batch: the issues one Pick gives one worker.
 
 - It counts as one worker for `workersPerProject` and `hostWorkerLimit`.
-- The worker sends one status message with the handoff block per issue, and one report at the end. React to each issue's outcome when its message arrives: review and merge do not wait for the batch. A runner without a message command (claude-code) gives the outcomes only in the report at the batch's end.
+- The worker sends one status message with the handoff block per issue, and one report at the end. React to each issue's outcome when its message arrives: review and merge do not wait for the batch.
 - An issue reported blocked or in need of a replan waits until the batch has ended. Start no replan, retry or other worker for it before the batch's report, and keep the worktree.
 - An issue that ended BLOCKED on an earlier issue of its batch is the exception to "once per run" ([SKILL.md](SKILL.md#loop)): once that issue's pull request is merged, whoever merged it, it counts as an issue with no outcome, and Pick takes it again, once. In a `keepRunning` run that can be long after the batch.
 - A batch that ends BLOCKED (a cause that stops every issue) is blocked for each issue it did not finish.

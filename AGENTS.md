@@ -2,14 +2,11 @@
 
 ## Commands
 
-Every command runs in the dev container: start it with `devcontainer up --docker-path podman --workspace-folder .`, then run `devcontainer exec --docker-path podman --workspace-folder . <command>`, compound commands as `... sh -lc '<commands>'`. `devcontainer exec` starts in the repository root and has no working-folder option: run the commands of `web/` as `... sh -lc 'cd web && <commands>'`. Git (fetch, commit, push) runs on the host: the container mounts the git metadata read-only.
-
-The site (in `web/`): `npm ci`, `npm run build`, `npm test`.
+Every command runs in the dev container: start it with `devcontainer up --docker-path podman --workspace-folder .`, then run `devcontainer exec --docker-path podman --workspace-folder . <command>`, compound commands as `... sh -lc '<commands>'`. Git (fetch, commit, push) runs on the host: the container mounts the git metadata read-only.
 
 The plugins (in `plugins/*/`, Node.js alone, no install), in `sh -lc`: `for dir in plugins/*/test; do node --import ./.github/scripts/plugin-test-env.mjs --test "$dir"/*.test.mjs || exit 1; done`.
 
 The changed-files check, for each area the change touches:
-- `web/`: `npm run build && npm test`
 - `plugins/`: the plugin tests above.
 - `plugins/` and `.github/`: the scripts of the `checks-core` job in [checks.yml](.github/workflows/checks.yml) that cover the changed files.
 
@@ -28,7 +25,6 @@ The changed-files check, for each area the change touches:
 - Keep the repository's layers: imports point down, never up. Code that gets a test takes the time, randomness and I/O it uses as parameters.
 - Remove what your change made unused. Leave other code, comments and formatting as they are; name unrelated dead code in the report.
 - Comments only where the code cannot say it: one line, the why, not the how.
-- UI code follows the styleguide and tokens that Pointers links. No new colors, font sizes, spacing or shadows when a token already covers the role.
 
 ## Tests
 
@@ -43,6 +39,5 @@ The changed-files check, for each area the change touches:
 
 ## Pointers
 
-- [docs/agents/](docs/agents/): [domain docs](docs/agents/domain.md), the [issue policy](docs/agents/issue-tracker.md) (this repository takes no issues), [triage labels](docs/agents/triage-labels.md).
+- [docs/agents/](docs/agents/): [domain docs](docs/agents/domain.md).
 - [Development](docs/development.md): workflows, checks and the dev container. [Releasing](docs/releasing.md).
-- Styleguide and tokens: the Mantine theme of the site, [web/src/components/SiteShell.tsx](web/src/components/SiteShell.tsx).
