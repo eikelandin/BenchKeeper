@@ -143,7 +143,7 @@ Both modes: an item held for the owner before its start gets an Orca gate on a d
 
 ## Tasks and gates
 
-Each item has one Orca task, its item task: the task its first `worker-start` returns, for a batch one task for all its issues. Keep its id and status in the handoff file. It records the item's state for Resume; the outcome still comes from the report ([Worker reports](#worker-reports)). A follow-up and every later start make a task of their own and leave the item task as it is: a `send` to a worker whose item task was `blocked` made a new task and left that one `blocked` (observed with Orca 1.4.259).
+Each item has one Orca task, its item task: the task its first `worker-start` returns, for a batch one task for all its issues. Keep its id and status in the handoff file. It records the first start's status and the item's gates for Resume, not the item's end: after a continuation it keeps the status restored after its gate; the outcome still comes from the report ([Worker reports](#worker-reports)). A follow-up and every later start make a task of their own and leave the item task as it is: a `send` to a worker whose item task was `blocked` made a new task and left that one `blocked` (observed with Orca 1.4.259).
 
 What Orca does (observed with Orca 1.4.259):
 
@@ -154,7 +154,7 @@ What Orca does (observed with Orca 1.4.259):
 
 Read from Orca 1.4.259's source, not run: `task-update` without `--result` keeps the stored result; `task-update --status failed` is accepted from `ready`; a gate on a `failed` task is accepted.
 
-The coordinator never starts a worker on a task because Orca lists it `ready`, as the loop of Orca's guide does, and never on a task titled `Decision:`. Put each title and question in single quotes, in your own words, as an approval's title ([approvals.md](approvals.md#labels-and-title)), and each answer as its option label. Write the handoff file after each step below and before each `gate-resolve`.
+The coordinator never starts a worker on a task because Orca lists it `ready`, as the loop of Orca's guide does, and never on a task titled `Decision:`. Put each title and question in single quotes, in your own words, as an approval's title ([approvals.md](approvals.md#labels-and-title)), and each answer as its option label. Write the handoff file after each step below and before each `gate-resolve`. A refused command of this section goes into the report with its error; the approval still holds the item, the outcome of a final answer stands, and nothing is stopped, retried or started because of it.
 
 ### A hold before the start
 
@@ -169,7 +169,7 @@ The decision task turns `blocked` (observed with Orca 1.4.259). On the answer, i
 
 ### A gate after a report
 
-A report or merge step that needs the owner (a BLOCKED report with an owner question, a merge outside `merge.allowed` or above `merge.autoMergeMax`, an owner-only file or a release) gets a gate once the item's worker settled: its `worker_done` arrived, or an automatic worker's release is confirmed (below). Write the item task's status into the approval's line ([approvals.md](approvals.md#once-per-pull-request-and-gate)) first, then:
+A report or merge step that needs the owner (a BLOCKED report with an owner question, a merge outside `merge.allowed` or above `merge.autoMergeMax`, an owner-only file or a release) gets a gate, for an approval still open then, once the item's worker settled: its `worker_done` arrived, or an automatic worker's release is confirmed (below). Write the item task's status into the approval's line ([approvals.md](approvals.md#once-per-pull-request-and-gate)) first, then:
 
 ```text
 ORCA orchestration gate-create --task <item task id> --question '<title>' --json
@@ -177,11 +177,11 @@ ORCA orchestration gate-create --task <item task id> --question '<title>' --json
 
 An item task with a pending gate gets no second one: a second approval for it, another issue of its batch, names the same gate and the status the first one recorded, and the gate is resolved once the last of them is answered. A later head that voids an answer ([The answer](approvals.md#the-answer), The head) gets a new gate the same way once that head's worker settled.
 
-On the answer, or once a wake-up check sees the pull request merged: `gate-resolve` as above (the item task turns `ready`), then in the same turn `ORCA orchestration task-update --id <item task id> --status <status from the approval's line> --json`, with no `--result`, so the worker's result stays and no item task stays `ready` without a worker. Write `resolved` in place of the gate id in the line. Then the item goes on as [Gates](modes.md#gates) says.
+On the answer, or once a wake-up check sees the pull request merged: `gate-resolve` as above (the item task turns `ready`), then in the same turn `ORCA orchestration task-update --id <item task id> --status <status from the approval's line> --json`, with no `--result`, so the worker's result stays and no item task stays `ready` without a worker. Then the line changes as [The answer](approvals.md#the-answer), The Orca gate, says, and the item goes on as [Gates](modes.md#gates) says. A pull request closed without a merge leaves its gate pending and its line in `## Open`, and each report names it until the owner answers the approval.
 
 ### An automatic worker's task
 
-An automatic worker sends no `worker_done`, so nothing settles its task: the item task for its first start, the start's own task for each later one. Once its release is confirmed ([Clean up](#clean-up), Release), set that task by its final answer: `ORCA orchestration task-update --id <task id> --status completed --result DONE --json` for DONE, else `--status failed` with the outcome word (`BLOCKED`, `NEEDS_REPLAN`, `failed`) as the result. Unverified: the task's status after that release, and that Orca accepts the update there (read from Orca 1.4.259's source, not run). After a `worker-stop` of a worker that sent no `worker_done`, its task was `blocked` and `task-update --status completed` was accepted (observed with Orca 1.4.259). A refused update goes into the report; the outcome of the final answer stands.
+An automatic worker sends no `worker_done`, so nothing settles its task: the item task for its first start, the start's own task for each later one. Once its release is confirmed ([Clean up](#clean-up), Release), set that task by its final answer: `ORCA orchestration task-update --id <task id> --status completed --result DONE --json` for DONE, else `--status failed` with the outcome word (`BLOCKED`, `NEEDS_REPLAN`, `failed`) as the result. Unverified: the task's status after that release, and that Orca accepts the update there (read from Orca 1.4.259's source, not run). After a `worker-stop` of a worker that sent no `worker_done`, its task was `blocked` and `task-update --status completed` was accepted (observed with Orca 1.4.259).
 
 ## Watch
 
@@ -264,7 +264,7 @@ The file's Resume section holds these steps, in this order, with the run id and 
 2. Read `<skill folder>/SKILL.md` and `<skill folder>/orca.md` in full, then the reference file that the mail of step 1 or the Next section's step needs. A `/clear` empties the context, the skill included, and a compaction returns only the start of it.
 3. When `check` said no run is bound: `ORCA orchestration run-use --id <run id> --json`, then `check` again.
 4. `ORCA orchestration run-current --json`
-5. `ORCA orchestration task-list --ready --brief --json` and `ORCA orchestration gate-list --status pending --json`. A `ready` task gets no worker for being listed ([Tasks and gates](#tasks-and-gates)). A task whose gate is resolved while the handoff file shows no step after it (a coordinator that stopped between `gate-resolve` and the next command) gets that next step now, by the answer the handoff file records; a pending gate whose answer it records gets its `gate-resolve` and that step; a decision task it records with no gate gets its `gate-create`. Name in the report a pending gate that no line of `## Open` records.
+5. `ORCA orchestration task-list --ready --brief --json` and `ORCA orchestration gate-list --status pending --json`. A `ready` task gets no worker for being listed ([Tasks and gates](#tasks-and-gates)). A task whose gate is resolved while the handoff file shows no step after it (a coordinator that stopped between `gate-resolve` and the next command) gets that next step now, by the answer the handoff file records; a pending gate whose answer it records gets its `gate-resolve` and that step; a decision task it records with no gate gets its `gate-create`, and a `design` approval it records with no decision task gets its `task-create` and `gate-create`. Name in the report a pending gate that no line of `## Open` records. A gate no longer pending whose answer `## Decisions` does not record is no answer: nothing starts or is released by it, the approval stays open, and the report names it; never run `gate-resolve` on a gate that is not pending (Orca accepts it and sets the task `ready` again).
 6. `ORCA orchestration inbox --terminal run:<run id> --limit 50 --json`: the mail already handled.
 7. With session crons: `CronList`. When it no longer shows the run's stall-check cron (a restarted process loses it), or that cron expires within 2 days, replace it as the Watch section of `<skill folder>/orca.md` says.
 
