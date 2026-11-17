@@ -111,13 +111,17 @@ const pluginParts = (part) => readdirSync(join(root, 'plugins')).map((p) => join
 // Claude Code loads a plugin's agents from agents/ and its subfolders.
 export const ownAgents = () => pluginParts('agents').flatMap(markdownFiles);
 
+// A command's words, split at spaces, quotes, commas, brackets and shell operators; and the index of its claude word, or -1.
+const commandWords = (line) => line.split(/[\s'"`,()[\]{};|&<>]+/);
+const claudeAt = (words) => words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+
 // Hooks do not run in bare mode, the role guard's included (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
-// A line (continuations joined) whose words, split at spaces, quotes, commas, brackets and shell operators, hold claude and
-// after it --bare: a command line, or a spawn or execFile call with its argument list.
+// A line (continuations joined) whose words hold claude and after it --bare: a command line, or a spawn or execFile call
+// with its argument list.
 const bareLaunch = (text) =>
   text.replace(/[\\`]\r?\n/g, ' ').split('\n').some((line) => {
-    const words = line.split(/[\s'"`,()[\]{};|&<>]+/);
-    const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+    const words = commandWords(line);
+    const at = claudeAt(words);
     return at >= 0 && words.includes('--bare', at + 1);
   });
 
@@ -130,13 +134,14 @@ const LAUNCH_MODES = ['auto', 'dontAsk'];
 
 // Why a --command string that starts claude does not start it in auto or dontAsk mode; null when it does or starts no claude.
 function launchMode(command) {
-  const words = command.split(/[\s'"`]+/);
-  const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+  const words = commandWords(command);
+  const at = claudeAt(words);
   if (at < 0) return null;
   const rest = words.slice(at + 1);
   const dangerous = rest.find((w) => /dangerously/i.test(w));
   if (dangerous) return dangerous;
-  const modes = rest.flatMap((w, i) => (/^--permission-mode(=|$)/.test(w) ? [w.split('=')[1] ?? rest[i + 1]] : []));
+  // --permission-mode='auto' splits into "--permission-mode=" and "auto".
+  const modes = rest.flatMap((w, i) => (/^--permission-mode(=|$)/.test(w) ? [w.split('=')[1] || rest[i + 1]] : []));
   if (modes.length > 1) return '--permission-mode twice';
   if (!modes.length) return 'no --permission-mode';
   return LAUNCH_MODES.includes(modes[0]) ? null : `--permission-mode ${modes[0]}`;
@@ -146,11 +151,12 @@ export function launchModes(files) {
   return files.flatMap((file) => {
     const text = readFileSync(file, 'utf8');
     const at = (index) => `${file}:${text.slice(0, index).split('\n').length}`;
-    const commands = [...text.matchAll(/--command[ =]"([^"]*)"/g)].flatMap((m) => {
-      const why = launchMode(m[1]);
+    const commands = [...text.matchAll(/--command[ =](?:"([^"]*)"|'([^']*)')/g)].flatMap((m) => {
+      const why = launchMode(m[1] ?? m[2]);
       return why ? [`${at(m.index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
     });
-    const orca = [...text.matchAll(/^.*\bworker-start\b.*$/gm)].filter(([line]) => /--agent[ =]claude(?![\w-])/.test(line))
+    // A worker-start line with its continuation lines.
+    const orca = [...text.matchAll(/^.*\bworker-start\b(?:.*\\\r?\n)*.*$/gm)].filter(([line]) => /--agent[\s=\\'"]+claude(?![\w-])/.test(line))
       .map((m) => `${at(m.index)}: worker-start --agent claude takes Orca's agent permission setting; start a Claude Code worker in its own terminal`);
     return [...commands, ...orca];
   });
@@ -170,7 +176,8 @@ export function ownSkills() {
 if (isMain(import.meta.url)) {
   const dirs = process.argv.length > 2 ? process.argv.slice(2).map((d) => resolve(d)) : ownSkills();
   const agents = process.argv.length > 2 ? [] : ownAgents();
-  const launches = process.argv.length > 2 ? [] : [...bareLaunches(pluginFiles()), ...launchModes(pluginFiles())];
+  const files = process.argv.length > 2 ? [] : pluginFiles();
+  const launches = [...bareLaunches(files), ...launchModes(files)];
   const errors = [...dirs.flatMap(lintSkill), ...agents.flatMap(lintAgent), ...launches];
   for (const e of errors) console.log(`::error::${e.replace(root + '/', '')}`);
   console.log(`${agents.length} agents, ${dirs.length} skills checked, ${errors.length} errors`);

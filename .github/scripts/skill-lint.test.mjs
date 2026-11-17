@@ -100,10 +100,20 @@ test('a --command line without --permission-mode fails', () => assert.match(lint
 test('a --command line with --permission-mode bypassPermissions fails', () => assert.match(lintLine(terminal('--permission-mode bypassPermissions')), /with --permission-mode bypassPermissions;/));
 test('a --command line with a dangerously flag fails', () => assert.match(lintLine(terminal('--permission-mode auto --allow-dangerously-skip-permissions')), /with --allow-dangerously-skip-permissions;/));
 test('a --command line with --permission-mode twice fails', () => assert.match(lintLine(terminal('--permission-mode auto --permission-mode plan')), /with --permission-mode twice;/));
-test('a --command line with --permission-mode auto passes', () => assert.equal(lintLine(terminal('--permission-mode auto')), ''));
+test('a single-quoted --command and a claude after a shell operator are checked', () => {
+  assert.match(lintLine("ORCA terminal create --command 'claude --permission-mode bypassPermissions' --json"), /with --permission-mode bypassPermissions;/);
+  assert.match(lintLine('ORCA terminal create --command "cd x;claude --permission-mode plan" --json'), /with --permission-mode plan;/);
+});
+test('a --command line with --permission-mode auto passes', () => {
+  assert.equal(lintLine(terminal('--permission-mode auto')), '');
+  assert.equal(lintLine(terminal("--permission-mode='auto'")), '');
+});
 test('a --command line with --permission-mode dontAsk passes', () => assert.equal(lintLine(terminal("--permission-mode dontAsk --settings '<settings file>'")), ''));
-test('a worker-start line with --agent claude fails', () =>
-  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent claude --model "<model>" --json'), /orca\.md:3: worker-start --agent claude/));
+test('a worker-start line with --agent claude fails', () => {
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent claude --model "<model>" --json'), /orca\.md:3: worker-start --agent claude/);
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent "claude" --json'), /orca\.md:3: worker-start --agent claude/);
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> \\\n  --agent claude --json'), /orca\.md:3: worker-start --agent claude/);
+});
 test('a worker-start line with --agent codex passes', () =>
   assert.equal(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent codex --model "<model>" --json'), ''));
 test('own plugin files start every Claude Code worker in auto or dontAsk mode', () => assert.deepEqual(launchModes(pluginFiles()), []));
