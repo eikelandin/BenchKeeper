@@ -1,11 +1,13 @@
 {
   "name": "cl-repo",
   "displayName": "CedarLoom repo",
-  "version": "6.27.0",
+  "version": "0.0.0",
   "description": "Sets up and maintains a repository: its agent setup, audits, fixes and maintenance passes. Each skill starts only when you call it.",
   "author": {
-    "name": "eikelandin",
-    "url": "https://github.com/eikelandin"
+    "name": "CedarLoom",
+    "url": "https://github.com/CedarLoom"
   },
+  "homepage": "https://github.com/CedarLoom/cedarloom#readme",
+  "repository": "https://github.com/CedarLoom/cedarloom",
   "license": "ISC"
 }

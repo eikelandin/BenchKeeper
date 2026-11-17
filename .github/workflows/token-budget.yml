@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   token-budget:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

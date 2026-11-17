@@ -107,7 +107,7 @@ for (const [name, text, expected] of CASES) test(`approval: ${name} lacks ${expe
 
 test('approval: the command line exits 0 for a filled approval and 1 with the missing row on stderr', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   const run = (name, text, ...mode) => { writeFileSync(join(dir, '.cedarloom/runs/r1', name), text); return spawnSync(process.execPath, [script, ...mode, `.cedarloom/runs/r1/${name}`], { cwd: dir, encoding: 'utf8' }); };
   assert.equal(run('filled.md', FILLED).status, 0);
@@ -168,9 +168,9 @@ for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`a
 
 test('approval: the command line counts a member\'s answer only with write access to the repository the issue URL names', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
-  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
+  const bin = mkdtempSync(join(tmpdir(), 'cl-approval-bin-'));
   const run = (permission, issue) => {
     writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" > '${bin}/log'\necho '{"permission":"${permission}"}'\n`, { mode: 0o755 });
     writeFileSync(join(dir, '.cedarloom/runs/r1/issue.json'), JSON.stringify({ body: FILLED, comments: [{ ...SECOND, authorAssociation: 'MEMBER' }], ...issue }));
@@ -193,7 +193,7 @@ test('approval: the command line counts a member\'s answer only with write acces
 
 test('approval: apply moves a question the owner answered to cedarloom:ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
+  const bin = mkdtempSync(join(tmpdir(), 'cl-approval-bin-'));
   const labels = [{ name: 'cedarloom:needs-human' }, { name: 'CedarLoom:Deferred' }, { name: 'bug' }];
   const run = (comments, { body = 'Which export format?', tags = labels, args = [] } = {}) => {
     writeFileSync(join(bin, 'issue.json'), JSON.stringify({ number: 12, labels: tags, author: { login: 'coordinator' }, body, comments }));
@@ -228,7 +228,7 @@ test('approval: apply moves a question the owner answered to cedarloom:ready-for
 
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   writeFileSync(join(dir, 'filled.md'), FILLED);
   symlinkSync(join(dir, 'filled.md'), join(dir, '.cedarloom/runs/r1/link.md'));
@@ -238,13 +238,13 @@ test('approval: the command line refuses a file outside the run folder with exit
   assert.equal(refused.stderr.trim().split('\n').length, 1);
   assert.equal(status(dir, '.cedarloom/runs/r1/link.md'), 2);
   // A linked .cedarloom or runs folder leads out of the project, so even a filled approval under it is refused.
-  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  const out = mkdtempSync(join(tmpdir(), 'cl-approval-out-'));
   mkdirSync(join(out, 'runs/r1'), { recursive: true });
   writeFileSync(join(out, 'runs/r1/filled.md'), FILLED);
-  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const linkedDot = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   symlinkSync(out, join(linkedDot, '.cedarloom'));
   assert.equal(status(linkedDot, '.cedarloom/runs/r1/filled.md'), 2);
-  const linkedRuns = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const linkedRuns = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(linkedRuns, '.cedarloom'));
   symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom/runs'));
   assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
@@ -253,7 +253,7 @@ test('approval: the command line refuses a file outside the run folder with exit
 test('approval: without a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   // The working folder of the coordinator can be a subfolder of a repository.
-  const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const repo = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   execFileSync('git', ['init', '-q'], { cwd: repo });
   const dir = join(repo, 'work');
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
@@ -286,7 +286,7 @@ test('approval: without a private tracker, the question goes into the local queu
 test('approval: the local queue refuses links, existing files and planted answers, and reports a file it cannot read', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const project = (sub = '.') => {
-    const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+    const repo = mkdtempSync(join(tmpdir(), 'cl-approval-'));
     execFileSync('git', ['init', '-q'], { cwd: repo });
     const dir = join(repo, sub);
     mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
@@ -295,7 +295,7 @@ test('approval: the local queue refuses links, existing files and planted answer
   };
   const answered = `Status: answered\n\n${FILLED}\nOwner answer (2026-11-15): b. Hold it for now.\n`;
   // A linked queue folder leads out of the project: nothing is filed or read there.
-  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  const out = mkdtempSync(join(tmpdir(), 'cl-approval-out-'));
   mkdirSync(join(out, 'questions'));
   writeFileSync(join(out, 'questions/project-1.md'), answered);
   const linkedQueue = project();
@@ -303,7 +303,7 @@ test('approval: the local queue refuses links, existing files and planted answer
   assert.equal(linkedQueue.run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
   assert.deepEqual(readdirSync(join(out, 'questions')), ['project-1.md']);
   assert.equal(linkedQueue.run('queue').status, 2);
-  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const linkedDot = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   symlinkSync(out, join(linkedDot, '.cedarloom'));
   assert.equal(spawnSync(process.execPath, [script, 'queue'], { cwd: linkedDot, encoding: 'utf8' }).status, 2);
   // A file of the next number's name is never overwritten.

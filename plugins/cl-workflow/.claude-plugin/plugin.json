@@ -1,12 +1,14 @@
 {
   "name": "cl-workflow",
   "displayName": "CedarLoom workflow",
-  "version": "6.27.0",
+  "version": "0.0.0",
   "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and starts the planning, review and research agents it needs. Works next to other skill packs and plugins when they are installed.",
   "author": {
-    "name": "eikelandin",
-    "url": "https://github.com/eikelandin"
+    "name": "CedarLoom",
+    "url": "https://github.com/CedarLoom"
   },
+  "homepage": "https://github.com/CedarLoom/cedarloom#readme",
+  "repository": "https://github.com/CedarLoom/cedarloom",
   "license": "ISC",
   "hooks": "./hooks/claude-code.json",
   "types": "./types/index.d.ts",

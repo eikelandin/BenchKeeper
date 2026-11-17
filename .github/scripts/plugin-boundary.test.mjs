@@ -53,7 +53,7 @@ test('Orca is found in cl-workflow and cl-repo, and passes in cl-orchestration a
 });
 
 test('scan reads tracked files of every folder under plugins, skips binaries and the changelog, and checks matcher prefixes against the plugin name', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'bk-boundary-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-boundary-'));
   try {
     for (const folder of ['plugins/one/skills', 'plugins/two/hooks', 'plugins/two/.claude-plugin']) mkdirSync(join(dir, folder), { recursive: true });
     writeFileSync(join(dir, 'plugins/two/.claude-plugin/plugin.json'), '{"name": "two"}');
