@@ -121,7 +121,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # While the repository is private, macOS runs on pushes to main only: its minutes cost more of the private quota.
+        # macOS runs on pull requests once the repository is public; while it is private, on pushes to main only.
         os: ${{ fromJSON((github.event_name == 'push' || !github.event.repository.private) && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 8
