@@ -139,7 +139,7 @@ The reviewer's working directory is not the clone, so neither built-in command f
   - Any push to the branch after a review is such a fix, whoever made it, except a head whose verdict's `pin` is `clean-merges` ([Merge](#merge), step 2).
   - The head that re-review accepts is the new reviewed head.
 - A review or re-review that reports itself void counts as no review and no round: split its scope into parts that together cover all of it, and start a fresh one on each part. They count as one review: void while one part is void, and clean only when every part is.
-- A review with a Blocking or Important finding is a round. After the second round with findings, the follow-up tells the worker to rerun the phase the findings come from on a stronger model or a higher effort (`sonnet` to `opus`, `opus` to `fable`, or an effort below `high` to `high`; `xhigh` only as [policy.md](policy.md) says). With no step left, the question goes to the owner at once.
+- A review with a Blocking or Important finding is a round. After the second round with findings, the follow-up tells the worker to rerun the phase the findings come from on a stronger model or a higher effort (by default `sonnet` to `opus`, `opus` to `fable`, or an effort below `high` to `high`; `xhigh` only as [policy.md](policy.md) says). With no step left, the question goes to the owner at once.
 - A third round with findings is a question for the owner ([SKILL.md](SKILL.md#owner-decisions)): the pull request stays a draft and is named in the report. There is no fourth round.
 
 ## Ready
@@ -181,7 +181,7 @@ The verdict's `next` is never `merge` or `trial` without `merge.allowed` (its `a
    - `update` (`strict`, or `disjoint` with a file in `shared` outside `merge.additivePaths`), and in either mode a data removal or a wide refactor (a consumer can break without a shared file): the head that merges contains the default branch's tip, and the required checks are green on that head.
      - Update the branch with a merge of the default branch, `gh pr update-branch <n> -R <owner/repo>`, never with `--rebase`, then start again at step 1 at a later wake-up. Repeat the update until `upToDate` is true on a head that passes the Pin.
      - When the update fails, do not merge. A conflict goes to the owning worker as a follow-up: its resolution is a push after the review ([Rounds](#rounds)).
-     - A failure you cannot read as a conflict leaves the pull request ready for the owner, named in the report (unverified: how `gh` reports a conflict).
+     - A failure you cannot read as a conflict leaves the pull request ready for the owner, named in the report (the wording `gh` uses for a conflict may differ).
    - `trial` (`disjoint`, and `shared`, the files that both the pull request and the default branch since changed, holds no file, or only files under `merge.additivePaths`): the head merges without an update when a trial merge passes: run it by [trial-merge.md](trial-merge.md) before step 4. In `strict`, `next` is never `trial`.
 4. **Title and body.** Read them (`gh pr view <n> -R <owner/repo> --json title,body,closingIssuesReferences`). The title becomes the subject of the squash commit: check it against the project's convention (`AGENTS.md`, else the history). A title that does not fit, or that holds a line break, a control character or a closing keyword, goes back to the owning worker as a follow-up, and so does a body that fails the test of [Ready](#ready).
 5. **Merge.** In this order:

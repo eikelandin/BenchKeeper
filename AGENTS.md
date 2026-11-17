@@ -16,16 +16,6 @@ The changed-files check, for each area the change touches:
 - Don't poll CI: wait with `gh run watch <run-id> --interval 30 --compact --exit-status` or `gh pr checks --watch --interval 30`.
 - main stays releasable. A red main is fixed before anything else merges.
 
-## Code
-
-- Make the smallest change that does the whole task, including the callers, tests, fixtures, configuration and docs it breaks or changes. Add nothing speculative: no option, flag, layer, shim or "for later" code; name what you left out in one line of the report.
-- Reuse in this order: code the repository has (extend it, never a parallel version; abstract at the second caller, not the first), the standard library or platform, an installed dependency, a maintained package (recent releases, a license the project allows, a size that fits; name it and why in the pull request), own code. A few own lines beat a new dependency.
-- Validate where data enters (user input, files, the network, another process) and where a wrong value loses data or breaks security. Inside, trust the types, the framework and your own code: no guard or fallback for a case that cannot happen. An error you cannot handle propagates; never swallow it or hide it behind a default.
-- One job per function, module and file, named after it; never `utils`, `helpers`, `common`, `misc` or `shared`. A unit that wants such a name has two jobs: split it.
-- Keep the repository's layers: imports point down, never up. Code that gets a test takes the time, randomness and I/O it uses as parameters.
-- Remove what your change made unused. Leave other code, comments and formatting as they are; name unrelated dead code in the report.
-- Comments only where the code cannot say it: one line, the why, not the how.
-
 ## Tests
 
 - Do not add tests by default. Add one only when it fails if your change is reverted, hardcodes its expected values (never computed by production code, locale files or mocks), and runs at the single layer that owns the behavior.
@@ -40,4 +30,4 @@ The changed-files check, for each area the change touches:
 ## Pointers
 
 - [docs/agents/](docs/agents/): [domain docs](docs/agents/domain.md).
-- [Development](docs/development.md): workflows, checks and the dev container. [Releasing](docs/releasing.md).
+- [Development](docs/development.md): workflows and checks. [Releasing](docs/releasing.md).

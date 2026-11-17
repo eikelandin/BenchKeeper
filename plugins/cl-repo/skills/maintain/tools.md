@@ -2,7 +2,7 @@
 
 Deterministic tools first, your reading second: a tool names a candidate, you decide it. Run commands where the repository's `AGENTS.md` runs `node`, `python` or `cargo`. Install into a scratch folder outside the repository (`npm i --prefix <scratch> --ignore-scripts <pkg>@<version>`, then call `<scratch>/node_modules/.bin/<tool>` from the project root), so the tree stays clean. Every tool name below is a candidate list; skip a tool the repository's own scripts already run.
 
-Versions are the newest release at least 7 days old on 2026-10-26; this skill proposes their bumps like any other pin.
+Versions are the newest release at least 3 days old when they were pinned; this skill proposes their bumps like any other pin.
 
 ## JavaScript and TypeScript
 
@@ -15,7 +15,7 @@ Versions are the newest release at least 7 days old on 2026-10-26; this skill pr
 
 ## Python and Rust
 
-Not run in the spike that wrote this skill: install, run time and false-positive rate are unverified, so every finding is a candidate to confirm by search.
+Not tested: install, run time and false-positive rate are not known, so every finding is a candidate to confirm by search.
 
 | Stack | Dead code | Dependencies | Cycles and layers | Mutation |
 |---|---|---|---|---|

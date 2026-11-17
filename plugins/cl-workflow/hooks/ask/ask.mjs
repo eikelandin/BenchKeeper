@@ -18,7 +18,7 @@ const input = await text(process.stdin).then(JSON.parse).catch(() => null);
 const event = input?.hook_event_name;
 const now = Date.now();
 if (input === null || typeof input !== 'object' || Array.isArray(input)) {
-  // Exit 2 refuses the question tool on every Claude Code version; onFailure "block" needs 2.1.295 or later.
+  // Exit 2 refuses the question tool; onFailure "block" also refuses it when the hook cannot start.
   process.stderr.write('CedarLoom ask hook: the hook input is no JSON object.\n');
   process.exitCode = 2;
 } else if (event === 'PreToolUse') {
@@ -35,7 +35,7 @@ if (input === null || typeof input !== 'object' || Array.isArray(input)) {
   }
   say(event, { additionalContext: line(now) });
 } else if (event === 'UserPromptExpansion' && ['cl-workflow:ask', 'cl-workflow:questions'].includes(input.command_name)) {
-  // Only a typed command expands; a scheduled or delivered prompt with the same text does not (trial, Claude Code 2.1.316).
+  // Only a typed command expands; a scheduled or delivered prompt with the same text does not.
   // claude -p expands one (https://code.claude.com/docs/en/headless), so role-guard.mjs refuses such a launch.
   if (!file) throw new Error(`the plugin has no data folder (CLAUDE_PLUGIN_DATA), so /${input.command_name} cannot keep its window`);
   const args = String(input.command_args ?? '');

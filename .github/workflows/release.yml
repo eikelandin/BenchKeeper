@@ -1,15 +1,14 @@
 name: Release
 
-# Nothing releases until the owner merges the release pull request (docs/releasing.md). release-please keeps one release
+# Nothing releases until a maintainer merges the release pull request (docs/releasing.md). release-please keeps one release
 # pull request open from the Conventional Commits on main (release-please-config.json: the plugins under plugins/, one
 # version for all, set in each .claude-plugin/plugin.json). It creates no tag or Release: after the merge the job
 # `release` tags each plugin, creates the Release cedarloom-v<x.y.z>, moves the branch stable (the ref users add the
 # marketplace at) to the commit that tag names.
 #
-# The release pull request opens with the release GitHub App token so that its required checks run without approval
-# (a pull request changed with GITHUB_TOKEN starts no runs until someone approves them). Set the variable
-# RELEASE_APP_CLIENT_ID and the secret RELEASE_APP_PRIVATE_KEY. Without them the job falls back to GITHUB_TOKEN: the
-# owner then approves the runs on the release pull request.
+# The release pull request opens with a GitHub App token when one is configured, so that its required checks run without
+# approval (a pull request changed with GITHUB_TOKEN starts no runs until someone approves them). Without one the job
+# falls back to GITHUB_TOKEN, and a maintainer approves the runs on the release pull request.
 on:
   push:
     branches: [main]
