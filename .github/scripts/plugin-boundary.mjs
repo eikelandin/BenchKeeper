@@ -23,8 +23,8 @@ const ABOVE_ROOT = /CLAUDE_PLUGIN_ROOT\}?\/\.\.(?![\w.])/;
 const HOOKS = /^plugins\/[^/]+\/hooks\/[^/]+\.json$/;
 const PREFIX = /^\^([\w-]+):/;
 const MANIFEST = '.claude-plugin/plugin.json';
-// The Orca runner's name or environment variables, and the plugin folders that may hold them: cl-workflow and cl-repo work without Orca.
-const ORCA = /\borca\b|ORCA_/i;
+// A word that starts with Orca's name (`orca`, `OrcaClient`, `ORCA_*`), and the plugin folders that may hold it: cl-workflow and cl-repo work without Orca.
+const ORCA = /\borca/i;
 const ORCA_PLUGINS = new Set(['plugins/cl-orchestration', 'plugins/cedarloom']);
 
 const GENERATED = /(?:^|\/)CHANGELOG\.md$/;
