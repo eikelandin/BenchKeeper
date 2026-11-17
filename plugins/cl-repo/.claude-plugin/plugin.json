@@ -1,7 +1,7 @@
 {
   "name": "cl-repo",
   "displayName": "CedarLoom repo",
-  "version": "6.27.0",
+  "version": "0.1.0",
   "description": "Sets up and maintains a repository: its agent setup, audits, fixes and maintenance passes. Each skill starts only when you call it.",
   "author": {
     "name": "eikelandin",

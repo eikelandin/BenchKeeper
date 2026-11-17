@@ -1,6 +1,6 @@
 {
   "name": "cl-repo",
-  "version": "6.27.0",
+  "version": "0.1.0",
   "description": "Preview for Codex: the skills. Sets up and maintains a repository: its agent setup, audits, fixes and maintenance passes.",
   "author": {
     "name": "eikelandin",
