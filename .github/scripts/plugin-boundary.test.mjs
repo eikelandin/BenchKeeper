@@ -43,7 +43,11 @@ test('Orca is found in cl-workflow and cl-repo, and passes in cl-orchestration a
   assert.deepEqual(orca('plugins/cl-workflow/skills/a/SKILL.md', 'Run `orca task-create --spec-file spec.md`.'), ['orca-only-orchestration']);
   assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const handle = process.env.ORCA_TERMINAL_HANDLE;'), ['orca-only-orchestration']);
   assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const client = new OrcaClient();'), ['orca-only-orchestration']);
-  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const trip = majorca_trip;'), []);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const handle = process.env.CEDARLOOM_ORCA_HANDLE;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'if (isOrcaWorker()) return;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const useOrca = true; const in_orca = true;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const trip = majorca_trip; // Majorca'), []);
+  assert.deepEqual(names('a.md', 'Runs in Orca.'), ['orca-only-orchestration']);
   assert.deepEqual(orca('plugins/cl-orchestration/skills/coordinate/orca.md', 'Orca opens a terminal; read `$ORCA_TERMINAL_HANDLE`.'), []);
   assert.deepEqual(orca('plugins/cedarloom/.claude-plugin/plugin.json', '{"description": "Installs cl-orchestration, which runs workers in Orca."}'), []);
 });

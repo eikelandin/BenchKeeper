@@ -23,8 +23,8 @@ const ABOVE_ROOT = /CLAUDE_PLUGIN_ROOT\}?\/\.\.(?![\w.])/;
 const HOOKS = /^plugins\/[^/]+\/hooks\/[^/]+\.json$/;
 const PREFIX = /^\^([\w-]+):/;
 const MANIFEST = '.claude-plugin/plugin.json';
-// A word that starts with Orca's name (`orca`, `OrcaClient`, `ORCA_*`), and the plugin folders that may hold it: cl-workflow and cl-repo work without Orca.
-const ORCA = /\borca/i;
+// Orca's name as a word or inside an identifier (`orca`, `OrcaClient`, `ORCA_*`, `CEDARLOOM_ORCA_HANDLE`, `isOrcaWorker`, `in_orca`) but not inside a plain word (`Majorca`), and the plugin folders that may hold it: cl-workflow and cl-repo work without Orca.
+const ORCA = /(?<![A-Za-z])orca|(?<![A-Z])Orca|(?<![A-Z])ORCA/;
 const ORCA_PLUGINS = new Set(['plugins/cl-orchestration', 'plugins/cedarloom']);
 
 const GENERATED = /(?:^|\/)CHANGELOG\.md$/;
