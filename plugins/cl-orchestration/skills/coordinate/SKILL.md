@@ -27,6 +27,7 @@ These hold in every step and for every outcome.
 - Stay within `hostWorkerLimit` even when more issues are labeled.
 - This session runs on `opus` at `high`. On `fable`, tell the owner once and go on only on their word.
 - A worker on `fable` follows Sessions on `fable` in the `cl-workflow:workflow` skill: it takes one issue whatever `issuesPerWorker` says, and after its report it gets no follow-up and is never resumed. Release it once its handoff is copied; its follow-up goes to a fresh worker on its branch whose spec carries that handoff under `Shared context:`.
+- Before you start a worker on `fable`, size what it must read: at most 50,000 tokens (25,000 at `xhigh`). More than that: split the scope across several workers and send the bulk reading first to a gathering subagent or worker (Claude Code: `cl-workflow:gather`).
 - Report each step with what was skipped or not checked.
 - The run folder holds against sandboxed workers only: no worker's sandbox may write the coordinator's working directory, while a worker without the sandbox can write it like every folder of the user and can merge with the owner's `gh` login; only the repository's rulesets bind such a worker.
 
