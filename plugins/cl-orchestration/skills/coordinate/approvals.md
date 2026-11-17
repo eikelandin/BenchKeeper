@@ -16,7 +16,7 @@ Run `node <skill folder>/approval.mjs <file>` from your working directory until 
 ## Where it goes
 
 1. **The project's repository**: `<owner/repo>` and nothing else.
-2. **A private repository is recommended.** An approval names the plan, the models, the cost and the owner-only paths, which anyone can read on a public repository. `gh repo view <repository> --json visibility,hasIssuesEnabled` must show issues on: then file it there, and when `visibility` is `PUBLIC`, warn in the run report that the approval is public. With issues off, or when the command fails, file no issue there: the text goes into the local queue.
+2. **A private repository is recommended.** An approval names the plan, the models, the cost and the owner-only paths, which anyone can read on a public repository. `gh repo view <repository> --json visibility,hasIssuesEnabled` must show issues on: then file it there. Run it when the run starts: when it shows `PUBLIC` with issues on, say in the session, before the first approval is filed, that approvals for that repository will be public issues. The run report repeats the warning as the record. With issues off, or when the command fails, file no issue there: the text goes into the local queue.
 3. **The local queue**: `node <skill folder>/approval.mjs file <file> <name of <owner/repo>>` checks the text, writes a new `.cedarloom/questions/<project>-<n>.md`, kept out of git, and prints `{ file }`. The role guard refuses other edit-tool writes to that folder, and commands that reach it, except in the session where the user typed `/cl-workflow:questions`.
 
 ## Labels and title

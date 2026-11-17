@@ -45,7 +45,7 @@ By default, in a Claude Code session with the cl-workflow plugin on, a hook refu
 
 ## Owner questions
 
-The coordinator of `/cl-orchestration:coordinate` files an owner question in the approval layout as an issue of the project's repository, labeled `cedarloom:needs-human`, when that repository has issues on; else it writes it to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A private repository is recommended: on a public one the question is public, and the coordinator says so in its report.
+The coordinator of `/cl-orchestration:coordinate` files an owner question in the approval layout as an issue of the project's repository, labeled `cedarloom:needs-human`, when that repository has issues on; else it writes it to the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A private repository is recommended: on a public one the question is public, and the coordinator says so in the session when the run starts, before it files the first one, and again in its report.
 
 | Label | Meaning |
 | --- | --- |
