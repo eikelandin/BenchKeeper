@@ -24,7 +24,7 @@ The changed-files check, for each area the change touches:
 
 ## Every change considers
 
-- The plugins: Linux and macOS (the plugin tests run on both, on Node.js 22; on pull requests, macOS only once the repository is public), Windows untested.
+- The plugins: Linux and macOS (the plugin tests run on both, on Node.js 22; macOS runs on pushes to `main` while the repository is private, and also on pull requests once it is public), Windows untested.
 - Footguns, read before changing that area: [git and child processes](docs/agents/git-and-processes.md).
 
 ## Pointers
