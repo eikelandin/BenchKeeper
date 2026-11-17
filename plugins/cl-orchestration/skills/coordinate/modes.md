@@ -25,7 +25,7 @@ A gate holds one item for the owner while the other items go on ([Owner-only dec
 
 | Deny rules | Supervised | Automatic |
 | --- | --- | --- |
-| `gh pr merge`, `gh release`, `gh repo create`, `delete` and `edit`; `git push` with `--force`, `-f`, a `+` refspec, `--delete`, `-d`, a `:` refspec, `--mirror` or `--prune`; reading `.env`, `.env.*` and `secrets/` | refused; the reads only to the file tools: Bash can still read those files | refused |
+| `gh pr merge`, `gh release`, `gh repo create`, `delete` and `edit`; `git push` with `--force`, `-f`, a `+` refspec, `--delete`, `-d`, a `:` refspec, `--mirror` or `--prune`; reading `.env`, `.env.*` and `secrets/` | refused; the reads to the file tools, while Bash can still read those files (`cut -d= -f1 .env` did) | refused |
 | `git push`, `gh pr create`, `gh pr comment`, `gh issue` writes, `rm -r` (`-R`, `-fr`, `--recursive`), `WebFetch` | refused: push, pull request and issue comments stay with the coordinator ([Commit and push](#commit-and-push)) | refused |
 | edits under `.claude/`, `.github/` and any `.git` | refused to the file tools | refused to the file tools (`dontAsk`) |
 
