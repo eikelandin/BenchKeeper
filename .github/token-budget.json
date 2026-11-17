@@ -8,14 +8,14 @@
     "^\\.github/copilot-instructions\\.md$"
   ],
   "baseline": {
-    "AGENTS.md": 499,
+    "AGENTS.md": 526,
     "CLAUDE.md": 3,
     "README.md": 2192,
     "docs/agents/domain.md": 134,
     "docs/agents/git-and-processes.md": 907,
-    "docs/development.md": 840,
+    "docs/development.md": 871,
     "docs/plugins.md": 4991,
-    "docs/releasing.md": 527,
+    "docs/releasing.md": 570,
     "docs/skills.md": 2253,
     "docs/stack.md": 1845,
     "plugins/cl-orchestration/rules/worker.md": 620,

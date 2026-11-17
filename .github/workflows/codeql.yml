@@ -19,7 +19,6 @@ concurrency:
 jobs:
   analyze:
     if: github.repository == 'CedarLoom/cedarloom' && github.event.repository.visibility == 'public'
-    name: analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

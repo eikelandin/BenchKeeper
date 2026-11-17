@@ -37,12 +37,12 @@ jobs:
           version: 1.31.1
           advanced-security: false
           inputs: .github
-      # Em dash and emoji in tracked text files; lockfiles and PNG files excluded.
+      # Em dash and emoji in tracked text files; lockfiles, PNG files and the generated changelogs (release-please's breaking-changes heading has U+26A0) excluded.
       - name: Forbidden characters
         run: |
           # git grep: 0 match, 1 no match, anything else an error (for example a pattern PCRE rejects).
           rc=0
-          git grep -nIP '\x{2014}|[\x{1F000}-\x{1FAFF}\x{2300}-\x{23FF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}]|\x{FE0F}' -- . ':!*package-lock.json' ':!*.png' || rc=$?
+          git grep -nIP '\x{2014}|[\x{1F000}-\x{1FAFF}\x{2300}-\x{23FF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}]|\x{FE0F}' -- . ':!*package-lock.json' ':!*.png' ':!*CHANGELOG.md' || rc=$?
           if [ "$rc" -eq 0 ]; then echo "::error::em dash or emoji found"; exit 1; fi
           if [ "$rc" -ne 1 ]; then echo "::error::git grep failed ($rc)"; exit 1; fi
       # One minimum Claude Code version, stated in the README's Requirements: any other 2.1.x version fails. Changelogs, tests, package manifests and lockfiles, workflows (action pin comments) and the CI pin are exempt.
@@ -121,7 +121,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macOS runs on pull requests once the repository is public; while it is private, on pushes to main only.
+        os: ${{ fromJSON((github.event_name == 'push' || !github.event.repository.private) && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 8
     permissions:
