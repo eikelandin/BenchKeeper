@@ -130,6 +130,17 @@ test('every claude launch of a --command string needs its own mode', () => {
   assert.match(lintLine('ORCA terminal create --command "claude; echo --permission-mode auto" --json'), /with no --permission-mode;/);
   assert.equal(lintLine('ORCA terminal create --command "claude --permission-mode auto \\\n  --model x" --json'), '');
 });
+test('a --command string continued with \\ and LF or CRLF inside either quote is read and joined', () => {
+  assert.match(lintLine("ORCA terminal create --command 'env A=1 claude --model x \\\n  --permission-mode bypassPermissions' --json"), /orca\.md:3: --command starts claude with --permission-mode bypassPermissions;/);
+  assert.match(lintLine("ORCA terminal create --command 'claude --model x \\\r\n  --permission-mode plan' --json"), /orca\.md:3: --command starts claude with --permission-mode plan;/);
+  assert.match(lintLine('ORCA terminal create --command "claude --model x \\\r\n  --dangerously-skip-permissions" --json'), /orca\.md:3: --command starts claude with --dangerously-skip-permissions;/);
+  assert.match(lintLine('ORCA terminal create --command "claude --permission-mode auto \\\n  --dangerously-skip-permissions" --json'), /orca\.md:3: --command starts claude with --dangerously-skip-permissions;/);
+  assert.equal(lintLine('ORCA terminal create --command "claude --model x \\\n  --permission-mode auto" --json'), '');
+});
+test('a dangerously flag after a quoted operator or a redirect fails', () => {
+  assert.match(lintLine(`ORCA terminal create --command "claude --permission-mode auto --settings '<a;b>.json' --dangerously-skip-permissions" --json`), /with --dangerously-skip-permissions;/);
+  assert.match(lintLine('ORCA terminal create --command "claude --permission-mode auto 2>&1 --dangerously-skip-permissions" --json'), /with --dangerously-skip-permissions;/);
+});
 test('a --command string that starts claude through the role guard launcher names is checked', () => {
   assert.match(lintLine('ORCA terminal create --command "npx @anthropic-ai/claude-code@latest --dangerously-skip-permissions" --json'), /with --dangerously-skip-permissions;/);
   assert.match(lintLine('ORCA terminal create --command "claude-code --permission-mode bypassPermissions" --json'), /with --permission-mode bypassPermissions;/);

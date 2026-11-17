@@ -138,15 +138,21 @@ const LAUNCH_MODES = ['auto', 'dontAsk'];
 export const LAUNCHERS = new Set(['claude', 'claude-code']);
 const launcher = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '').replace(/@[^@]*$/, '').replace(/\.(cmd|ps1|bat)$/, '');
 
+// The words after a command's first launcher, or null when it starts no claude; and the first of them naming a dangerously flag.
+const launchArgs = (command) => {
+  const words = commandWords(command);
+  const at = words.findIndex((w) => LAUNCHERS.has(launcher(w)));
+  return at < 0 ? null : words.slice(at + 1);
+};
+const dangerousWord = (rest) => rest.find((w) => /dangerously/i.test(w));
+
 // Why a command that starts claude does not start it in auto or dontAsk mode; null when it does or starts no claude.
 // shortcut: words inside a quoted argument of claude count as its flags, so claude -p 'use --permission-mode auto' passes;
 // a shell word parser would close this.
 function launchMode(command) {
-  const words = commandWords(command);
-  const at = words.findIndex((w) => LAUNCHERS.has(launcher(w)));
-  if (at < 0) return null;
-  const rest = words.slice(at + 1);
-  const dangerous = rest.find((w) => /dangerously/i.test(w));
+  const rest = launchArgs(command);
+  if (!rest) return null;
+  const dangerous = dangerousWord(rest);
   if (dangerous) return dangerous;
   // --permission-mode='auto' splits into "--permission-mode=" and "auto".
   const modes = rest.flatMap((w, i) => {
@@ -160,17 +166,23 @@ function launchMode(command) {
 }
 
 // Each --command "..." or '...' string, after spaces, = or \ continuations; a double-quoted one may hold escaped quotes.
-// Neither quote crosses a line, so an unclosed quote in prose does not hide the launch on a later line.
+// Either quote crosses a line only after a \ continuation (LF or CRLF), so an unclosed quote in prose does not hide the
+// launch on a later line.
+// shortcut: a bare line break inside the quotes (after && or in a "$(cat <<EOF ...)" heredoc) ends the read there, and an
+// operator inside a quoted argument of claude splits the string, so a second --permission-mode after it goes unread; a
+// shell parser would close both. A dangerously word anywhere after the first launcher is still caught.
 export const launchCommands = (text) =>
-  [...text.matchAll(/--command[\s=\\]+(?:"((?:[^"\\\n]|\\[\s\S])*)"|'([^'\n]*)')/g)].map((m) => ({ index: m.index, command: m[1] ?? m[2] }));
+  [...text.matchAll(/--command[\s=\\]+(?:"((?:[^"\\\n]|\\(?:\r\n|[\s\S]))*)"|'((?:\\\r?\n|[^'\n])*)')/g)].map((m) => ({ index: m.index, command: m[1] ?? m[2] }));
 
 export function launchModes(files) {
   return files.flatMap((file) => {
     const text = readFileSync(file, 'utf8');
     const at = (index) => `${file}:${text.slice(0, index).split('\n').length}`;
     const commands = launchCommands(text).flatMap(({ index, command }) => {
-      // Each command of the string, continuations joined: a claude after && or || needs its own mode.
-      const why = command.replace(/\\\r?\n/g, ' ').split(/&&|\|\||[;|&\n]/).map(launchMode).find(Boolean);
+      // Continuations joined. The whole string first: a quoted operator or a redirect (2>&1) splits off the flags after it.
+      // Then each command of the string: a claude after && or || needs its own mode.
+      const joined = command.replace(/\\\r?\n/g, ' ');
+      const why = dangerousWord(launchArgs(joined) ?? []) ?? joined.split(/&&|\|\||[;|&\n]/).map(launchMode).find(Boolean);
       return why ? [`${at(index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
     });
     // Anywhere in the text: a command line, a continuation line, an argument list, or a sentence that tells the coordinator to use it.
