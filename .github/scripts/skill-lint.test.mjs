@@ -6,7 +6,7 @@ import { join, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isMain } from './main.mjs';
-import { bareLaunches, lintAgent, lintSkill, ownAgents, ownSkills, pluginFiles } from './skill-lint.mjs';
+import { bareLaunches, launchModes, lintAgent, lintSkill, ownAgents, ownSkills, pluginFiles } from './skill-lint.mjs';
 
 function skill(name, { fm = `name: ${name}\ndescription: "Does a thing. Use when asked."`, body = '', yaml = 'interface:\n  display_name: "X"\n' } = {}) {
   const dir = join(mkdtempSync(join(tmpdir(), 'lint-')), name);
@@ -88,6 +88,25 @@ test('own plugin files start no bare session', () => {
   assert.ok(pluginFiles().some((p) => p.endsWith(`${sep}SKILL.md`)));
   assert.deepEqual(bareLaunches(pluginFiles()), []);
 });
+
+function lintLine(line) {
+  const file = join(mkdtempSync(join(tmpdir(), 'lint-')), 'orca.md');
+  writeFileSync(file, `Start it:\n\n${line}\n`);
+  return launchModes([file]).join();
+}
+const terminal = (args) => `ORCA terminal create --worktree path:<worktree path> --command "env -u CEDARLOOM_ROLE claude --model '<model>' ${args}" --json`;
+
+test('a --command line without --permission-mode fails', () => assert.match(lintLine(terminal('--effort high')), /orca\.md:3: --command starts claude with no --permission-mode/));
+test('a --command line with --permission-mode bypassPermissions fails', () => assert.match(lintLine(terminal('--permission-mode bypassPermissions')), /with --permission-mode bypassPermissions;/));
+test('a --command line with a dangerously flag fails', () => assert.match(lintLine(terminal('--permission-mode auto --allow-dangerously-skip-permissions')), /with --allow-dangerously-skip-permissions;/));
+test('a --command line with --permission-mode twice fails', () => assert.match(lintLine(terminal('--permission-mode auto --permission-mode plan')), /with --permission-mode twice;/));
+test('a --command line with --permission-mode auto passes', () => assert.equal(lintLine(terminal('--permission-mode auto')), ''));
+test('a --command line with --permission-mode dontAsk passes', () => assert.equal(lintLine(terminal("--permission-mode dontAsk --settings '<settings file>'")), ''));
+test('a worker-start line with --agent claude fails', () =>
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent claude --model "<model>" --json'), /orca\.md:3: worker-start --agent claude/));
+test('a worker-start line with --agent codex passes', () =>
+  assert.equal(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent codex --model "<model>" --json'), ''));
+test('own plugin files start every Claude Code worker in auto or dontAsk mode', () => assert.deepEqual(launchModes(pluginFiles()), []));
 
 // isMain (main.mjs) guards the command line of every script here; this file runs in CI, so its tests are here.
 const scripts = fileURLToPath(new URL('.', import.meta.url));

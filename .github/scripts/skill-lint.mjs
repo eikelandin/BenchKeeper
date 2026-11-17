@@ -124,6 +124,38 @@ const bareLaunch = (text) =>
 export const bareLaunches = (files) =>
   files.filter((file) => bareLaunch(readFileSync(file, 'utf8'))).map((file) => `${file}: starts claude with --bare, which runs no hooks (the role guard's included)`);
 
+// A Claude Code worker starts in a terminal whose --command line sets its mode, never through Orca's own launch, which adds
+// the flag of Orca's agent permission setting (bypass under full access). The flag wins over every settings file's defaultMode.
+const LAUNCH_MODES = ['auto', 'dontAsk'];
+
+// Why a --command string that starts claude does not start it in auto or dontAsk mode; null when it does or starts no claude.
+function launchMode(command) {
+  const words = command.split(/[\s'"`]+/);
+  const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+  if (at < 0) return null;
+  const rest = words.slice(at + 1);
+  const dangerous = rest.find((w) => /dangerously/i.test(w));
+  if (dangerous) return dangerous;
+  const modes = rest.flatMap((w, i) => (/^--permission-mode(=|$)/.test(w) ? [w.split('=')[1] ?? rest[i + 1]] : []));
+  if (modes.length > 1) return '--permission-mode twice';
+  if (!modes.length) return 'no --permission-mode';
+  return LAUNCH_MODES.includes(modes[0]) ? null : `--permission-mode ${modes[0]}`;
+}
+
+export function launchModes(files) {
+  return files.flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    const at = (index) => `${file}:${text.slice(0, index).split('\n').length}`;
+    const commands = [...text.matchAll(/--command[ =]"([^"]*)"/g)].flatMap((m) => {
+      const why = launchMode(m[1]);
+      return why ? [`${at(m.index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
+    });
+    const orca = [...text.matchAll(/^.*\bworker-start\b.*$/gm)].filter(([line]) => /--agent[ =]claude(?![\w-])/.test(line))
+      .map((m) => `${at(m.index)}: worker-start --agent claude takes Orca's agent permission setting; start a Claude Code worker in its own terminal`);
+    return [...commands, ...orca];
+  });
+}
+
 // The files every plugin ships; its tests name commands the hooks deny.
 export function pluginFiles() {
   const plugins = join(root, 'plugins');
@@ -138,7 +170,7 @@ export function ownSkills() {
 if (isMain(import.meta.url)) {
   const dirs = process.argv.length > 2 ? process.argv.slice(2).map((d) => resolve(d)) : ownSkills();
   const agents = process.argv.length > 2 ? [] : ownAgents();
-  const launches = process.argv.length > 2 ? [] : bareLaunches(pluginFiles());
+  const launches = process.argv.length > 2 ? [] : [...bareLaunches(pluginFiles()), ...launchModes(pluginFiles())];
   const errors = [...dirs.flatMap(lintSkill), ...agents.flatMap(lintAgent), ...launches];
   for (const e of errors) console.log(`::error::${e.replace(root + '/', '')}`);
   console.log(`${agents.length} agents, ${dirs.length} skills checked, ${errors.length} errors`);
