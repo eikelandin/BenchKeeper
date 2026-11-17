@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "startLabel": "cedarloom:ready-for-agent",
+  "startLabel": "cl:ready-for-agent",
   "trustedAuthors": ["example-review-bot[bot]"],
   "workersPerProject": 1,
   "hostWorkerLimit": 3,
