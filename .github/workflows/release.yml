@@ -20,6 +20,7 @@ permissions: {}
 # it, and only the run of the release merge releases, so a later push must not cancel it.
 jobs:
   release-please:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # A pending release-please job that a newer push replaces is dropped: the newer one does the same work.
@@ -81,6 +82,7 @@ jobs:
   # The merge of the release pull request: each plugin releases at the version of its .claude-plugin/plugin.json.
   # Every step skips what a previous run did, so rerunning the job after a failure continues where it stopped.
   release:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     # One group per commit: a push after the release merge never cancels this job, and a rerun waits for a running one.

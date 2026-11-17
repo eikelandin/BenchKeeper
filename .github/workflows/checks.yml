@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   checks-core:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
@@ -36,7 +37,7 @@ jobs:
           version: 1.31.1
           advanced-security: false
           inputs: .github
-      # Em dash and emoji in tracked text files; vendored skills and lockfiles excluded.
+      # Em dash and emoji in tracked text files; lockfiles and PNG files excluded.
       - name: Forbidden characters
         run: |
           # git grep: 0 match, 1 no match, anything else an error (for example a pattern PCRE rejects).
@@ -77,6 +78,7 @@ jobs:
 
   # Each plugin as Claude Code reads it: manifest and skill front matter (strict), the marketplace file, the mod tests, an install of each plugin. Claude Code is pinned by `.github/claude-code/package-lock.json` (the `stable` tag of its npm package); bump it by hand.
   plugin-checks:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -115,6 +117,7 @@ jobs:
 
   # The plugins' scripts and hooks under Node.js alone: no app and no install.
   plugin-tests:
+    if: github.repository == 'CedarLoom/cedarloom'
     strategy:
       fail-fast: false
       matrix:
@@ -139,7 +142,7 @@ jobs:
 
   # Required check: passes when all parallel jobs pass.
   checks:
-    if: always()
+    if: always() && github.repository == 'CedarLoom/cedarloom'
     needs: [checks-core, plugin-checks, plugin-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -153,7 +156,7 @@ jobs:
           done
 
   dependency-review:
-    if: github.event_name == 'pull_request'
+    if: github.repository == 'CedarLoom/cedarloom' && github.event_name == 'pull_request' && !github.event.repository.private
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

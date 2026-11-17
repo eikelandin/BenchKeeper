@@ -113,7 +113,7 @@ test('reviewThreads: a failed permission lookup or a thread longer than one page
 
 test('thread: the command line writes only into the run folder, never through .. or a link, and refuses any other file with exit 2', () => {
   const script = fileURLToPath(new URL('../skills/coordinate/thread.mjs', import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-thread-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-thread-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   mkdirSync(join(dir, 'elsewhere'));
   writeFileSync(join(dir, 'kept.md'), 'kept');
@@ -132,7 +132,7 @@ test('thread: the command line writes only into the run folder, never through ..
 
 test('thread: the command line reads the issue from the project\'s repository', () => {
   const script = fileURLToPath(new URL('../skills/coordinate/thread.mjs', import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-thread-cli-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-thread-cli-'));
   const bin = join(dir, 'bin');
   mkdirSync(bin);
   mkdirSync(join(dir, 'project'));

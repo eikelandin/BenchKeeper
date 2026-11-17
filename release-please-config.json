@@ -1,6 +1,5 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "4bf56b9d969b938adac099d9608a95daae280138",
   "group-pull-request-title-pattern": "chore${scope}: release cedarloom",
   "bump-minor-pre-major": true,
   "plugins": [

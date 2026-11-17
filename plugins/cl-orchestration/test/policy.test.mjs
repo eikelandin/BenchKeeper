@@ -171,7 +171,7 @@ test('policy: each refused value is named with its rule and path', () => {
 });
 
 test('policy: a skill folder copied alone, as for an agent without plugins, checks with its own schema; minPlugin cannot be checked there and gives no policy', async () => {
-  const copy = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'skills', 'coordinate');
+  const copy = join(mkdtempSync(join(tmpdir(), 'cl-policy-')), 'skills', 'coordinate');
   cpSync(fileURLToPath(new URL('../skills/coordinate', import.meta.url)), copy, { recursive: true });
   const copied = await import(pathToFileURL(join(copy, 'policy.mjs')).href);
   assert.equal(copied.effective({ startLabel: 'go', merge: { mode: 'disjoint' } }).policy.merge.mode, 'disjoint');
@@ -190,7 +190,7 @@ test('policy: a skill folder copied alone, as for an agent without plugins, chec
 });
 
 test('policy: minPlugin is checked against the version in the plugin manifest two folders above the skill', async () => {
-  const plugin = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+  const plugin = mkdtempSync(join(tmpdir(), 'cl-policy-'));
   cpSync(fileURLToPath(new URL('../skills/coordinate', import.meta.url)), join(plugin, 'skills', 'coordinate'), { recursive: true });
   mkdirSync(join(plugin, '.claude-plugin'));
   writeFileSync(join(plugin, '.claude-plugin', 'plugin.json'), '{ "name": "cedarloom", "version": "2.3.0" }');
@@ -245,7 +245,7 @@ test('policy: a file that is not JSON gives no policy', () => {
 
 test('policy: a repository whose own git config redirects origin or runs a command gives no policy, and git starts nothing', () => {
   const repo = (text) => {
-    const dir = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+    const dir = mkdtempSync(join(tmpdir(), 'cl-policy-'));
     const git = initRepo(dir);
     mkdirSync(join(dir, 'docs/agents'), { recursive: true });
     writeFileSync(join(dir, 'docs/agents/orchestration.json'), text);
@@ -256,12 +256,12 @@ test('policy: a repository whose own git config redirects origin or runs a comma
   const origin = repo('{ "startLabel": "go" }');
   const other = repo('{ "startLabel": "go", "trustedAuthors": ["someone"], "merge": { "allowed": true } }');
   const project = () => {
-    const dir = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'project');
+    const dir = join(mkdtempSync(join(tmpdir(), 'cl-policy-')), 'project');
     origin.git('clone', '-q', origin.dir, dir);
     return (...config) => { origin.git('-C', dir, 'config', ...config); return dir; };
   };
   assert.equal(read(project()('user.name', 't')).policy.merge.allowed, false);
-  const marker = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'ran');
+  const marker = join(mkdtempSync(join(tmpdir(), 'cl-policy-')), 'ran');
   for (const config of [
     [`url.${other.dir}.insteadOf`, origin.dir],
     ['remote.origin.uploadpack', `touch '${marker}'; git-upload-pack`],
@@ -280,7 +280,7 @@ test('policy: a repository whose own git config redirects origin or runs a comma
   // git's own file system monitor runs no command of the repository.
   assert.equal(read(project()('core.fsmonitor', 'true')).policy.startLabel, 'go');
   // The fetch writes the reader's ref, and no hook of the shared git directory runs for it. The repository's own core.hooksPath, which the check allows, also overrides one of the user's config.
-  const hooks = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+  const hooks = mkdtempSync(join(tmpdir(), 'cl-policy-'));
   writeFileSync(join(hooks, 'reference-transaction'), `#!/bin/sh\ntouch '${marker}'\n`, { mode: 0o755 });
   const hooked = project()('core.hooksPath', hooks);
   assert.equal(read(hooked).policy.startLabel, 'go');
@@ -296,7 +296,7 @@ test('policy: a repository whose own git config redirects origin or runs a comma
   assert.equal(read(raced, racing('remote.origin.uploadpack', `touch '${marker}'; git-upload-pack`)).policy.startLabel, 'go');
   assert.equal(existsSync(marker), false, 'remote.origin.uploadpack');
   // With GIT_SSH set, the user's ssh program still beats a core.sshCommand of the repository: git ranks any core.sshCommand above GIT_SSH.
-  const tools = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), "it's tools");
+  const tools = join(mkdtempSync(join(tmpdir(), 'cl-policy-')), "it's tools");
   mkdirSync(tools);
   writeFileSync(join(tools, 'ssh'), '#!/bin/sh\ntouch "$(dirname "$0")/used"\nexit 1\n', { mode: 0o755 });
   const viaSsh = project()('user.name', 't');
@@ -309,7 +309,7 @@ test('policy: a repository whose own git config redirects origin or runs a comma
 });
 
 test('policy: the command line prints the policy of the default branch and exits 0, or names each error and exits 1', () => {
-  const origin = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+  const origin = mkdtempSync(join(tmpdir(), 'cl-policy-'));
   const git = initRepo(origin);
   const commit = (text) => {
     mkdirSync(join(origin, 'docs/agents'), { recursive: true });
@@ -318,7 +318,7 @@ test('policy: the command line prints the policy of the default branch and exits
     git('commit', '-qm', 'policy');
   };
   commit('{ "merge": { "mode": "disjont" } }');
-  const project = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'project');
+  const project = join(mkdtempSync(join(tmpdir(), 'cl-policy-')), 'project');
   git('clone', '-q', origin, project);
   const cli = (dir, env = {}) => spawnSync(process.execPath, [fileURLToPath(new URL('../skills/coordinate/policy.mjs', import.meta.url)), dir], { encoding: 'utf8', env: { ...process.env, ...env } });
   const rejected = cli(project);
@@ -334,7 +334,7 @@ test('policy: the command line prints the policy of the default branch and exits
   assert.equal(below.status, 0, below.stderr);
   assert.equal(JSON.parse(below.stdout).startLabel, 'go');
   // Not cloned (init, then remote add): there is no origin/HEAD, and the remote's HEAD is all the reader needs.
-  const added = mkdtempSync(join(tmpdir(), 'bk-policy-'));
+  const added = mkdtempSync(join(tmpdir(), 'cl-policy-'));
   git('init', '-q', '-b', 'other', added);
   git('-C', added, 'remote', 'add', 'origin', origin);
   const asked = cli(added);

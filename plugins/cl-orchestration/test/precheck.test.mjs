@@ -168,7 +168,7 @@ test('precheck: an origin whose host cannot be compared with gh\'s fails, and an
 test('precheck and policy: started through a symlinked folder they still run, so no project means exit 1, not a silent 0', () => {
   // Exit 0 means "there is an issue to pick" or "here is the policy": a guard that skipped the command line would start every scheduled run.
   const real = realpathSync(fileURLToPath(new URL('../skills/coordinate', import.meta.url)));
-  const link = join(mkdtempSync(join(tmpdir(), 'bk-precheck-')), 'link');
+  const link = join(mkdtempSync(join(tmpdir(), 'cl-precheck-')), 'link');
   symlinkSync(real, link, 'dir');
   for (const dir of [real, link]) for (const script of ['precheck.mjs', 'policy.mjs']) assert.equal(spawnSync(process.execPath, [join(dir, script)]).status, 1, join(dir, script));
 });

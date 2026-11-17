@@ -116,7 +116,7 @@ test('merge checks: a file under riskyPaths raises a low class to medium and low
 
 const SCRIPT = fileURLToPath(new URL('../skills/coordinate/merge-checks.mjs', import.meta.url));
 const cli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
-const folder = () => mkdtempSync(join(tmpdir(), 'bk-merge-'));
+const folder = () => mkdtempSync(join(tmpdir(), 'cl-merge-'));
 
 // An origin whose first commit holds these files. clones() gives the project's checkout and the scratch clone, once every head is on a branch.
 function world(files) {
