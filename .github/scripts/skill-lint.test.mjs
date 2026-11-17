@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { isMain } from './main.mjs';
-import { bareLaunches, launchModes, lintAgent, lintSkill, ownAgents, ownSkills, pluginFiles } from './skill-lint.mjs';
+import { bareLaunches, LAUNCHERS, launchCommands, launchModes, lintAgent, lintSkill, ownAgents, ownSkills, pluginFiles } from './skill-lint.mjs';
 
 function skill(name, { fm = `name: ${name}\ndescription: "Does a thing. Use when asked."`, body = '', yaml = 'interface:\n  display_name: "X"\n' } = {}) {
   const dir = join(mkdtempSync(join(tmpdir(), 'lint-')), name);
@@ -107,15 +107,55 @@ test('a single-quoted --command and a claude after a shell operator are checked'
 test('a --command line with --permission-mode auto passes', () => {
   assert.equal(lintLine(terminal('--permission-mode auto')), '');
   assert.equal(lintLine(terminal("--permission-mode='auto'")), '');
+  assert.equal(lintLine(terminal('--permission-mode=auto')), '');
+});
+test('a --command line with --permission-mode=<value> reads the value after =', () => {
+  assert.match(lintLine(terminal('--permission-mode=plan --effort high')), /with --permission-mode plan;/);
+  assert.match(lintLine(terminal('--permission-mode=auto=x')), /with --permission-mode auto=x;/);
+  assert.match(lintLine(terminal('--permission-mode')), /with --permission-mode without a value;/);
 });
 test('a --command line with --permission-mode dontAsk passes', () => assert.equal(lintLine(terminal("--permission-mode dontAsk --settings '<settings file>'")), ''));
-test('a worker-start line with --agent claude fails', () => {
-  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent claude --model "<model>" --json'), /orca\.md:3: worker-start --agent claude/);
-  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent "claude" --json'), /orca\.md:3: worker-start --agent claude/);
-  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> \\\n  --agent claude --json'), /orca\.md:3: worker-start --agent claude/);
+test('a --command string after more spaces, a tab or a continuation, or with escaped quotes, is read', () => {
+  const bypass = /orca\.md:3: --command starts claude with --dangerously-skip-permissions;/;
+  assert.match(lintLine('ORCA terminal create --command  "claude --dangerously-skip-permissions" --json'), bypass);
+  assert.match(lintLine('ORCA terminal create --command\t"claude --dangerously-skip-permissions" --json'), bypass);
+  assert.match(lintLine('ORCA terminal create --command \\\n  "claude --dangerously-skip-permissions" --json'), bypass);
+  assert.match(lintLine('ORCA terminal create --command "env FOO=\\"a b\\" claude --dangerously-skip-permissions" --json'), bypass);
+  assert.equal(lintLine('ORCA terminal create --command "claude --model \\"x\\" --permission-mode auto" --json'), '');
+});
+test('a --command quote does not cross lines, so an unclosed quote in prose hides no launch', () =>
+  assert.match(lintLine('Pass the launch line to --command "with its mode.\nORCA terminal create --command "claude --permission-mode plan" --json'), /orca\.md:4: --command starts claude with --permission-mode plan;/));
+test('every claude launch of a --command string needs its own mode', () => {
+  assert.match(lintLine('ORCA terminal create --command "claude --permission-mode auto --continue || claude --model x" --json'), /with no --permission-mode;/);
+  assert.match(lintLine('ORCA terminal create --command "claude; echo --permission-mode auto" --json'), /with no --permission-mode;/);
+  assert.equal(lintLine('ORCA terminal create --command "claude --permission-mode auto \\\n  --model x" --json'), '');
+});
+test('a --command string that starts claude through the role guard launcher names is checked', () => {
+  assert.match(lintLine('ORCA terminal create --command "npx @anthropic-ai/claude-code@latest --dangerously-skip-permissions" --json'), /with --dangerously-skip-permissions;/);
+  assert.match(lintLine('ORCA terminal create --command "claude-code --permission-mode bypassPermissions" --json'), /with --permission-mode bypassPermissions;/);
+  assert.match(lintLine('ORCA terminal create --command "claude.cmd --dangerously-skip-permissions" --json'), /with --dangerously-skip-permissions;/);
+});
+test('the lint and the role guard name the same launchers', () => {
+  const guard = readFileSync(new URL('../../plugins/cl-workflow/hooks/role-guard/role-guard.mjs', import.meta.url), 'utf8');
+  assert.deepEqual(JSON.parse(/const LAUNCHERS = new Set\((\[.*\])\);/.exec(guard)[1].replaceAll("'", '"')), [...LAUNCHERS]);
+});
+test('--agent claude fails on any line of a plugin file', () => {
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent claude --model "<model>" --json'), /orca\.md:3: --agent claude starts the worker through Orca's own launch/);
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent "claude" --json'), /orca\.md:3: --agent claude/);
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> \\\n  --agent claude --json'), /orca\.md:4: --agent claude/);
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> `\n  --agent claude --json'), /orca\.md:4: --agent claude/);
+  assert.match(lintLine('A supervised Claude Code retry takes `--agent claude` in place of `--terminal`.'), /orca\.md:3: --agent claude/);
+  assert.match(lintLine("execFile(orca, ['orchestration', 'worker-start', '--agent', 'claude']);"), /orca\.md:3: --agent claude/);
 });
 test('a worker-start line with --agent codex passes', () =>
   assert.equal(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent codex --model "<model>" --json'), ''));
+test('the lint reads both Claude Code launch lines of orca.md', () => {
+  const text = readFileSync(new URL('../../plugins/cl-orchestration/skills/coordinate/orca.md', import.meta.url), 'utf8');
+  const lines = text.split('\n').filter((line) => /^ORCA terminal create .*\bclaude\b/.test(line));
+  assert.equal(lines.length, 2);
+  const read = launchCommands(text).map(({ command }) => command);
+  for (const line of lines) assert.ok(read.some((command) => /\bclaude\b/.test(command) && line.includes(`"${command}"`)), line);
+});
 test('own plugin files start every Claude Code worker in auto or dontAsk mode', () => assert.deepEqual(launchModes(pluginFiles()), []));
 
 // isMain (main.mjs) guards the command line of every script here; this file runs in CI, so its tests are here.

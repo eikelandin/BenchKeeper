@@ -129,35 +129,53 @@ export const bareLaunches = (files) =>
   files.filter((file) => bareLaunch(readFileSync(file, 'utf8'))).map((file) => `${file}: starts claude with --bare, which runs no hooks (the role guard's included)`);
 
 // A Claude Code worker starts in a terminal whose --command line sets its mode, never through Orca's own launch, which adds
-// the flag of Orca's agent permission setting (bypass under full access). The flag wins over every settings file's defaultMode.
+// the flag of Orca's agent permission setting (bypass under full access). The flag wins over every settings file's defaultMode
+// (https://code.claude.com/docs/en/permission-modes).
 const LAUNCH_MODES = ['auto', 'dontAsk'];
 
-// Why a --command string that starts claude does not start it in auto or dontAsk mode; null when it does or starts no claude.
+// The role guard's launcher names and their normalization (plugins/cl-workflow/hooks/role-guard/role-guard.mjs, LAUNCHERS and
+// launcher), copied: that hook reads its input from stdin when imported. A test keeps the two lists equal.
+export const LAUNCHERS = new Set(['claude', 'claude-code']);
+const launcher = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '').replace(/@[^@]*$/, '').replace(/\.(cmd|ps1|bat)$/, '');
+
+// Why a command that starts claude does not start it in auto or dontAsk mode; null when it does or starts no claude.
+// shortcut: words inside a quoted argument of claude count as its flags, so claude -p 'use --permission-mode auto' passes;
+// a shell word parser would close this.
 function launchMode(command) {
   const words = commandWords(command);
-  const at = claudeAt(words);
+  const at = words.findIndex((w) => LAUNCHERS.has(launcher(w)));
   if (at < 0) return null;
   const rest = words.slice(at + 1);
   const dangerous = rest.find((w) => /dangerously/i.test(w));
   if (dangerous) return dangerous;
   // --permission-mode='auto' splits into "--permission-mode=" and "auto".
-  const modes = rest.flatMap((w, i) => (/^--permission-mode(=|$)/.test(w) ? [w.split('=')[1] || rest[i + 1]] : []));
+  const modes = rest.flatMap((w, i) => {
+    const flag = /^--permission-mode(?:=(.*))?$/.exec(w);
+    return flag ? [flag[1] || rest[i + 1] || ''] : [];
+  });
   if (modes.length > 1) return '--permission-mode twice';
   if (!modes.length) return 'no --permission-mode';
+  if (!modes[0]) return '--permission-mode without a value';
   return LAUNCH_MODES.includes(modes[0]) ? null : `--permission-mode ${modes[0]}`;
 }
+
+// Each --command "..." or '...' string, after spaces, = or \ continuations; a double-quoted one may hold escaped quotes.
+// Neither quote crosses a line, so an unclosed quote in prose does not hide the launch on a later line.
+export const launchCommands = (text) =>
+  [...text.matchAll(/--command[\s=\\]+(?:"((?:[^"\\\n]|\\[\s\S])*)"|'([^'\n]*)')/g)].map((m) => ({ index: m.index, command: m[1] ?? m[2] }));
 
 export function launchModes(files) {
   return files.flatMap((file) => {
     const text = readFileSync(file, 'utf8');
     const at = (index) => `${file}:${text.slice(0, index).split('\n').length}`;
-    const commands = [...text.matchAll(/--command[ =](?:"([^"]*)"|'([^']*)')/g)].flatMap((m) => {
-      const why = launchMode(m[1] ?? m[2]);
-      return why ? [`${at(m.index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
+    const commands = launchCommands(text).flatMap(({ index, command }) => {
+      // Each command of the string, continuations joined: a claude after && or || needs its own mode.
+      const why = command.replace(/\\\r?\n/g, ' ').split(/&&|\|\||[;|&\n]/).map(launchMode).find(Boolean);
+      return why ? [`${at(index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
     });
-    // A worker-start line with its continuation lines.
-    const orca = [...text.matchAll(/^.*\bworker-start\b(?:.*\\\r?\n)*.*$/gm)].filter(([line]) => /--agent[\s=\\'"]+claude(?![\w-])/.test(line))
-      .map((m) => `${at(m.index)}: worker-start --agent claude takes Orca's agent permission setting; start a Claude Code worker in its own terminal`);
+    // Anywhere in the text: a command line, a continuation line, an argument list, or a sentence that tells the coordinator to use it.
+    const orca = [...text.matchAll(/--agent[\s=\\'"`,]+claude(?![\w-])/g)]
+      .map((m) => `${at(m.index)}: --agent claude starts the worker through Orca's own launch, which takes Orca's agent permission setting; start a Claude Code worker in its own terminal`);
     return [...commands, ...orca];
   });
 }
