@@ -51,7 +51,7 @@ test('release.yml creates the tagged label before it marks the release pull requ
 // config with jq: the runners have it, elsewhere the test skips without it.
 const noJq = spawnSync('jq', ['--version'], { stdio: 'ignore' }).status !== 0 && !process.env.CI;
 test('release.yml tags every plugin component at the version of its plugin.json and creates one Release with the changelog section of each plugin', { skip: noJq }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'bk-tags-'));
+  const dir = mkdtempSync(join(tmpdir(), 'release-tags-'));
   try {
     const packages = { 'plugins/cedarloom': { component: 'cedarloom' }, 'plugins/cl-workflow': { component: 'cedarloom-workflow' }, 'plugins/cl-repo': { component: 'cedarloom-repo' }, 'plugins/cl-orchestration': { component: 'cedarloom-orchestration' } };
     writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
@@ -94,7 +94,7 @@ gh() { n=$((n + 1)); printf '%s\\0' "$@" > "calls/$n"; case "$1 $2" in 'release 
 
 // The Release is on the bundle's tag, so it takes the bundle's version, not another plugin's.
 test('release.yml releases the version of the bundle plugin.json', { skip: noJq }, () => {
-  const dir = mkdtempSync(join(tmpdir(), 'bk-version-'));
+  const dir = mkdtempSync(join(tmpdir(), 'release-version-'));
   try {
     const packages = { 'plugins/cl-repo': { component: 'cedarloom-repo' }, 'plugins/cedarloom': { component: 'cedarloom' } };
     writeFileSync(join(dir, 'release-please-config.json'), JSON.stringify({ packages }));
