@@ -25,7 +25,7 @@ A gate holds one item for the owner while the other items go on ([Owner-only dec
 
 | Deny rules | Supervised | Automatic |
 | --- | --- | --- |
-| `gh pr merge`, `gh release`, `gh repo create`, `delete` and `edit`; `git push` with `--force`, `-f`, a `+` refspec, `--delete`, `-d`, a `:` refspec, `--mirror` or `--prune`; reading `.env`, `.env.*` and `secrets/` | refused | refused |
+| `gh pr merge`, `gh release`, `gh repo create`, `delete` and `edit`; `git push` with `--force`, `-f`, a `+` refspec, `--delete`, `-d`, a `:` refspec, `--mirror` or `--prune`; reading `.env`, `.env.*` and `secrets/` | refused; the read rules bind the file tools, the Bash file commands Claude Code recognizes (such as `cat` and `head`) and Bash redirections ([Read and Edit](https://code.claude.com/docs/en/permissions#read-and-edit)), and any other Bash command still reads those files (`cut -d= -f1 .env` did) | refused |
 | `git push`, `gh pr create`, `gh pr comment`, `gh issue` writes, `rm -r` (`-R`, `-fr`, `--recursive`), `WebFetch` | refused: push, pull request and issue comments stay with the coordinator ([Commit and push](#commit-and-push)) | refused |
 | edits under `.claude/`, `.github/` and any `.git` | refused to the file tools | refused to the file tools (`dontAsk`) |
 
