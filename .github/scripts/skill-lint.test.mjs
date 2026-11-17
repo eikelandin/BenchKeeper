@@ -158,6 +158,10 @@ test('--agent claude fails on any line of a plugin file', () => {
   assert.match(lintLine('A supervised Claude Code retry takes `--agent claude` in place of `--terminal`.'), /orca\.md:3: --agent claude/);
   assert.match(lintLine("execFile(orca, ['orchestration', 'worker-start', '--agent', 'claude']);"), /orca\.md:3: --agent claude/);
 });
+test('--agent claude fails in any letter case', () => {
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent Claude --json'), /orca\.md:3: --agent claude/);
+  assert.match(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent CLAUDE --json'), /orca\.md:3: --agent claude/);
+});
 test('a worker-start line with --agent codex passes', () =>
   assert.equal(lintLine('ORCA orchestration worker-start --spec-file <spec> --agent codex --model "<model>" --json'), ''));
 test('the lint reads both Claude Code launch lines of orca.md', () => {

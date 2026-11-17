@@ -169,8 +169,8 @@ function launchMode(command) {
 // Either quote crosses a line only after a \ continuation (LF or CRLF), so an unclosed quote in prose does not hide the
 // launch on a later line.
 // shortcut: a bare line break inside the quotes (after && or in a "$(cat <<EOF ...)" heredoc) ends the read there, and an
-// operator inside a quoted argument of claude splits the string, so a second --permission-mode after it goes unread; a
-// shell parser would close both. A dangerously word anywhere after the first launcher is still caught.
+// operator inside a quoted argument of claude or a redirect (2>&1) splits the string, so a second --permission-mode after
+// it goes unread; a shell parser would close both. A dangerously word anywhere after the first launcher is still caught.
 export const launchCommands = (text) =>
   [...text.matchAll(/--command[\s=\\]+(?:"((?:[^"\\\n]|\\(?:\r\n|[\s\S]))*)"|'((?:\\\r?\n|[^'\n])*)')/g)].map((m) => ({ index: m.index, command: m[1] ?? m[2] }));
 
@@ -186,7 +186,7 @@ export function launchModes(files) {
       return why ? [`${at(index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
     });
     // Anywhere in the text: a command line, a continuation line, an argument list, or a sentence that tells the coordinator to use it.
-    const orca = [...text.matchAll(/--agent[\s=\\'"`,]+claude(?![\w-])/g)]
+    const orca = [...text.matchAll(/--agent[\s=\\'"`,]+claude(?![\w-])/gi)]
       .map((m) => `${at(m.index)}: --agent claude starts the worker through Orca's own launch, which takes Orca's agent permission setting; start a Claude Code worker in its own terminal`);
     return [...commands, ...orca];
   });
