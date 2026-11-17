@@ -32,7 +32,7 @@ test('facts: a failing gh call reads unread in its own section only', () => {
   assert.ok(text.includes('### octo/app\n\nunread\n\n### octo/lib\n'));
   assert.ok(text.includes('| 20 | feat: lib | 9d9d9d9 | UNKNOWN | none | unread | - |'));
   assert.ok(text.includes('## Accounts\n\nunread\n\n## Main'));
-  assert.ok(text.includes('| 41 | cedarloom:ready-for-agent | a | 2026-11-13T09:00Z |'));
+  assert.ok(text.includes('| 41 | cl:ready-for-agent | a | 2026-11-13T09:00Z |'));
 });
 
 test('facts: without cswap installed the accounts section reads skipped', () => {
@@ -41,17 +41,17 @@ test('facts: without cswap installed the accounts section reads skipped', () => 
   assert.ok(text.includes('## Accounts\n\nSkipped: cswap is not installed.\n\n## Main'));
 });
 
-test('facts: an open question with an answer an agent recorded or the owner commented on GitHub loses cedarloom:needs-human and gains cedarloom:ready-for-agent; one without an answer or with another login\'s keeps its labels', () => {
+test('facts: an open question with an answer an agent recorded or the owner commented on GitHub loses cl:needs-human and gains cl:ready-for-agent; one without an answer or with another login\'s keeps its labels', () => {
   const edits = [];
   const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake(COMMANDS)(cmd, args); };
   facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
   assert.deepEqual(edits, [
-    'issue edit 41 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent',
-    'issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent',
+    'issue edit 41 -R octo/app --remove-label cl:needs-human --add-label cl:ready-for-agent',
+    'issue edit 46 -R octo/app --remove-label cl:needs-human --add-label cl:ready-for-agent',
   ]);
   // A failed edit shows in the row, and the next run tries again.
-  const failed = write({ ...COMMANDS, 'gh issue edit 41 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent': { exit: 1 } });
-  assert.ok(failed.includes('| 41 | cedarloom:needs-human, label edit failed | a | 2026-11-13T09:00Z |'));
+  const failed = write({ ...COMMANDS, 'gh issue edit 41 -R octo/app --remove-label cl:needs-human --add-label cl:ready-for-agent': { exit: 1 } });
+  assert.ok(failed.includes('| 41 | cl:needs-human, label edit failed | a | 2026-11-13T09:00Z |'));
 });
 
 test('facts: a Head comment that lands between the open and the recent read voids the answer of an open question', () => {
@@ -60,7 +60,7 @@ test('facts: a Head comment that lands between the open and the recent read void
   const edits = [];
   const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake({ ...COMMANDS, [key]: { out: recent } })(cmd, args); };
   facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
-  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent']);
+  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cl:needs-human --add-label cl:ready-for-agent']);
 });
 
 test('facts: an open question rejected and closed between the open and the recent read gets no label edit and reads closed', () => {
@@ -69,7 +69,7 @@ test('facts: an open question rejected and closed between the open and the recen
   const edits = [];
   const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake({ ...COMMANDS, [key]: { out: recent } })(cmd, args); };
   const text = facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
-  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent']);
+  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cl:needs-human --add-label cl:ready-for-agent']);
   assert.ok(text.includes('| 41 | closed | b | 2026-11-13T09:00Z |'));
 });
 

@@ -1,5 +1,5 @@
 // Usage: node precheck.mjs <project paths...>. Sample precheck for a scheduled coordinator run: exit 0 when a project has an issue to pick, else 1. It starts and merges nothing.
-// Pickable: open, carries startLabel and every issues.labels entry, not labeled cedarloom:needs-human (an owner question), cedarloom:in-progress (a worker holds it) or cedarloom:deferred (the owner parked it), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
+// Pickable: open, carries startLabel and every issues.labels entry, not labeled cl:needs-human (an owner question), cl:in-progress (a worker holds it) or cl:deferred (the owner parked it), written by a trusted author (the repository owner, a trustedAuthors login, or a member or collaborator with write access), and no pull request for it: none merged or open in the repository with a head branch <type>/<number>-<slug> (an open one from a fork does not count, since anyone can open it).
 // An issue that several of the given projects list starts in none of them: it is printed once on stderr, as "several projects: <owner/repo>#<number> (<paths>)".
 import { parseArgs } from 'node:util';
 import { errorLine, escaped, isMain, read, sh } from './policy.mjs';
@@ -24,7 +24,7 @@ export const trusts = (policy, writes) => {
 };
 
 // An issue with one of these waits for the owner, also after it gained the start label, is held by a worker or is parked.
-const HELD = ['cedarloom:needs-human', 'cedarloom:in-progress', 'cedarloom:deferred'];
+const HELD = ['cl:needs-human', 'cl:in-progress', 'cl:deferred'];
 
 // writes(login) is asked last, so only for an issue that is pickable otherwise.
 export function pickable(policy, issues, pulls, writes = () => false) {

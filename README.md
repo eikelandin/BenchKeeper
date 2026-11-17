@@ -77,7 +77,7 @@ For other agents, follow its own README.
    - Describe the task: the workflow picks the kind and the depth. Start a bigger one with `/cl-workflow:plan <task>`, and run `/cl-workflow:ask` to let the agent ask you questions in the terminal for a while.
    - Keep the repository in shape with `/cl-repo:maintain`, and run `/cl-repo:audit`, `/cl-repo:improve` and `/cl-repo:debloat` on its instructions, docs or code.
 4. Per issue, with the coordinator (needs `cl-orchestration`):
-   - Label the issues with the `startLabel` (`cedarloom:ready-for-agent` by default).
+   - Label the issues with the `startLabel` (`cl:ready-for-agent` by default).
    - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:coordinate <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/coordinate/orca.md) and a fresh reviewer per pull request, merges as the repository's policy allows, and resumes from the handoff file after a clear or compaction. Releases and tags stay yours; the role guard refuses merge and release commands in the other sessions.
    - The coordinator's questions go to the project's repository as issues when its issues are on, else to the local queue `.cedarloom/questions/`. A private repository is recommended, as question issues on a public one are public; `/cl-workflow:questions` asks them. Labels: [owner questions](docs/plugins.md#owner-questions).
 
