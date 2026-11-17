@@ -49,7 +49,7 @@ The worker's settings file is written by `node <skill folder>/worker-settings.mj
   - This is the regular case, also with one worker per project: the next issue of the project gets its worktree only once the worker before it is released, and a follow-up never runs under a settings file older than a worktree.
   - Workers that start together get their worktrees before the first of their settings files. A worktree needed while one of them still works waits until that worker is released.
   - Some automatic workers are never released or not released yet: a worker whose terminal a person typed in is never released, a start held at a dialog has loaded its settings file and so counts as started, and a worker whose session end [Clean up](orca.md#clean-up) cannot confirm stays unreleased. While one of these lasts, no worktree is made in its project, and the project's waiting issues are listed for the owner in the report and do not hold the run open.
-  - Supervised workers stay open for follow-ups as [Start the run](orca.md#start-the-run) says.
+  - A supervised Claude Code worker is released by Orca after its report and reopened by a follow-up, and a supervised Codex worker stays open for follow-ups, as [Start the run](orca.md#start-the-run) says.
 
   The `commondir` read of [Commit and push](#commit-and-push) is the second check. Unverified: the sandbox's part of this is read from the [sandbox runtime](https://github.com/anthropic-experimental/sandbox-runtime)'s README and source, not run, and which runtime version Claude Code carries is not known.
 - Lists of rules and folders merge across every settings scope the worker loads, so the bounds are the template and the [Worker rules](#worker-rules) plus the user's and the main checkout's entries.
