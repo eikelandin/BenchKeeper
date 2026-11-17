@@ -1,0 +1,226 @@
+// Usage: node policy.mjs <project path>. Prints the project's effective coordinator policy as JSON; a file the schema rejects, a minPlugin newer than this plugin or an unreadable file prints each error and exits 1, and nothing may start there. Without the file it prints the defaults, exits 0 and says so on stderr.
+import { execFileSync } from 'node:child_process';
+import { readFileSync, realpathSync } from 'node:fs';
+import { devNull } from 'node:os';
+import { fileURLToPath } from 'node:url';
+
+const FILE = 'docs/agents/orchestration.json';
+// Pull requests on these paths are left for the owner, and a policy adds to the list and cannot shorten it: what CI runs and who reviews (.github, CODEOWNERS), the coordinator's own rules and what agents are told (docs/agents), and orca.yaml, whose scripts run on the host.
+const OWNER_ONLY = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', FILE, 'docs/agents/worker-rules.md', 'docs/agents', 'orca.yaml'];
+// A path with one of these names as a segment is the owner's at any depth: agents load nested instruction files and a .claude folder below the root, and editor, hook and container settings run commands on the host.
+const OWNER_ONLY_NAMES = ['.claude', '.mcp.json', 'AGENTS.md', 'CLAUDE.md', '.claude-plugin', '.codex', '.cursor', '.vscode', '.husky', '.githooks', '.pre-commit-config.yaml', '.devcontainer', '.devcontainer.json'];
+// A worker session's model and effort by the depth of its task, and for research. Every default effort is high: a higher one costs much more and is the owner's to ask for, in the policy.
+const DEPTHS = { quick: ['sonnet', 'high'], standard: ['opus', 'high'], deep: ['opus', 'high'], research: ['fable', 'high'] };
+// A sensitive change is planned and reviewed on the strongest model; xhigh only for the first independent review of a security or firmware-safety change (owner, 2026-11-12).
+const SENSITIVE = { plan: ['fable', 'high'], review: ['fable', 'high'], independent: ['fable', 'high'], security: ['fable', 'xhigh'] };
+
+// Text of a file, a path, a remote or a program on its way to the terminal: a control or format character could rewrite the line or cut the message, so each becomes a ?, or what `to` gives.
+export const escaped = (text, to = '?') => text.replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu, to);
+
+const shipped = (path) => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
+// The plugin's manifest lies two folders up; a skill folder copied alone (an agent without plugins) has none, so its version is unknown.
+const pluginVersion = () => { try { const v = shipped('../../.claude-plugin/plugin.json').version; return /^\d+\.\d+\.\d+$/.test(v) ? v : null; } catch { return null; } };
+
+// Started from a hook or `git rebase --exec`, these variables name another repository and carry that command's -c settings: neither reaches git here, and git fails instead of asking.
+const REPO_VARS = /^GIT_(DIR|WORK_TREE|COMMON_DIR|INDEX_FILE|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|PREFIX)$/;
+const CONFIG_VARS = /^GIT_CONFIG_(PARAMETERS|COUNT|KEY_\d+|VALUE_\d+)$/;
+const childEnv = () => {
+  const fromHook = Object.keys(process.env).some((k) => REPO_VARS.test(k));
+  return {
+    // GH_REPO would list another repository's issues than the origin the policy came from.
+    ...Object.fromEntries(Object.entries(process.env).filter(([k]) => k !== 'GH_REPO' && !REPO_VARS.test(k) && !(fromHook && CONFIG_VARS.test(k)))),
+    GIT_TERMINAL_PROMPT: '0',
+    // A worker shares the git directory: a replace ref it wrote must not swap the policy file for another.
+    GIT_NO_REPLACE_OBJECTS: '1',
+  };
+};
+// 64 MB: a thousand pull requests with their bodies do not fit Node's default of 1 MB. Two minutes: a stalled transfer or a prompt ssh waits at ends.
+export const sh = (cwd, cmd, args) => execFileSync(cmd, args, { cwd, env: childEnv(), encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 << 20, timeout: 120_000 });
+
+const kind = (v) => (v === null ? 'null' : Array.isArray(v) ? 'array' : Number.isInteger(v) ? 'integer' : typeof v);
+
+const KEYWORDS = ['$schema', 'title', 'type', 'enum', 'minLength', 'pattern', 'minimum', 'maximum', 'minItems', 'items', 'properties', 'additionalProperties', 'patternProperties'];
+// A schema edit that uses a keyword check() does not implement must fail every check, never pass files the schema refuses.
+function supported(s, at = 'the schema') {
+  const bad = Object.keys(s).find((k) => !KEYWORDS.includes(k))
+    ?? ('additionalProperties' in s && s.additionalProperties !== false ? 'additionalProperties other than false' : undefined)
+    ?? (Object.values(s.patternProperties ?? {}).some((sub) => Object.keys(sub).length) ? 'patternProperties with rules' : undefined);
+  if (bad) throw new Error(`${at} uses ${bad}, which the policy check does not implement`);
+  for (const [k, sub] of Object.entries(s.properties ?? {})) supported(sub, `${at}.${k}`);
+  if (s.items) supported(s.items, `${at}[]`);
+  return s;
+}
+
+// A "$ref" names an entry of the file's own "$defs"; inlining it keeps check() to the keywords above.
+function inlined(s, defs = s.$defs ?? {}) {
+  if (Array.isArray(s)) return s.map((x) => inlined(x, defs));
+  if (kind(s) !== 'object') return s;
+  if ('$ref' in s) {
+    const name = /^#\/\$defs\/([^/]+)$/.exec(s.$ref)?.[1];
+    if (Object.keys(s).length > 1 || !name || !Object.hasOwn(defs, name)) throw new Error(`the schema's $ref ${s.$ref} is no $defs entry the policy check implements`);
+    return inlined(defs[name], defs);
+  }
+  return Object.fromEntries(Object.entries(s).filter(([k]) => k !== '$defs').map(([k, v]) => [k, inlined(v, defs)]));
+}
+
+// The JSON Schema keywords the shipped schema uses, nothing more.
+function check(s, v, path, out) {
+  const fail = (rule, message) => out.push({ rule, path, message });
+  if (s.enum && !s.enum.includes(v)) return fail('enum', `must be one of ${s.enum.map((x) => JSON.stringify(x)).join(', ')}`);
+  const want = s.type;
+  if (want && kind(v) !== want && !(want === 'number' && kind(v) === 'integer')) return fail('type', `must be ${want}, not ${kind(v)}`);
+  if (typeof v === 'string' && s.minLength && v.length < s.minLength) fail('length', `must have at least ${s.minLength} characters`);
+  if (typeof v === 'string' && s.pattern && !new RegExp(s.pattern, 'u').test(v)) fail('pattern', `must match ${s.pattern}`);
+  if (typeof v === 'number') {
+    if (s.minimum != null && v < s.minimum) fail('range', `must be at least ${s.minimum}`);
+    if (s.maximum != null && v > s.maximum) fail('range', `must be at most ${s.maximum}`);
+  }
+  if (Array.isArray(v)) {
+    if (s.minItems && v.length < s.minItems) fail('length', `must have at least ${s.minItems} entries`);
+    v.forEach((x, i) => check(s.items, x, `${path}[${i}]`, out));
+  } else if (kind(v) === 'object') {
+    const at = (k) => (path ? `${path}.${k}` : k);
+    const known = s.properties ?? {};
+    for (const [k, sub] of Object.entries(known)) if (k in v) check(sub, v[k], at(k), out);
+    const shown = (k) => at(escaped(k));
+    if (s.additionalProperties === false) for (const k of Object.keys(v)) if (!Object.hasOwn(known, k) && !Object.keys(s.patternProperties ?? {}).some((p) => new RegExp(p, 'u').test(k))) out.push({ rule: 'unknown-key', path: shown(k), message: 'is not a key the schema names (a comment key starts with //)' });
+  }
+}
+
+// The errors of a parsed policy file, each { rule, path, message }.
+export function validate(doc) {
+  if (kind(doc) !== 'object') return [{ rule: 'not-object', path: '', message: 'must be a JSON object' }];
+  const errors = [];
+  check(supported(inlined(shipped('./orchestration.schema.json'))), doc, '', errors);
+  // A rule over two keys, which the keywords check() implements cannot state: the network allow list of automatic workers comes from this file alone.
+  if (doc.mode === 'automatic' && !(kind(doc.sandbox) === 'object' && Object.hasOwn(doc.sandbox, 'allowedDomains'))) errors.push({ rule: 'required', path: 'sandbox.allowedDomains', message: 'is required when mode is automatic: the hosts an automatic worker may reach' });
+  return errors.map((e) => (e.rule === 'unknown-key' && e.path === 'issues.repository' ? REFUSED_REPOSITORY : e));
+}
+
+const REFUSED_REPOSITORY = { rule: 'refused', path: 'issues.repository', message: 'is refused: a policy file names no other repository; the tracker is the project repository' };
+
+const older = (a, b) => { const x = a.split('.').map(Number), y = b.split('.').map(Number); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] < y[i]; return false; };
+// Comment keys explain the file to its reader; the policy holds only what the coordinator acts on.
+const plain = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith('//')));
+
+// { policy, errors, warnings }: the policy with every default filled in, or null with the errors. Fields are read by name, whatever the file's schemaVersion.
+export function effective(file, version = pluginVersion()) {
+  // A committed file never sends work, questions or answers to another repository: the reader drops issues.repository with a warning and keeps the project repository as the tracker.
+  const named = kind(file?.issues) === 'object' && Object.hasOwn(file.issues, 'repository');
+  const doc = named ? { ...file, issues: Object.fromEntries(Object.entries(file.issues).filter(([k]) => k !== 'repository')) } : file;
+  const warnings = named ? [REFUSED_REPOSITORY] : [];
+  const errors = validate(doc);
+  // The one check the schema cannot hold: it depends on the plugin that reads the file.
+  if (!errors.length && doc.minPlugin && !version) errors.push({ rule: 'range', path: 'minPlugin', message: 'cannot be checked: the version of this plugin is unknown (no .claude-plugin/plugin.json two folders above the skill)' });
+  else if (!errors.length && doc.minPlugin && older(version, doc.minPlugin)) errors.push({ rule: 'range', path: 'minPlugin', message: `must be at most ${version}, the version of this plugin` });
+  if (errors.length) return { policy: null, errors, warnings };
+  const { merge = {}, review = {}, issues = {}, models = {}, sandbox = {} } = doc;
+  return {
+    errors,
+    warnings,
+    policy: {
+      startLabel: doc.startLabel ?? null,
+      trustedAuthors: doc.trustedAuthors ?? [],
+      workersPerProject: doc.workersPerProject ?? 1,
+      hostWorkerLimit: doc.hostWorkerLimit ?? 2,
+      stallMinutes: doc.stallMinutes ?? 20,
+      merge: {
+        allowed: merge.allowed ?? false,
+        requiredChecks: merge.requiredChecks ?? [],
+        mode: merge.mode ?? 'strict',
+        autoMergeMax: merge.autoMergeMax ?? 'medium',
+        additivePaths: merge.additivePaths ?? [],
+        ownerOnlyPaths: [...new Set([...OWNER_ONLY, ...(merge.ownerOnlyPaths ?? [])])],
+        ownerOnlyNames: OWNER_ONLY_NAMES,
+      },
+      closeIssue: doc.closeIssue ?? false,
+      deleteMergedBranch: doc.deleteMergedBranch ?? false,
+      issuesPerWorker: doc.issuesPerWorker ?? 1,
+      keepRunning: doc.keepRunning ?? false,
+      permissionPrompts: doc.permissionPrompts ?? 'block',
+      mode: doc.mode ?? 'supervised',
+      sandbox: { allowedDomains: sandbox.allowedDomains ?? [] },
+      riskyPaths: doc.riskyPaths ?? [],
+      review: { depth: review.depth ?? 'high', sensitiveDepth: review.sensitiveDepth ?? 'high', sensitivePaths: review.sensitivePaths ?? [] },
+      issues: { labels: issues.labels ?? [] },
+      minPlugin: doc.minPlugin ?? null,
+      models: {
+        worker: Object.fromEntries(Object.entries(DEPTHS).map(([depth, [model, effort]]) => [depth, { model: models.worker?.model ?? model, effort: models.worker?.effort ?? effort }])),
+        phases: Object.fromEntries(Object.entries(plain(models.phases ?? {})).map(([phase, named]) => [phase, plain(named)])),
+        sensitive: Object.fromEntries(Object.entries(SENSITIVE).map(([use, [model, effort]]) => [use, { model: models.sensitive?.[use]?.model ?? model, effort: models.sensitive?.[use]?.effort ?? effort }])),
+      },
+    },
+  };
+}
+
+// The reader's own ref for the remote's HEAD: the default branch as the remote has it now, not as a stale or locally moved origin/HEAD names it, and no name the remote chooses becomes an argument.
+const REF = 'refs/cedarloom/policy';
+const unreadable = (message) => ({ policy: null, errors: [{ rule: 'unreadable', path: '', message }] });
+
+// Settings of the repository's own config that send origin's fetch to another repository or make git run a command; a worker shares that config. A boolean core.fsmonitor is git's own monitor and runs nothing.
+const REDIRECTS = /^(url\..*\.(insteadof|pushinsteadof)|remote\.origin\.(uploadpack|receivepack|proxy)|core\.sshcommand|credential\..*|include(if)?\..*)$/i;
+const BOOLEAN = /^(true|false|yes|no|on|off|1|0)?$/i;
+// -z prints the scope, then the key, a line break and the value of each setting: [scope, key, value] each.
+const settings = (output) => output.split('\0').flatMap((entry, i, all) => (i % 2 ? [[all[i - 1], ...entry.split(/\n(.*)/s)]] : []));
+const OWN = ['local', 'worktree'];
+// A subsection can hold a URL with a token in it, so only the section and the name are shown.
+const redacted = (key) => escaped(key.replace(/^([^.]+)\..+\.([^.]+)$/s, '$1.*.$2'));
+const redirecting = (found) => [...new Set(found.filter(([scope, key, value = '']) => OWN.includes(scope) && (REDIRECTS.test(key) || (/^core\.fsmonitor$/i.test(key) && !BOOLEAN.test(value)))).map(([, key]) => redacted(key)))];
+// Set again for the two calls that reach the remote, as a worker could write the config between the check and the call: no hook (the fetch writes a ref, which runs reference-transaction), no ext:: command as the remote, and git's own monitor. core.sshCommand keeps the user's or system's value, else GIT_SSH, which git ranks below any core.sshCommand, quoted for the shell git runs it with.
+const pinned = (found) => {
+  const ssh = found.filter(([scope, key]) => !OWN.includes(scope) && /^core\.sshcommand$/i.test(key)).at(-1)?.[2] ?? (process.env.GIT_SSH ? `'${process.env.GIT_SSH.replaceAll("'", String.raw`'\''`)}'` : 'ssh');
+  return ['-c', `core.hooksPath=${devNull}`, '-c', 'core.fsmonitor=false', '-c', 'protocol.ext.allow=never', '-c', `core.sshCommand=${ssh}`];
+};
+// git keeps the first remote.origin.uploadpack it reads, and the repository's config comes before -c: only the option overrides it.
+const UPLOAD_PACK = '--upload-pack=git-upload-pack';
+
+// The effective policy of the project in dir. A project without the file gets the defaults, which start and merge nothing, and absent: true.
+export function read(dir, run = sh) {
+  let found;
+  try { found = settings(run(dir, 'git', ['config', '--show-scope', '-z', '--list'])); } catch (e) {
+    return unreadable(e.code === 'ENOENT' ? 'the folder does not exist, or git is not installed' : 'git could not list the git config here: a config file it cannot parse, or git older than 2.26');
+  }
+  const refused = redirecting(found);
+  if (refused.length) return unreadable(`the repository's own git config sets ${refused.join(', ')}, which can send the reader to another repository or run a command: remove it from the repository's git config`);
+  const pins = pinned(found);
+  let commit;
+  try {
+    // The commit is asked of the remote and both reads name it: a worker shares this git directory and could move the reader's ref between the fetch and the read.
+    commit = /^([0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/m.exec(run(dir, 'git', [...pins, 'ls-remote', UPLOAD_PACK, 'origin', 'HEAD']))?.[1];
+    // The fetch touches only the reader's ref: no submodules, and not the FETCH_HEAD a session in this worktree may rely on.
+    run(dir, 'git', [...pins, 'fetch', UPLOAD_PACK, '--quiet', '--no-tags', '--no-recurse-submodules', '--no-write-fetch-head', 'origin', `+HEAD:${REF}`]);
+  } catch (e) {
+    return unreadable(e.code === 'ENOENT' ? 'the folder does not exist, or git is not installed' : "git could not fetch origin's HEAD: no git repository here, no remote named origin, no answer from it, or no default branch there");
+  }
+  if (!commit) return unreadable("origin names no commit as its HEAD");
+  let text;
+  try {
+    // ls-tree decides whether the file exists, so a show that fails is never read as "no file", which would mean the defaults. --full-tree: the path counts from the repository root, as in the show, also when dir is a folder below it.
+    if (!run(dir, 'git', ['ls-tree', '--full-tree', '--name-only', commit, '--', FILE]).trim()) return { ...effective({}), absent: true };
+    text = run(dir, 'git', ['show', `${commit}:${FILE}`]);
+  } catch { return unreadable(`git could not read ${FILE} from origin's default branch`); }
+  let doc;
+  try { doc = JSON.parse(text); } catch { return { policy: null, errors: [{ rule: 'bad-json', path: '', message: 'is not valid JSON' }] }; }
+  return effective(doc);
+}
+
+export const errorLine = (e) => `${e.rule}${e.path ? ` at ${e.path}` : ''}: ${e.message}`;
+
+// JSON that holds a path or an issue's text: its control and format characters are written as \u escapes, which a reader of the JSON turns back.
+export const json = (value) => escaped(JSON.stringify(value), (c) => c.split('').map((unit) => `\\u${unit.charCodeAt(0).toString(16).padStart(4, '0')}`).join(''));
+
+// Node resolves symlinks for import.meta.url but keeps process.argv[1] as typed: compared as real paths, the command line also runs through a symlinked folder.
+export const isMain = (url) => { try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(url)); } catch { return false; } };
+if (isMain(import.meta.url)) {
+  try {
+    if (process.argv.length !== 3) throw new Error('usage: node policy.mjs <project path>');
+    const { policy, errors, warnings = [], absent } = read(process.argv[2]);
+    if (absent) console.error(`no ${FILE} on origin's default branch: these defaults start and merge nothing`);
+    for (const e of [...warnings, ...errors]) console.error(errorLine(e));
+    if (policy) console.log(JSON.stringify(policy, null, 2));
+    process.exitCode = policy ? 0 : 1;
+  } catch (e) {
+    console.error(e.message.split('\n')[0]);
+    process.exitCode = 1;
+  }
+}

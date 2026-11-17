@@ -1,8 +1,0 @@
-{
-  "plugins/cedarloom/.claude-plugin/plugin.json": ["app-package"],
-  "plugins/cl-orchestration/skills/orchestrating-projects/recurring-runs.md": ["app-package"],
-  "plugins/cl-orchestration/skills/orchestrating-projects/spec-template.md": ["app-state"],
-  "plugins/cl-setup/skills/reviewing-rules/SKILL.md": ["app-state"],
-  "plugins/cl-setup/skills/setting-up-projects/SKILL.md": ["app-package", "app-state"],
-  "plugins/cl-workflow/skills/ask/SKILL.md": ["app-state"]
-}

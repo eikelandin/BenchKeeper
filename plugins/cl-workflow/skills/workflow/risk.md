@@ -2,7 +2,7 @@
 
 The depth says how hard you work; the risk class says who approves. Write the class under the depth line, before the first edit: `Risk: <low|medium|high> (<reason in a few words>)`.
 
-1. Read the facts: lines and files changed, files under the project's `riskyPaths` (in `docs/agents/orchestration.json` as the default branch has it), dependency manifests and lock files, migrations, and changed code files with no test. Where the `orchestrating-projects` skill is installed, its `risk-facts.mjs` prints them: `node <that skill folder>/risk-facts.mjs <repository path> <base> <head>`. Before the first edit, judge them from the task and the files it will touch.
+1. Read the facts: lines and files changed, files under the project's `riskyPaths` (in `docs/agents/orchestration.json` as the default branch has it), dependency manifests and lock files, migrations, and changed code files with no test. Where the `coordinate` skill is installed, its `risk-facts.mjs` prints them: `node <that skill folder>/risk-facts.mjs <repository path> <base> <head>`. Before the first edit, judge them from the task and the files it will touch.
 2. Rate each low, medium or high:
    - **Impact**: blast radius, how hard the change is to reverse, security or data sensitivity. A file under `riskyPaths` alone makes it high.
    - **Likelihood** of a defect: diff size, novelty, test coverage of the touched files, your confidence.

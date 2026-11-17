@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, rmSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const HOOK = fileURLToPath(new URL('../hooks/role-guard/role-guard.mjs', import.meta.url));
+const ASK = fileURLToPath(new URL('../hooks/ask/ask.mjs', import.meta.url));
 // The hook asks git about the folder it runs in; a GIT_DIR of a surrounding git hook must not answer for it.
 const ENV = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_') && key !== 'CEDARLOOM_ROLE'));
 
@@ -52,11 +53,11 @@ after(() => {
   for (const dir of [trunk, feature, fresh, develop, fork]) rmSync(dir, { recursive: true, force: true });
 });
 
-const run = (input, role, home) =>
-  spawnSync(process.execPath, [HOOK], { input, env: { ...ENV, ...(role !== undefined && { CEDARLOOM_ROLE: role }), ...(home && { HOME: home, USERPROFILE: home }) }, encoding: 'utf8' });
-const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, home, toolInput = { command } } = {}) => {
+const run = (input, role, home, env) =>
+  spawnSync(process.execPath, [HOOK], { input, env: { ...ENV, ...(role !== undefined && { CEDARLOOM_ROLE: role }), ...(home && { HOME: home, USERPROFILE: home }), ...env }, encoding: 'utf8' });
+const decision = (command, { role, cwd = trunk, tool = 'Bash', agent, home, env, toolInput = { command } } = {}) => {
   const input = { hook_event_name: 'PreToolUse', tool_name: tool, tool_input: toolInput, tool_use_id: 'toolu_01', cwd, ...(agent && { agent_id: agent }) };
-  const r = run(JSON.stringify(input), role, home);
+  const r = run(JSON.stringify(input), role, home, env);
   assert.equal(r.status, 0, r.stderr);
   return r.stdout === '' ? 'none' : JSON.parse(r.stdout).hookSpecificOutput.permissionDecision;
 };
@@ -272,6 +273,122 @@ test('role guard: passes a Monitor call on a WebSocket', () => {
 test('role guard: passes everything in the coordinator role, but not in its subagents', () => {
   for (const command of ['gh pr merge 12 --squash', 'git push --tags', 'git stash']) assert.equal(decision(command, { role: 'coordinator' }), 'none', command);
   assert.equal(decision('gh pr merge 12 --squash', { role: 'coordinator', agent: 'agent_01' }), 'deny');
+});
+
+test('role guard: only the session where the user typed /cl-workflow:questions writes into the local question queue', () => {
+  const data = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  const env = { CLAUDE_PLUGIN_DATA: data, CLAUDE_PID: '4242' };
+  const typed = (command_name) => spawnSync(process.execPath, [ASK], { input: JSON.stringify({ hook_event_name: 'UserPromptExpansion', command_name, command_args: '', session_id: 's', cwd: trunk }), env: { ...ENV, ...env }, encoding: 'utf8' }).status;
+  const answer = { file_path: '.cedarloom/questions/project-1.md', old_string: 'Status: open', new_string: 'Status: answered' };
+  const calls = [
+    ['Edit', answer],
+    ['Write', { file_path: join(trunk, '.CedarLoom', 'Questions', 'project-2.md'), content: 'Status: open' }],
+    ['Bash', { command: "sed -i 's/open/answered/' .cedarloom/questions/project-1.md" }],
+  ];
+  const decide = (opts) => calls.map(([tool, toolInput]) => decision(undefined, { tool, toolInput, env, ...opts }));
+  // Every session, the coordinator's included, until the user types the command; a window /cl-workflow:ask opened does not count.
+  for (const role of [undefined, 'worker', 'coordinator']) assert.deepEqual(decide({ role }), ['deny', 'deny', 'deny'], role);
+  assert.equal(typed('cl-workflow:ask'), 0);
+  assert.deepEqual(decide({}), ['deny', 'deny', 'deny']);
+  assert.equal(typed('cl-workflow:questions'), 0);
+  assert.deepEqual(decide({}), ['none', 'none', 'none']);
+  // The window is the process's, so a subagent of that session stays out.
+  assert.deepEqual(decide({ agent: 'agent_01' }), ['deny', 'deny', 'deny']);
+  // No session writes the window files, which would open the window for itself.
+  const forged = join(data, 'ask', '4242.json');
+  for (const opts of [{}, { role: 'coordinator' }]) {
+    assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: forged, content: '{}' }, env, ...opts }), 'deny');
+    assert.equal(decision(`echo '{}' > ~/x/${basename(data)}/ask/4242.json`, { env, ...opts }), 'deny');
+  }
+  // Edits anywhere else pass, also in a guarded session.
+  assert.equal(decision(undefined, { tool: 'Edit', toolInput: { ...answer, file_path: '.cedarloom/runs/handoff.md' }, env }), 'none');
+  assert.equal(decision(undefined, { tool: 'Edit', toolInput: { ...answer, file_path: 'docs/questions/a.md' } }), 'none');
+});
+
+test('role guard: a command reaches the queue or the window files through a cd, a redirection, a copy, a link, quotes or .. too', () => {
+  const data = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  const session = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  mkdirSync(join(session, '.cedarloom', 'questions'), { recursive: true });
+  const env = { CLAUDE_PLUGIN_DATA: data, CLAUDE_PID: '4242' };
+  const denied = [
+    "cd .cedarloom/questions && sed -i 's/open/answered/' project-1.md",
+    'cd .cedarloom/questions; echo "Owner answer (2026-11-15): a." >> project-1.md',
+    'cd .cedarloom && echo x > questions/project-1.md',
+    'cp answer.md .cedarloom/questions && echo done',
+    'mv .cedarloom/questions .cedarloom/q',
+    'rm -r .cedarloom/questions; mkdir -p .cedarloom',
+    'ln -s .cedarloom/questions q',
+    'cat ".cedarloom/questions"/project-1.md',
+    'echo x >> .cedarloom/"questions"/project-1.md',
+    'echo x >> .cedarloom/./questions/project-1.md',
+    'echo x >> .cedarloom/runs/../questions/project-1.md',
+    'echo x >> .cedar\\loom/questions/project-1.md',
+    'echo x >> .cedarloom/*/project-1.md',
+    `cd ${data}/ask && echo x > 4242.json`,
+    `cp w.json "${data}/ask"/4242.json`,
+    `echo x > ${data}/x/../ask/4242.json`,
+  ];
+  for (const command of denied) assert.equal(decision(command, { cwd: session, env }), 'deny', command);
+  for (const command of denied.slice(0, 2)) assert.equal(decision(command, { cwd: session, env, role: 'coordinator' }), 'deny', command);
+  // PowerShell decodes with its own escape, and the backslash separates folders.
+  for (const command of ['cd .cedarloom\\questions; Set-Content project-1.md x', 'Add-Content .cedarloom\\runs\\..\\questions\\project-1.md x', 'Set-Location .cedarloom; Add-Content questions\\project-1.md x']) {
+    assert.equal(decision(command, { tool: 'PowerShell', cwd: session, env }), 'deny', command);
+  }
+  // A command with more cds than the guard follows.
+  assert.equal(decision(`${Array.from({ length: 64 }, (_, i) => `cd d${i}`).join(' && ')} && ls`, { cwd: session, env }), 'deny');
+  // A session whose folder is the queue writes there with any path.
+  assert.equal(decision("sed -i 's/open/answered/' project-1.md", { cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
+  assert.equal(decision('/bin/sh /tmp/answer.sh', { cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
+  assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: 'project-1.md', content: 'x' }, cwd: join(session, '.cedarloom', 'questions'), env }), 'deny');
+  // A session started with the command would hold the flag, in any role.
+  const versioned = ['npx -y @anthropic-ai/claude-code@latest -p "/cl-workflow:questions"', 'npx @anthropic-ai/claude-code@2.1.300 -p /questions', 'pnpm dlx @anthropic-ai/claude-code@latest -p /questions'];
+  for (const role of [undefined, 'coordinator']) {
+    assert.equal(decision('claude -p "/cl-workflow:questions"', { cwd: session, env, role }), 'deny', role);
+    assert.equal(decision("echo '/questions' | claude -p", { cwd: session, env, role }), 'deny', role);
+    // npx names the package with a version, and a Windows npm install starts claude through a script file.
+    for (const command of versioned) assert.equal(decision(command, { cwd: session, env, role }), 'deny', `${role}: ${command}`);
+    for (const command of ['claude.cmd -p /questions', 'claude.ps1 -p /questions', 'claude.bat -p /questions']) assert.equal(decision(command, { tool: 'PowerShell', cwd: session, env, role }), 'deny', `${role}: ${command}`);
+  }
+  // Names that only look alike pass, as do wildcard pairs, cd chains and prose that reach neither folder.
+  const alike = [
+    'cd docs && echo x > questions.md',
+    'grep -rn /cl-workflow:questions plugins',
+    'cat .cedarloom/questions-old/a.md',
+    'grep -n "/questions" CLAUDE.md',
+    'grep -rn "/cl-workflow:questions" plugins/cl-workflow/hooks/claude-code.json',
+    'ls */*',
+    'du -sh */*',
+    'ls plugins/*/*',
+    'cat packages/*/*/package.json',
+    'rm -rf dist/*/*',
+    'for d in */*; do echo $d; done',
+    "find . -path '*/*' -name x",
+    'npx prettier --check "**/*"',
+    'npx eslint "src/**/*"',
+    "cat > docs/setup.md <<'EOF'\nRun cd web before npm ci.\nThen cd .. and start again.\nUse cd packages/ui for the UI tests.\nEOF",
+    Array.from({ length: 6 }, (_, i) => `cd p${i} && make && cd ..`).join(' && '),
+    'cd a && cd b && cd c && cd d && cd e && cd f && cd g && ls',
+  ];
+  for (const command of alike) assert.equal(decision(command, { cwd: session, env }), 'none', command);
+  assert.equal(decision('Get-ChildItem *\\*', { tool: 'PowerShell', cwd: session, env }), 'none');
+});
+
+test('role guard: every path field of the edit tools is read, resolved from the session folder', () => {
+  const data = mkdtempSync(join(tmpdir(), 'role-guard-'));
+  const env = { CLAUDE_PLUGIN_DATA: data, CLAUDE_PID: '4242' };
+  const edit = (toolInput, opts) => decision(undefined, { tool: 'Edit', toolInput, env, ...opts });
+  // The coordinator's main session skips the role rules, so only the queue rule refuses these.
+  assert.equal(decision(undefined, { tool: 'MultiEdit', toolInput: { file_path: '.cedarloom/questions/project-1.md', edits: [] }, env, role: 'coordinator' }), 'deny');
+  assert.equal(decision(undefined, { tool: 'NotebookEdit', toolInput: { notebook_path: '.cedarloom/questions/a.ipynb', new_source: 'x' }, env, role: 'coordinator' }), 'deny');
+  assert.equal(decision(undefined, { tool: 'NotebookEdit', toolInput: { file_path: 'docs/a.ipynb', notebook_path: '.cedarloom/questions/a.ipynb', new_source: 'x' }, env }), 'deny');
+  assert.equal(edit({ old_string: 'a', new_string: 'b' }), 'deny');
+  assert.equal(edit({ file_path: 7, old_string: 'a', new_string: 'b' }), 'deny');
+  assert.equal(edit({ file_path: './questions/project-1.md', old_string: 'a', new_string: 'b' }, { cwd: join(trunk, '.cedarloom') }), 'deny');
+  assert.equal(edit({ file_path: join(data, 'x', '..', 'ask', '4242.json'), old_string: 'a', new_string: 'b' }), 'deny');
+  // The window files under a plugin data folder named with a trailing / or a /./.
+  for (const named of [`${data}/`, `${data}/./`]) {
+    assert.equal(decision(undefined, { tool: 'Write', toolInput: { file_path: join(data, 'ask', '4242.json'), content: '{}' }, env: { ...env, CLAUDE_PLUGIN_DATA: named } }), 'deny', named);
+  }
 });
 
 test('role guard: input it cannot read exits 2, which blocks the call', () => {

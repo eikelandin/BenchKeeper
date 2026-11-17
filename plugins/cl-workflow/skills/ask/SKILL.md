@@ -11,6 +11,6 @@ writes: "One file per Claude Code process in the plugin's data folder (ask/<proc
 
 By default the plugin's hook refuses the question tool and plan mode, and open questions go into the issue tracker the project names, else the report. This command opens a window for them: alone for 30 minutes, `for <n>m` or `for <n>h`, `until HH:MM` (local time, the next such time), or `off` to end it early. The window ends at that time or when Claude Code quits; `/clear`, compaction and a fork keep it, a resumed conversation starts with it closed.
 
-The plugin's hook has already set the window and added the mode above as context. Answer with that line alone. When no such line is there, the hook did not run: say so in one line and name `cedarloom-app doctor`, which reports hooks turned off.
+The plugin's hook has already set the window and added the mode above as context. Answer with that line alone. When no such line is there, the hook did not run: say so in one line.
 
 Codex runs none of the question hooks, so there this command changes nothing.

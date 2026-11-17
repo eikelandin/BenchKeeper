@@ -1,82 +1,42 @@
 # Stack
 
-CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/cl-workflow), [setup](../plugins/cl-setup) and [orchestration](../plugins/cl-orchestration), installed together by the [cedarloom](../plugins/cedarloom) bundle). Install steps: [README](../README.md#install).
-
-The rest of this page describes what the BenchKeeper app (`benchkeeper` on npm; its source is on the branch `archive/pre-cedarloom-0.1`) sets up for what a plugin cannot carry (project setup, the global rules and settings, history and undo), which a command-line tool and browser UI replace in 0.2: the components, where each file lives and why these were chosen.
+CedarLoom 0.1 ships as plugins for Claude Code and Codex ([workflow](../plugins/cl-workflow), [repo](../plugins/cl-repo) and [orchestration](../plugins/cl-orchestration), installed together by the [cedarloom](../plugins/cedarloom) bundle). Install steps: [README](../README.md#install).
 
 ## Components
 
 | Component | Scope | Purpose |
 |---|---|---|
-| [Dev Containers](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli) | tooling on host, configuration per repo | the agent runs inside the container by default; `--env` also offers the agent on the host with project commands in the container, a Docker Sandboxes microVM (untested), or no container |
-| [Ponytail](https://github.com/DietrichGebert/ponytail), level `full`, optional | the `ponytail` pack: global plugin in both agents, its level written when the pack is chosen | implementation simplicity |
+| [Dev Containers](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli) | tooling on host, configuration per repo | project commands run in the container, whose configuration `setup` writes |
+| [Ponytail](https://github.com/DietrichGebert/ponytail), optional | global plugin, installed separately | implementation simplicity |
 | [workflow](../plugins/cl-workflow/skills/workflow/SKILL.md) | global, Claude + Codex | task kind (software change, docs pass, research) and depth (quick, standard, deep), pre-push correctness review, security review for risky changes; uses installed skills that match a step |
-| [find-skills](https://github.com/vercel-labs/skills) | global | skill search, used by `setting-up-projects` |
-
-Per repo, committed: `.devcontainer/`, `AGENTS.md` (your own text), `docs/agents/` (issue tracker, triage labels and domain docs), `.mcp.json`, `.codex/config.toml`. Local by default, listed in `.git/info/exclude` (committed with `--share`): `CLAUDE.local.md` (shared: `CLAUDE.md`), `AGENTS.override.md`, `.agents/skills/` and `.claude/skills/` (library and stack skills), `skills-lock.json`, `.benchkeeper/`, and `.worktreeinclude`, which lists them for new worktrees (with `--share` it lists only the personal files).
-
-Global (per machine): the rules, the BenchKeeper plugin, the plugins of the packs chosen (Ponytail), find-skills, settings.
-
-With the `ponytail` pack, another Ponytail level for the current session: `/ponytail lite` or `/ponytail ultra` (Claude Code).
 
 ## Contents
 
 | Path | What | Linked as |
 |---|---|---|
 | [.claude-plugin/marketplace.json](../.claude-plugin/marketplace.json) | the marketplace, read by Claude Code and Codex | `$HOME/.claude/plugins/`, `$HOME/.codex/plugins/` |
-| [plugins/cl-setup/rules/project.md](../plugins/cl-setup/rules/project.md) | repository rules (standard level and up) | the CedarLoom block `setting-up-projects` writes, and part of the project block the app writes (`CLAUDE.local.md`, `AGENTS.override.md`, or `AGENTS.md` with `--share`) |
-| [plugins/cl-orchestration/rules/worker.md](../plugins/cl-orchestration/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `orchestrating-projects`; no setup installs it as a rule file |
-| `benchkeeper` (source on the branch `archive/pre-cedarloom-0.1`) | the installer: global setup, project setup, history and undo, CLI and browser UI | `npx benchkeeper@6.27.0` |
-| [plugins/cl-setup/skills/setting-up-projects](../plugins/cl-setup/skills/setting-up-projects/SKILL.md) | set up or update one repo after `projects apply`: devcontainer, the project parts of AGENTS.md with footgun docs (`docs/agents/`), stack skills, other configuration to remove | plugin skill `cl-setup:setting-up-projects` |
+| [plugins/cl-repo/rules/project.md](../plugins/cl-repo/rules/project.md) | repository rules (standard level and up) | the CedarLoom block `setup` writes |
+| [plugins/cl-orchestration/rules/worker.md](../plugins/cl-orchestration/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `coordinate`; no setup installs it as a rule file |
+| [plugins/cl-repo/skills/setup](../plugins/cl-repo/skills/setup/SKILL.md) | set up or update one repo: devcontainer, the project parts of AGENTS.md with footgun docs (`docs/agents/`), stack skills, other configuration to remove | plugin skill `cl-repo:setup` |
 | [plugins/cl-workflow/skills/workflow](../plugins/cl-workflow/skills/workflow/SKILL.md) | task kind and depth, then the playbook for software changes, docs passes or research, batch mode, long checks at the end | plugin skill `cl-workflow:workflow` |
-| [plugins/cl-workflow/agents](../plugins/cl-workflow/agents) | the phase agents the workflow starts at standard and deep (plan, implement, test, review) and per item when research runs items in parallel, each with its effort and tools; the workflow skill passes the model in the call | Claude Code plugin agents `cl-workflow:<role>`; Codex and app installs use general subagents |
+| [plugins/cl-workflow/agents](../plugins/cl-workflow/agents) | the phase agents the workflow starts at standard and deep (plan, implement, test, review) and per item when research runs items in parallel, each with its effort and tools; the workflow skill passes the model in the call | Claude Code plugin agents `cl-workflow:<role>`; Codex uses general subagents |
 | [plugins/cl-workflow/hooks/tier](../plugins/cl-workflow/hooks/tier/register.tsx) | the optional status band in the Claude Code terminal and desktop app: project, branch and Ponytail's level, the last test run and lint or type check with the edits since, ASK while terminal questions are allowed ([plugins](plugins.md#the-status-band)) | Claude Code plugin option `tierBand`, off by default |
-| [plugins/cl-orchestration/hooks/rotation](../plugins/cl-orchestration/hooks/rotation/register.ts) | clears an idle coordinator of `orchestrating-projects` above a context threshold or after a number of settled Orca tasks and hands its handoff file back after a clear or compaction; only with that file ([plugins](plugins.md#coordinator-context-rotation)) | Claude Code plugin options `rotateAtTokens` (200000), `rotateAtPercent` (off) and `rotateAfterTasks` (off); the restore also as a Codex `SessionStart` hook |
+| [plugins/cl-orchestration/hooks/rotation](../plugins/cl-orchestration/hooks/rotation/register.ts) | clears an idle coordinator of `coordinate` above a context threshold and hands its handoff file back after a clear or compaction; only in the session whose id that file names ([plugins](plugins.md#coordinator-context-rotation)) | Claude Code plugin options `rotateAtTokens` (200000) and `rotateAtPercent` (off); the restore also as a Codex `SessionStart` hook |
 | [plugins/cl-workflow/skills/ask](../plugins/cl-workflow/skills/ask/SKILL.md) | allows terminal questions for a while (`for 30m`, `until HH:MM`, `off`) | plugin skill `/cl-workflow:ask`, user-invoked |
-| [plugins/cl-workflow/skills/questions](../plugins/cl-workflow/skills/questions/SKILL.md) | asks the open question issues of the hub repository in batches, records each answer, keeps deferred ones out of the queue, and allows terminal questions for the session | plugin skill `/cl-workflow:questions`, user-invoked |
+| [plugins/cl-workflow/skills/questions](../plugins/cl-workflow/skills/questions/SKILL.md) | asks the open owner questions of this repository and the local queue in batches, records each answer, keeps deferred ones out of the queue, and allows terminal questions for the session | plugin skill `/cl-workflow:questions`, user-invoked |
 | [plugins/cl-workflow/hooks/ask](../plugins/cl-workflow/hooks/ask/ask.mjs) | refuses the question tool and plan mode outside the window `/cl-workflow:ask` or `/cl-workflow:questions` opens, sets that window, adds one line on the mode at session start ([plugins](plugins.md#terminal-questions)) | Claude Code plugin hooks, always on |
 | [plugins/cl-workflow/hooks/role-guard](../plugins/cl-workflow/hooks/role-guard/role-guard.mjs) | denies merge, release, tag push, a push to the default branch, repository settings and security, `gh auth`, `git config` writes, `git stash` and `claude --bare` in a session that does not run as the coordinator and in every subagent ([plugins](plugins.md#role-guard)) | Claude Code plugin hook, always on; `CEDARLOOM_ROLE=coordinator` lifts it |
-| [plugins/cl-setup/skills/maintaining-repos](../plugins/cl-setup/skills/maintaining-repos/SKILL.md) | the Maintain pass on request: dead code and duplicates, dependency cycles, test audit by mutation, debt, dependency audit, version pins, docs drift, unused skills | plugin skill `cl-setup:maintaining-repos` |
-| [plugins/cl-orchestration/skills/orchestrating-projects](../plugins/cl-orchestration/skills/orchestrating-projects/SKILL.md) | the coordinator on request: workers on labeled issues, projects in parallel, each pull request reviewed by a fresh reviewer, merge and cleanup by each repository's written policy | plugin skill `cl-orchestration:orchestrating-projects` |
-| [plugins/cl-setup/skills/reviewing-rules](../plugins/cl-setup/skills/reviewing-rules/SKILL.md) | reviews one rule file on request for contradictions, vague lines, lines a tool could enforce and lines that restate the code; changes nothing | plugin skill `/cl-setup:reviewing-rules`, user-invoked |
-| [plugins/cl-setup/skills/audit](../plugins/cl-setup/skills/audit/SKILL.md) | reports findings in agent instructions, docs or code with `file:line`, the exact quote, a pattern and a confidence; changes nothing | plugin skill `/cl-setup:audit`, user-invoked |
-| [plugins/cl-setup/skills/improve](../plugins/cl-setup/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-setup:improve`, user-invoked |
-| [plugins/cl-setup/skills/debloat](../plugins/cl-setup/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-setup/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-setup:debloat`, user-invoked; the script also runs the `token-budget` CI job |
-| [CHANGELOG.md](../CHANGELOG.md) | setup versions up to 6.25; then the app's changelog (tags `app-v*`, on the branch `archive/pre-cedarloom-0.1`) and the changelog of each plugin, `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`, content up to 6.27 under `setup-v*`), see [Releasing](releasing.md) | not linked |
-| [web](../web) | the site (Astro, Mantine), deployed to GitHub Pages | not linked |
+| [plugins/cl-repo/skills/maintain](../plugins/cl-repo/skills/maintain/SKILL.md) | the Maintain pass on request: dead code and duplicates, dependency cycles, test audit by mutation, debt, dependency audit, version pins, docs drift, unused skills | plugin skill `cl-repo:maintain` |
+| [plugins/cl-orchestration/skills/coordinate](../plugins/cl-orchestration/skills/coordinate/SKILL.md) | the coordinator on request: workers on labeled issues, projects in parallel, each pull request reviewed by a fresh reviewer, merge and cleanup by each repository's written policy | plugin skill `cl-orchestration:coordinate` |
+| [plugins/cl-repo/skills/audit](../plugins/cl-repo/skills/audit/SKILL.md) | reports findings in agent instructions (one rule file included), docs or code with `file:line`, the exact quote, a pattern and a confidence; changes nothing | plugin skill `/cl-repo:audit`, user-invoked |
+| [plugins/cl-repo/skills/improve](../plugins/cl-repo/skills/improve/SKILL.md) | turns audit findings into one diff per finding and applies the approved ones, with the text before and after as evidence | plugin skill `/cl-repo:improve`, user-invoked |
+| [plugins/cl-repo/skills/debloat](../plugins/cl-repo/skills/debloat/SKILL.md) | measures tokens, keeps protected text and cuts whole lines from a plan its script checks ([token-budget.mjs](../plugins/cl-repo/skills/debloat/token-budget.mjs)); in code, removes what the repository's checks prove unused | plugin skill `/cl-repo:debloat`, user-invoked; the script also runs the `token-budget` CI job |
+| [CHANGELOG.md](../CHANGELOG.md) | the changelog up to 6.25 and the tags `setup-v*` and `app-v*` up to 6.27; each plugin keeps its own in `plugins/*/CHANGELOG.md` (Releases `cedarloom-v*`), see [Releasing](releasing.md) | not linked |
 
 ## How this stack was selected
 
-<!-- generated:reasons -->
 - Checks by depth: every change runs the checks and reviews its depth names: the tests of the touched code after each edit, a review before pushing for standard and deep work.
 - Long checks last: the full suite, end-to-end tests and builds run once after the last edit, in a subagent that returns only failures and key lines.
 - Simplicity: the optional Ponytail pack adds a plugin that steers the agent to the smallest complete change.
 - Skills by level: the full flow runs only for deep work. Small changes load one targeted skill.
 - One install: one machine setup covers every repository. Each repository adds only its tracker, docs and stack.
-<!-- /generated:reasons -->
-
-## Recommended tools (optional)
-
-Not installed by BenchKeeper.
-
-**Parallel agents: pick one.** Orca, Nimbalyst and cmux each manage several agent sessions side by side. Running two duplicates the sessions and worktrees they track for the same repositories.
-
-<!-- generated:tools -->
-| Tool | Platforms | Gives you | Choose it when |
-|---|---|---|---|
-| [Orca](https://github.com/stablyai/orca) | macOS, Windows, Linux | one git worktree per agent, the same prompt across agents; terminal splits, SSH remote worktrees, mobile app; the app offers its `orca-cli` and `orchestration` skills | you want terminal-based parallel agents with worktrees, remote machines or mobile access |
-| [Nimbalyst](https://github.com/Nimbalyst/nimbalyst) | macOS, Windows, Linux | parallel sessions on a kanban board, one-click worktree per session; every agent edit arrives as a diff you approve or reject; visual editors (Markdown, CSV, mockups, diagrams), task tracking, iOS app | you review changes visually and work on docs, mockups and tasks next to the agents |
-| [cmux](https://github.com/manaflow-ai/cmux) | macOS only | Ghostty-based terminal with vertical tabs; notifications when an agent needs input and a sidebar with branch, PR status and ports; browser pane inside the terminal | you are on macOS and want a terminal without a separate app |
-<!-- /generated:tools -->
-
-Orca only: the app offers the `orca-cli` and `orchestration` skills. Existing Orca skills and hooks are kept ([Orca skill installation](https://github.com/stablyai/orca/blob/main/docs/site/content/docs/cli/skills.mdx)).
-
-<!-- generated:openhands -->
-**Unattended or isolated runs: [OpenHands](https://github.com/OpenHands/OpenHands).** A self-hosted agent server with a web UI that runs work without you at the terminal.
-
-- Each conversation can run in its own Docker container (`OH_CONVERSATION_RUNTIME=docker`), an isolation option BenchKeeper does not provide.
-- Runs its own agent or hosts Claude Code, Codex and Gemini CLI.
-- Automations on a schedule or on webhook events (GitHub, Slack, Linear), for example splitting GitHub issues into tasks.
-- Without a sandbox, the local agent has full access to your filesystem.
-- Unverified: whether agents inside its containers load the BenchKeeper rules and skills, which are installed on the host.
-<!-- /generated:openhands -->

@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { costs, costTable, facts, jobs } from '../skills/orchestrating-projects/facts.mjs';
+import { costs, costTable, facts, jobs } from '../skills/coordinate/facts.mjs';
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/facts/', import.meta.url));
-const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/facts.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../skills/coordinate/facts.mjs', import.meta.url));
 const RUN = join(FIXTURES, 'run');
 const NOW = Date.parse('2026-11-13T12:00:00Z');
 const COMMANDS = JSON.parse(readFileSync(join(FIXTURES, 'commands.json'), 'utf8'));
@@ -21,7 +21,7 @@ const fake = (commands) => (cmd, args) => {
   if (found.exit) throw Object.assign(new Error('exit'), { status: found.exit, stdout, stderr: found.stderr ?? '' });
   return stdout;
 };
-const write = (commands) => facts({ run: RUN, repos: ['octo/app', 'octo/lib'], tracker: 'octo/tracker', labels: ['project:app'], accounts: true, now: NOW, exec: fake(commands), alive: (pid) => pid === 4242 });
+const write = (commands) => facts({ run: RUN, repos: ['octo/app', 'octo/lib'], approvals: ['octo/app'], accounts: true, now: NOW, exec: fake(commands), alive: (pid) => pid === 4242 });
 
 test('facts: job files, gh and cswap output give the expected facts.md', () => {
   assert.equal(write(COMMANDS), readFileSync(join(FIXTURES, 'facts.md'), 'utf8'));
@@ -32,7 +32,39 @@ test('facts: a failing gh call reads unread in its own section only', () => {
   assert.ok(text.includes('### octo/app\n\nunread\n\n### octo/lib\n'));
   assert.ok(text.includes('| 20 | feat: lib | 9d9d9d9 | UNKNOWN | none | unread | - |'));
   assert.ok(text.includes('## Accounts\n\nunread\n\n## Main'));
-  assert.ok(text.includes('| 41 | project:app | ready-for-human | a | 2026-11-13T09:00Z |'));
+  assert.ok(text.includes('| 41 | cedarloom:ready-for-agent | a | 2026-11-13T09:00Z |'));
+});
+
+test('facts: an open question with an answer an agent recorded or the owner commented on GitHub loses cedarloom:needs-human and gains cedarloom:ready-for-agent; one without an answer or with another login\'s keeps its labels', () => {
+  const edits = [];
+  const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake(COMMANDS)(cmd, args); };
+  facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
+  assert.deepEqual(edits, [
+    'issue edit 41 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent',
+    'issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent',
+  ]);
+  // A failed edit shows in the row, and the next run tries again.
+  const failed = write({ ...COMMANDS, 'gh issue edit 41 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent': { exit: 1 } });
+  assert.ok(failed.includes('| 41 | cedarloom:needs-human, label edit failed | a | 2026-11-13T09:00Z |'));
+});
+
+test('facts: a Head comment that lands between the open and the recent read voids the answer of an open question', () => {
+  const key = 'gh issue list -R octo/app --state all --search updated:>=2026-11-12 --limit 200 --json number,state,labels,comments,author,body';
+  const recent = COMMANDS[key].out.map((i) => (i.number === 41 ? { ...i, comments: [...i.comments, { author: { login: 'coordinator' }, authorAssociation: 'OWNER', body: 'Head: abc1234', createdAt: '2026-11-13T11:00:00Z' }] } : i));
+  const edits = [];
+  const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake({ ...COMMANDS, [key]: { out: recent } })(cmd, args); };
+  facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
+  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent']);
+});
+
+test('facts: an open question rejected and closed between the open and the recent read gets no label edit and reads closed', () => {
+  const key = 'gh issue list -R octo/app --state all --search updated:>=2026-11-12 --limit 200 --json number,state,labels,comments,author,body';
+  const recent = COMMANDS[key].out.map((i) => (i.number === 41 ? { ...i, state: 'CLOSED', comments: [{ ...i.comments[0], body: 'Owner answer (2026-11-13): b. Not needed.' }] } : i));
+  const edits = [];
+  const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake({ ...COMMANDS, [key]: { out: recent } })(cmd, args); };
+  const text = facts({ run: RUN, repos: ['octo/app'], approvals: ['octo/app'], now: NOW, exec });
+  assert.deepEqual(edits, ['issue edit 46 -R octo/app --remove-label cedarloom:needs-human --add-label cedarloom:ready-for-agent']);
+  assert.ok(text.includes('| 41 | closed | b | 2026-11-13T09:00Z |'));
 });
 
 test('facts costs: per merged pull request the summed job cost and the changes rounds, with totals and medians', () => {

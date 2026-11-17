@@ -2,7 +2,7 @@
 export const RUNS = '.cedarloom/runs';
 export const FILE = `${RUNS}/handoff.md`;
 export const STATUS = ['<!-- cedarloom:status -->', '<!-- /cedarloom:status -->'];
-const HEADER = "CedarLoom restored this coordinator's handoff file after a context clear or compaction (.cedarloom/runs/handoff.md, below). Before anything else, run its Resume steps: the runner's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
+const HEADER = "CedarLoom restored this coordinator's handoff file after a context clear or compaction (.cedarloom/runs/handoff.md, below). Before anything else, run its Resume steps: Orca's mail first, then the run's state. Then go on from its Next section and keep the file current in your own words, never pasting worker or issue text. If the run it names has closed, delete the file.";
 // Claude Code drops additionalContext above 10,000 characters: the header, this much of the file and drift together and
 // the cut line stay below.
 const CAP = 9000;
@@ -10,11 +10,23 @@ const DRIFT_CAP = 1500;
 const DRIFT_LINES = 20;
 const LINE_MAX = 200;
 
-// Whether the file is this session's: every Terminal: line of its header (before the first ## heading) names this terminal, and one does.
-export const mine = (text, terminal) => {
-  const header = text.split(/^## /m)[0].split('\n');
-  const claims = header.filter((line) => line.startsWith('Terminal:')).map((line) => unquoted(line.slice('Terminal:'.length)));
-  return Boolean(terminal) && claims.length > 0 && claims.every((claim) => claim === terminal);
+const SESSION = 'Session:';
+// The header (before the first ## heading) and the rest of the text.
+const parts = (text) => {
+  const at = /^## /m.exec(text)?.index ?? text.length;
+  return [text.slice(0, at), text.slice(at)];
+};
+
+// Whether the file is this session's: every Session: line of its header names this session id, and one does.
+export const mine = (text, session) => {
+  const claims = parts(text)[0].split('\n').filter((line) => line.startsWith(SESSION)).map((line) => unquoted(line.slice(SESSION.length)));
+  return Boolean(session) && claims.length > 0 && claims.every((claim) => claim === session);
+};
+
+// The text with every Session: line of its header naming this session id instead, each keeping its line ending.
+export const claimed = (text, session) => {
+  const [header, rest] = parts(text);
+  return header.split('\n').map((line) => (line.startsWith(SESSION) ? `${SESSION} ${session}${line.endsWith('\r') ? '\r' : ''}` : line)).join('\n') + rest;
 };
 
 // The value without spaces and surrounding backticks; no regular expression, so a long line costs linear time.
@@ -34,10 +46,11 @@ export const statusBlock = (text) => {
 };
 
 // FNV-1a (8 hex digits) of the text outside the status block, trimmed since appending the block adds blank lines: the
-// plugin's status line carries it, so the next status line can tell whether the coordinator changed the file since.
+// plugin's status line carries it, so the next status line can tell whether the coordinator changed the file since. The
+// Session: lines do not count: the plugin moves them to a new session id, which is no edit by the coordinator.
 export const fingerprint = (text) => {
   const at = statusBlock(text);
-  const outside = (at === null ? text : text.slice(0, at[0]) + text.slice(at[1])).trim();
+  const outside = claimed(at === null ? text : text.slice(0, at[0]) + text.slice(at[1]), '').trim();
   let hash = 0x811c9dc5;
   for (let i = 0; i < outside.length; i++) hash = Math.imul(hash ^ outside.charCodeAt(i), 0x01000193);
   return (hash >>> 0).toString(16).padStart(8, '0');

@@ -1,24 +1,36 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { answer, missing } from '../skills/orchestrating-projects/approval.mjs';
+import { answer, missing } from '../skills/coordinate/approval.mjs';
 
-const SKILL = '../skills/orchestrating-projects/';
+const SKILL = '../skills/coordinate/';
 const WHAT = 'What: Approve the design of the streamed export (plan: docs/plans/export.md).';
 const MERGES = '| Merges | the coordinator after green checks; .github stays for the owner |';
 const COST = '| Cost | 2 worker sessions, about 3 hours (unverified) |';
 const STREAM = '| (a) Stream the export (Recommended) | Both PRs start | More code to review |';
 const HOLD = '| (b) Hold | Nothing changes | The export stays slow |';
+const RECOMMENDED = 'Recommended: (a) Stream the export, because its memory use stays flat for any row count';
 const WHY = 'Why now: issue 12 waits on it.';
 const FILLED = `${WHAT}
 
+Context: Exports of more than 200,000 rows fail, as the export builds the whole file in memory.
+
+| Option | Impact | Trade-off |
+|---|---|---|
+${STREAM}
+${HOLD}
+
+${RECOMMENDED}
+Source: docs/plans/export.md
+Confidence: high
+${WHY}
+
 | Approval | |
 |---|---|
-| Recommended | (a) Stream the export, confidence high |
 | Work if approved | 2 PRs, each under 1,000 lines, in owner/project; the reader first |
 | Runs on | opus xhigh; phases: plan opus high, implement opus high, test sonnet high, review opus high, depth xhigh |
 | Review | fresh reviewer per PR at xhigh, plus the security review |
@@ -26,20 +38,14 @@ ${MERGES}
 | Owner steps | none |
 ${COST}
 | Undo | revert each PR |
-| Answer | comment "a", "b" or free text, or run /cl-workflow:questions |
 
-| Option | What happens | Trade-off |
-|---|---|---|
-${STREAM}
-${HOLD}
-
-${WHY}
+Answer: comment "a", "b" or free text, or run /cl-workflow:questions
 `;
 
 // A variant must differ from the filled text, or its case would pass on the text that passes.
 const swap = (from, to) => { assert.ok(FILLED.includes(from), from); return FILLED.replace(from, to); };
 const NO_COST = swap(`${COST}\n`, '');
-const APPROVAL = FILLED.slice(FILLED.indexOf('| Approval | |'), FILLED.indexOf('\n\n| Option'));
+const APPROVAL = FILLED.slice(FILLED.indexOf('| Approval | |'), FILLED.indexOf('\n\nAnswer:'));
 
 const CASES = [
   ['the filled text', FILLED, []],
@@ -64,8 +70,14 @@ const CASES = [
   ['a deferral as a link text whose target holds a bracket', swap(COST, '| Cost | [TBD](x]y) |'), ['Cost']],
   ['a deferral after a zero-width space', swap(COST, '| Cost | ​TBD |'), ['Cost']],
   ['the Approval table inside a multi-line HTML comment', swap(APPROVAL, `<!--\n${APPROVAL}\n-->`),
-    ['Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer']],
-  ['a Recommended row that names another option than the first', swap('| Recommended | (a) Stream the export, confidence high |', '| Recommended | (b) Hold, confidence high |'), ['Recommended']],
+    ['Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo']],
+  ['a Recommended line that names another option than the first', swap(RECOMMENDED, 'Recommended: (b) Hold, because nothing else changes'), ['Recommended']],
+  ['a second Recommended line that names another option', swap(RECOMMENDED, `${RECOMMENDED}\nRecommended: (b) Hold, because nothing else changes`), ['Recommended']],
+  ['no Recommended line', swap(`${RECOMMENDED}\n`, ''), ['Recommended']],
+  ['no Context line', swap('Context: Exports', 'Exports'), ['Context']],
+  ['no Source line', swap('Source: docs/plans/export.md\n', ''), ['Source']],
+  ['a placeholder as Confidence', swap('Confidence: high', 'Confidence: <high, medium or low>'), ['Confidence']],
+  ['no Answer line', swap('Answer: comment', 'Comment'), ['Answer']],
   ['a second Approval table with an empty row', `${FILLED}\n| Approval | |\n|---|---|\n| Cost | |\n`, ['Cost']],
   ['a row twice, once empty', swap(COST, `| Cost | |\n${COST}`), ['Cost']],
   ['no What line', swap(`${WHAT}\n`, ''), ['What']],
@@ -77,14 +89,15 @@ const CASES = [
   ['the marked option not first', swap(`${STREAM}\n${HOLD}`, `${HOLD}\n${STREAM}`), ['Options']],
   ['two options marked', swap('| (b) Hold |', '| (b) Hold (Recommended) |'), ['Options']],
   ['a placeholder in the options table', swap('| More code to review |', '| <trade-off> |'), ['Options']],
-  ['an option without What happens', swap(HOLD, '| (b) Hold | | The export stays slow |'), ['Options']],
+  ['an option without Impact', swap(HOLD, '| (b) Hold | | The export stays slow |'), ['Options']],
+  ['an option without Trade-off', swap(HOLD, '| (b) Hold | Nothing changes | |'), ['Options']],
   ['two options with one label', swap('| (b) Hold |', '| (a) Hold |'), ['Options']],
   ['two options with one label in two cases', swap('| (b) Hold |', '| (A) Hold |'), ['Options']],
   ['an option without a label', swap('| (b) Hold |', '| Hold |'), ['Options']],
-  ['front matter left in', `---\nlabels: question, ready-for-human\n---\n\n${FILLED}`, ['Front matter']],
-  // Every part of the template holds a placeholder: the Answer row depends on where the issue lands.
+  ['front matter left in', `---\nlabels: cedarloom:needs-human\n---\n\n${FILLED}`, ['Front matter']],
+  // Every part of the template holds a placeholder: the Answer line depends on where the issue lands.
   ['the unfilled template', readFileSync(new URL(`${SKILL}approval-template.md`, import.meta.url), 'utf8'),
-    ['Front matter', 'What', 'Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer', 'Options', 'Why now']],
+    ['What', 'Context', 'Recommended', 'Source', 'Confidence', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Options', 'Why now', 'Answer']],
 ];
 
 // A comment as `gh issue view --json comments` prints it.
@@ -151,7 +164,7 @@ const ANSWERS = [
   ['free text that is no label is none', [said('a, go ahead', '2026-11-11T10:00:00Z'), said('(a', '2026-11-11T10:30:00Z'), said('Looks good', '2026-11-11T11:00:00Z')], null],
   ['an option without a full stop is cut at 200 characters', [said(`Owner answer (2026-11-11): ${'x'.repeat(300)}`, '2026-11-11T10:00:00Z')], { option: 'x'.repeat(200), text: '', at: '2026-11-11T10:00:00Z' }],
 ];
-for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'question' }], author: { login: 'owner' }, body, comments }, writes), expected));
+for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'cedarloom:needs-human' }], author: { login: 'owner' }, body, comments }, writes), expected));
 
 test('approval: the command line counts a member\'s answer only with write access to the repository the issue URL names', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
@@ -178,6 +191,41 @@ test('approval: the command line counts a member\'s answer only with write acces
   assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
 });
 
+test('approval: apply moves a question the owner answered to cedarloom:ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
+  const labels = [{ name: 'cedarloom:needs-human' }, { name: 'CedarLoom:Deferred' }, { name: 'bug' }];
+  const run = (comments, { body = 'Which export format?', tags = labels, args = [] } = {}) => {
+    writeFileSync(join(bin, 'issue.json'), JSON.stringify({ number: 12, labels: tags, author: { login: 'coordinator' }, body, comments }));
+    writeFileSync(join(bin, 'log'), '');
+    writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" >> '${bin}/log'\ncase "$1 $2" in\n'issue view') cat '${bin}/issue.json' ;;\n'api '*) echo '{"permission":"read"}' ;;\nesac\n`, { mode: 0o755 });
+    const r = spawnSync(process.execPath, [script, 'apply', ...(args.length ? args : ['owner/tracker', '12'])], { encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+    return { ...r, edits: readFileSync(join(bin, 'log'), 'utf8').split('\n').filter((line) => line.startsWith('issue edit')) };
+  };
+  // The answer the questions skill has just posted.
+  const answered = run([SECOND]);
+  assert.equal(answered.status, 0, answered.stderr);
+  assert.deepEqual(JSON.parse(answered.stdout), { ...GO, labels: ['bug', 'cedarloom:ready-for-agent'] });
+  assert.deepEqual(answered.edits, ['issue edit 12 -R owner/tracker --remove-label cedarloom:needs-human --remove-label CedarLoom:Deferred --add-label cedarloom:ready-for-agent']);
+  // An approval's work lives in what it names: it gets no start label.
+  const approval = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED });
+  assert.equal(approval.status, 0, approval.stderr);
+  assert.deepEqual(approval.edits, ['issue edit 12 -R owner/tracker --remove-label cedarloom:needs-human --remove-label CedarLoom:Deferred']);
+  // An approval that carries the start label loses it, or the precheck lists it as work to start.
+  const started = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED, tags: [{ name: 'cedarloom:needs-human' }, { name: 'cedarloom:ready-for-agent' }, { name: 'bug' }] });
+  assert.equal(started.status, 0, started.stderr);
+  assert.deepEqual(JSON.parse(started.stdout), { option: 'a', text: '', at: '2026-11-11T10:00:00Z', labels: ['bug'] });
+  assert.deepEqual(started.edits, ['issue edit 12 -R owner/tracker --remove-label cedarloom:needs-human --remove-label cedarloom:ready-for-agent']);
+  for (const comments of [[], [{ ...SECOND, authorAssociation: 'COLLABORATOR' }], [{ ...SECOND, authorAssociation: 'MEMBER' }]]) {
+    const open = run(comments);
+    assert.deepEqual([open.status, open.stdout, open.edits], [1, '', []]);
+  }
+  for (const args of [['owner/tracker'], ['owner', '12'], ['owner/tracker', '12x']]) {
+    const refused = run([SECOND], { args });
+    assert.deepEqual([refused.status, refused.edits], [2, []]);
+  }
+});
+
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
@@ -200,4 +248,86 @@ test('approval: the command line refuses a file outside the run folder with exit
   mkdirSync(join(linkedRuns, '.cedarloom'));
   symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom/runs'));
   assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
+});
+
+test('approval: without a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  // The working folder of the coordinator can be a subfolder of a repository.
+  const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  execFileSync('git', ['init', '-q'], { cwd: repo });
+  const dir = join(repo, 'work');
+  mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+  writeFileSync(join(dir, '.cedarloom/runs/r1/filled.md'), FILLED);
+  writeFileSync(join(dir, '.cedarloom/runs/r1/no-cost.md'), NO_COST);
+  const run = (...args) => spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' });
+  const queue = () => { const r = run('queue'); assert.equal(r.status, 0, r.stderr); return JSON.parse(r.stdout); };
+  assert.deepEqual(queue(), []);
+  // Checked as an issue body: an approval that lacks a row is not filed.
+  const lacking = run('file', '.cedarloom/runs/r1/no-cost.md', 'project');
+  assert.equal(lacking.status, 1);
+  assert.match(lacking.stderr, /\bCost\b/);
+  for (const n of [1, 2]) assert.deepEqual(JSON.parse(run('file', '.cedarloom/runs/r1/filled.md', 'project').stdout), { file: `project-${n}.md` });
+  assert.equal(run('file', '.cedarloom/runs/r1/filled.md', '../project').status, 2);
+  const filed = readFileSync(join(dir, '.cedarloom/questions/project-1.md'), 'utf8');
+  assert.equal(filed, `Status: open\n\n${FILLED}`);
+  // Kept out of git, as the run folder is.
+  assert.equal(spawnSync('git', ['check-ignore', '-q', '.cedarloom/questions/project-1.md'], { cwd: dir }).status, 0);
+  assert.deepEqual(queue(), [{ file: 'project-1.md', status: 'open' }, { file: 'project-2.md', status: 'open' }]);
+  // What /cl-workflow:questions writes for an answer and a defer.
+  writeFileSync(join(dir, '.cedarloom/questions/project-1.md'), `${filed.replace('Status: open', 'Status: answered')}\nOwner answer (2026-11-15): b. Hold it for now.\n`);
+  writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `${filed.replace('Status: open', 'Status: deferred')}\nDeferred by the owner on 2026-11-15.\n`);
+  assert.deepEqual(queue(), [{ file: 'project-1.md', status: 'answered', option: 'b', text: 'Hold it for now.', at: '2026-11-15' }, { file: 'project-2.md', status: 'deferred' }]);
+  // A file answered without an answer line is an error, never "no answer yet", and holds back no other answer.
+  writeFileSync(join(dir, '.cedarloom/questions/project-2.md'), `Status: answered\n\n${FILLED}`);
+  assert.deepEqual(queue()[1], { file: 'project-2.md', error: 'answered, but no Owner answer line' });
+  assert.equal(queue()[0].option, 'b');
+});
+
+test('approval: the local queue refuses links, existing files and planted answers, and reports a file it cannot read', () => {
+  const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
+  const project = (sub = '.') => {
+    const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    const dir = join(repo, sub);
+    mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
+    writeFileSync(join(dir, '.cedarloom/runs/r1/filled.md'), FILLED);
+    return { repo, dir, run: (...args) => spawnSync(process.execPath, [script, ...args], { cwd: dir, encoding: 'utf8' }) };
+  };
+  const answered = `Status: answered\n\n${FILLED}\nOwner answer (2026-11-15): b. Hold it for now.\n`;
+  // A linked queue folder leads out of the project: nothing is filed or read there.
+  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  mkdirSync(join(out, 'questions'));
+  writeFileSync(join(out, 'questions/project-1.md'), answered);
+  const linkedQueue = project();
+  symlinkSync(join(out, 'questions'), join(linkedQueue.dir, '.cedarloom/questions'));
+  assert.equal(linkedQueue.run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
+  assert.deepEqual(readdirSync(join(out, 'questions')), ['project-1.md']);
+  assert.equal(linkedQueue.run('queue').status, 2);
+  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  symlinkSync(out, join(linkedDot, '.cedarloom'));
+  assert.equal(spawnSync(process.execPath, [script, 'queue'], { cwd: linkedDot, encoding: 'utf8' }).status, 2);
+  // A file of the next number's name is never overwritten.
+  const { dir, run } = project();
+  mkdirSync(join(dir, '.cedarloom/questions'));
+  writeFileSync(join(dir, '.cedarloom/questions/project-9007199254740992.md'), answered);
+  assert.equal(run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
+  assert.equal(readFileSync(join(dir, '.cedarloom/questions/project-9007199254740992.md'), 'utf8'), answered);
+  // The answer is read only after the filed text, so a text that carries an answer line is not filed.
+  writeFileSync(join(dir, '.cedarloom/runs/r1/planted.md'), `${FILLED}\nOwner answer (2026-11-15): a. Approved.\n`);
+  assert.equal(run('file', '.cedarloom/runs/r1/planted.md', 'other').status, 2);
+  assert.equal(existsSync(join(dir, '.cedarloom/questions/other-1.md')), false);
+  // A folder and a dangling link by a question's name hold back no other answer.
+  mkdirSync(join(dir, '.cedarloom/questions/notes.md'));
+  symlinkSync(join(dir, 'gone.md'), join(dir, '.cedarloom/questions/.#project-1.md'));
+  const read = run('queue');
+  assert.equal(read.status, 0, read.stderr);
+  assert.deepEqual(JSON.parse(read.stdout), [
+    { file: '.#project-1.md', error: 'cannot be read (ENOENT)' },
+    { file: 'notes.md', error: 'cannot be read (EISDIR)' },
+    { file: 'project-9007199254740992.md', status: 'answered', option: 'b', text: 'Hold it for now.', at: '2026-11-15' },
+  ]);
+  // A project named as a repository can be, and a working folder whose name holds gitignore pattern characters.
+  const brackets = project('apps/[web]');
+  assert.deepEqual(JSON.parse(brackets.run('file', '.cedarloom/runs/r1/filled.md', '.github').stdout), { file: '.github-1.md' });
+  assert.equal(spawnSync('git', ['check-ignore', '-q', '.cedarloom/questions/.github-1.md'], { cwd: brackets.dir }).status, 0);
 });

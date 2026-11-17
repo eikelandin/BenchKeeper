@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { check, distinct, pickable, report } from '../skills/orchestrating-projects/precheck.mjs';
+import { check, distinct, pickable, projectsOf, report } from '../skills/coordinate/precheck.mjs';
 
 const POLICY = { startLabel: 'agent-ready', trustedAuthors: ['helper[bot]'] };
 const issue = (number, extra = {}) => ({ number, author_association: 'OWNER', user: { login: 'owner' }, labels: [{ name: 'agent-ready' }], ...extra });
@@ -26,27 +26,20 @@ test('precheck: picks labeled issues by trusted authors that have no open or mer
   assert.deepEqual(pickable(null, issues, []), []);
 });
 
-test('precheck: with a tracker an issue needs every label, and a pull request hides it only when its body names the tracker issue', () => {
-  const policy = { startLabel: 'agent-ready', issues: { repository: 'owner/tracker', labels: ['project-a'] } };
-  const labels = [{ name: 'agent-ready' }, { name: 'project-a' }];
-  const issues = [issue(12, { labels }), issue(13), ...[14, 15, 16, 17, 18, 19, 20].map((n) => issue(n, { labels }))];
-  const pulls = [
-    { headRefName: 'fix/12-an-old-branch-of-the-project', body: 'Fixes #12' },
-    { headRefName: 'feat/12-other', body: 'Part of owner/tracker#123 and co-owner/tracker#12.' },
-    { headRefName: 'fix/14-crash', body: 'Closes owner/tracker#14.' },
-    { headRefName: 'fix/15-x', body: null },
-    { headRefName: 'fix/16-x', body: 'See other/owner/tracker#16' },
-    { headRefName: 'fix/17-x', body: 'Closes Owner/Tracker#17' },
-    { headRefName: 'fix/18-x', body: 'Closes https://github.com/owner/tracker/issues/18' },
-    { headRefName: 'fix/19-x', body: 'After https://github.com/owner/tracker/issues/190 and https://github.com/owner/tracker/pull/19' },
-    { headRefName: 'fix/20-x', body: 'Closes https://github.com/other/tracker/issues/20' },
-  ];
-  assert.deepEqual(pickable(policy, issues, pulls), [12, 15, 16, 19, 20]);
+test('precheck: an issue needs every issues.labels entry', () => {
+  const policy = { startLabel: 'agent-ready', issues: { labels: ['project-a'] } };
+  const issues = [issue(12, { labels: [{ name: 'agent-ready' }, { name: 'project-a' }] }), issue(14)];
+  assert.deepEqual(pickable(policy, issues, []), [12]);
 });
 
-test('precheck: an issue labeled question is the owner\'s, also once it carries the start label', () => {
-  const issues = [issue(1), issue(2, { labels: [{ name: 'agent-ready' }, { name: 'Question' }] }), issue(3, { labels: [{ name: 'question' }, { name: 'agent-ready' }] })];
+test('precheck: an issue that waits for the owner, that a worker holds or that the owner parked does not start, also once it carries the start label', () => {
+  const issues = [issue(1), issue(2, { labels: [{ name: 'agent-ready' }, { name: 'CedarLoom:Needs-Human' }] }), issue(3, { labels: [{ name: 'cedarloom:needs-human' }, { name: 'agent-ready' }] }), issue(4, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:in-progress' }] }), issue(5, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:deferred' }] })];
   assert.deepEqual(pickable(POLICY, issues, []), [1]);
+});
+
+test('precheck: the command line takes project paths only, so an option of an old schedule fails instead of being read as a path', () => {
+  assert.deepEqual(projectsOf(['/a', '/b']), ['/a', '/b']);
+  for (const argv of [['--hub=owner/tracker', '/a'], ['--issues-in', 'repo', '/a']]) assert.throws(() => projectsOf(argv), /--hub|--issues-in/);
 });
 
 test('precheck: an issue that several projects list starts in none of them', () => {
@@ -74,6 +67,8 @@ test('precheck: the command line prints no issue that several projects list, nam
   assert.deepEqual(report(['/a', '/b', odd], pick), { out: ['/a: #12'], err: ['/c?[2K: no ?policy', 'several projects: owner/tracker#14 (/a, /b)'], code: 0 });
   assert.deepEqual(report(['/b', '/a'], (dir) => ({ tracker: 'owner/tracker', numbers: lists[dir].numbers.filter((n) => n === 14) })), { out: [], err: ['several projects: owner/tracker#14 (/b, /a)'], code: 1 });
   assert.deepEqual(report(['/a'], () => ({ tracker: 'owner/project', numbers: [31, 7] })), { out: ['/a: #7 #31'], err: [], code: 0 });
+  // A field the reader dropped is named, so a policy that changed meaning does not go quiet.
+  assert.deepEqual(report(['/a'], () => ({ tracker: 'owner/project', numbers: [], warnings: [{ rule: 'refused', path: 'issues.repository', message: 'is refused' }] })), { out: [], err: ['/a: refused at issues.repository: is refused'], code: 1 });
 });
 
 const calls = [];
@@ -86,9 +81,10 @@ const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd,
   if (args[0] === 'remote') return `${origin}\n`;
   if (args[0] === 'ls-tree') return policy ? 'docs/agents/orchestration.json\n' : '';
   if (args[0] === 'show') return JSON.stringify(policy);
-  if (args[0] === 'api') return JSON.stringify([[issue(7)], [issue(8)], [issue(9)]]);
-  // 7: a closed pull request and an open one from a fork, which anyone can open; 8: an open one of the project; 9: a merged one from a fork.
+  if (args[0] === 'api') return JSON.stringify([7, 8, 9, 10].map((n) => [issue(n)]));
+  // 7: a closed pull request and an open one from a fork, which anyone can open; 8: an open one of the project; 9: a merged one from a fork; 10: a merged one.
   return JSON.stringify([
+    { headRefName: 'feat/10-z', state: 'MERGED', isCrossRepository: false },
     { headRefName: 'feat/8-x', state: 'OPEN', isCrossRepository: false },
     { headRefName: 'feat/7-x', state: 'CLOSED', isCrossRepository: false },
     { headRefName: 'fix/7-x', state: 'OPEN', isCrossRepository: true },
@@ -96,12 +92,11 @@ const stub = (policy, origin = 'git@github.com:owner/project.git') => (dir, cmd,
   ]);
 };
 
-test('precheck: with a tracker the issues are listed there with every label, and the pull requests with their bodies', () => {
+test('precheck: a policy that names another repository lists the project\'s own issues', () => {
   calls.length = 0;
-  // Issues 7 to 9 lack the label project-a.
-  assert.deepEqual(check('/p', stub({ ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } })), []);
-  assert.ok(calls.includes('gh api --paginate --slurp repos/owner/tracker/issues?state=open&per_page=100&labels=agent-ready,project-a'));
-  assert.ok(calls.includes('gh pr list -R owner/project --state all --limit 1000 --json headRefName,state,isCrossRepository,body'));
+  assert.deepEqual(check('/p', stub({ ...POLICY, issues: { repository: 'owner/other' } })), [7]);
+  assert.ok(calls.includes('gh api --paginate --slurp repos/owner/project/issues?state=open&per_page=100&labels=agent-ready'));
+  assert.ok(!calls.some((c) => c.includes('owner/other')));
 });
 
 test('precheck: reads the policy from the default branch, skips a project without one and names why the reader rejects one', () => {
@@ -117,23 +112,22 @@ test('precheck: reads the policy from the default branch, skips a project withou
   assert.throws(() => check('/p', stub({ ...POLICY, merge: { mode: 'disjont' }, later: true })), /enum at merge\.mode: .+; unknown-key at later: /);
 });
 
-test('precheck: a member or collaborator counts only with write access to the tracker, and a failed lookup starts nothing', () => {
-  const policy = { ...POLICY, issues: { repository: 'owner/tracker', labels: ['project-a'] } };
-  const by = (number, author_association, login) => issue(number, { author_association, user: { login }, labels: [{ name: 'agent-ready' }, { name: 'project-a' }] });
+test('precheck: a member or collaborator counts only with write access to the repository, and a failed lookup starts nothing', () => {
+  const by = (number, author_association, login) => issue(number, { author_association, user: { login } });
   // A managed user's login ends in _<shortcode>.
   const issues = [by(1, 'MEMBER', 'reader'), by(2, 'COLLABORATOR', 'reader'), by(3, 'MEMBER', 'writer'), by(4, 'COLLABORATOR', 'maintainer'), by(5, 'COLLABORATOR', 'admin'), by(6, 'OWNER', 'owner'), by(7, 'MEMBER', 'mona_acme')];
   // The REST API gives the maintain role as write.
   const roles = { reader: 'read', writer: 'write', maintainer: 'write', admin: 'admin', mona_acme: 'write' };
   const asked = [];
   const run = (fails) => (dir, cmd, args) => {
-    if (args[0] !== 'api') return stub(policy)(dir, cmd, args);
+    if (args[0] !== 'api') return stub(POLICY)(dir, cmd, args);
     if (args[1] === '--paginate') return JSON.stringify([issues]);
     asked.push(args.join(' '));
     if (fails) throw new Error('HTTP 502');
     return JSON.stringify({ permission: roles[args[1].split('/')[4]] });
   };
   assert.deepEqual(check('/p', run(false), {}), [3, 4, 5, 6, 7]);
-  assert.ok(asked.includes('api repos/owner/tracker/collaborators/reader/permission'));
+  assert.ok(asked.includes('api repos/owner/project/collaborators/reader/permission'));
   assert.throws(() => check('/p', run(true), {}), /HTTP 502/);
 });
 
@@ -173,7 +167,7 @@ test('precheck: an origin whose host cannot be compared with gh\'s fails, and an
 
 test('precheck and policy: started through a symlinked folder they still run, so no project means exit 1, not a silent 0', () => {
   // Exit 0 means "there is an issue to pick" or "here is the policy": a guard that skipped the command line would start every scheduled run.
-  const real = realpathSync(fileURLToPath(new URL('../skills/orchestrating-projects', import.meta.url)));
+  const real = realpathSync(fileURLToPath(new URL('../skills/coordinate', import.meta.url)));
   const link = join(mkdtempSync(join(tmpdir(), 'bk-precheck-')), 'link');
   symlinkSync(real, link, 'dir');
   for (const dir of [real, link]) for (const script of ['precheck.mjs', 'policy.mjs']) assert.equal(spawnSync(process.execPath, [join(dir, script)]).status, 1, join(dir, script));

@@ -1,23 +1,12 @@
 // The question tool's switch for three hooks: UserPromptExpansion sets the window of /cl-workflow:ask and /cl-workflow:questions, PreToolUse refuses outside it, SessionStart says the mode.
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { text } from 'node:stream/consumers';
 import { OFF, SESSION, allowed, askUntil } from './window.mjs';
+import { openUntil, windowDir, windowFile } from './window-file.mjs';
 
-// One file per Claude Code process (CLAUDE_PID, which it sets for hook commands): /clear and compaction keep the window.
-const dir = process.env.CLAUDE_PLUGIN_DATA ? join(process.env.CLAUDE_PLUGIN_DATA, 'ask') : null;
-const file = dir && join(dir, `${process.env.CLAUDE_PID ?? process.ppid}.json`);
-
-// A window file's end while it is open (Infinity for the session), else null.
-function openUntil(path, now) {
-  try {
-    const at = JSON.parse(readFileSync(path, 'utf8')).askUntil;
-    const end = at === SESSION ? Infinity : Date.parse(at);
-    return end > now ? end : null;
-  } catch {
-    return null;
-  }
-}
+const dir = windowDir();
+const file = windowFile();
 
 const line = (now) => {
   const end = openUntil(file, now);
@@ -47,6 +36,7 @@ if (input === null || typeof input !== 'object' || Array.isArray(input)) {
   say(event, { additionalContext: line(now) });
 } else if (event === 'UserPromptExpansion' && ['cl-workflow:ask', 'cl-workflow:questions'].includes(input.command_name)) {
   // Only a typed command expands; a scheduled or delivered prompt with the same text does not (trial, Claude Code 2.1.316).
+  // claude -p expands one (https://code.claude.com/docs/en/headless), so role-guard.mjs refuses such a launch.
   if (!file) throw new Error(`the plugin has no data folder (CLAUDE_PLUGIN_DATA), so /${input.command_name} cannot keep its window`);
   const args = String(input.command_args ?? '');
   // Running the question queue is the user allowing terminal questions for the rest of the session.
@@ -58,7 +48,9 @@ if (input === null || typeof input !== 'object' || Array.isArray(input)) {
     say(event, { additionalContext: OFF });
   } else {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(file, `${JSON.stringify({ askUntil: end === Infinity ? SESSION : new Date(end).toISOString() })}\n`);
+    // The flag lets this session, and no other, write answers into the local question queue (role-guard.mjs).
+    const questions = input.command_name === 'cl-workflow:questions' || undefined;
+    writeFileSync(file, `${JSON.stringify({ askUntil: end === Infinity ? SESSION : new Date(end).toISOString(), questions })}\n`);
     say(event, { additionalContext: allowed(end, now) });
   }
 }

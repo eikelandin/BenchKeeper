@@ -4,7 +4,7 @@ name: Release
 # pull request open from the Conventional Commits on main (release-please-config.json: the plugins under plugins/, one
 # version for all, set in each .claude-plugin/plugin.json). It creates no tag or Release: after the merge the job
 # `release` tags each plugin, creates the Release cedarloom-v<x.y.z>, moves the branch stable (the ref users add the
-# marketplace at) to the commit that tag names and rebuilds the site.
+# marketplace at) to the commit that tag names.
 #
 # The release pull request opens with the release GitHub App token so that its required checks run without approval
 # (a pull request changed with GITHUB_TOKEN starts no runs until someone approves them). Set the variable
@@ -145,10 +145,6 @@ jobs:
         run: |
           git fetch --no-tags origin "refs/tags/$TAG:refs/tags/$TAG"
           git push origin "refs/tags/$TAG^{commit}:refs/heads/stable"
-      # A Release made with GITHUB_TOKEN starts no `release` run of pages.yml.
-      - if: ${{ steps.pr.outputs.number != '' }}
-        name: Rebuild the site
-        run: gh workflow run pages.yml --repo "$REPO" --ref main
       # release-please opens no new release pull request while a merged one is still pending. gh pr edit fails on a
       # label the repository lacks, after it has removed the pending one: create the label first (--force: no error if
       # it exists).

@@ -1,7 +1,7 @@
 {
   "name": "cl-orchestration",
   "version": "6.27.0",
-  "description": "Preview for Codex: the skill, and a SessionStart hook that hands a coordinator its handoff file back after a clear or compaction. Coordinates the issues of several projects from one session.",
+  "description": "Preview for Codex: the skill text. The coordinator runs only in Claude Code and starts workers through Orca.",
   "author": {
     "name": "eikelandin",
     "url": "https://github.com/eikelandin"

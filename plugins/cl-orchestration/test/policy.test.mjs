@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { effective, read, sh, validate } from '../skills/orchestrating-projects/policy.mjs';
+import { effective, read, sh, validate } from '../skills/coordinate/policy.mjs';
 import { initRepo } from './git-repo.mjs';
 
 const BUILT_IN = ['.github', 'CODEOWNERS', 'docs/CODEOWNERS', 'docs/agents/orchestration.json', 'docs/agents/worker-rules.md', 'docs/agents', 'orca.yaml'];
@@ -21,9 +21,11 @@ const DEFAULTS = {
   issuesPerWorker: 1,
   keepRunning: false,
   permissionPrompts: 'block',
+  mode: 'supervised',
+  sandbox: { allowedDomains: [] },
   riskyPaths: [],
   review: { depth: 'high', sensitiveDepth: 'high', sensitivePaths: [] },
-  issues: { repository: null, labels: [] },
+  issues: { labels: [] },
   minPlugin: null,
   models: {
     worker: { quick: { model: 'sonnet', effort: 'high' }, standard: { model: 'opus', effort: 'high' }, deep: { model: 'opus', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
@@ -43,7 +45,7 @@ const remote = (file, calls = []) => bare((dir, cmd, args) => {
 }, calls);
 
 test('policy: a version 1 file, or one without schemaVersion, keeps its fields and gets every default', () => {
-  assert.deepEqual(effective({}, '6.26.0'), { policy: DEFAULTS, errors: [] });
+  assert.deepEqual(effective({}, '6.26.0'), { policy: DEFAULTS, errors: [], warnings: [] });
   const file = { schemaVersion: 1, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { allowed: true, requiredChecks: ['ci'] }, closeIssue: true };
   assert.deepEqual(effective(file, '6.26.0').policy, { ...DEFAULTS, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { ...DEFAULTS.merge, allowed: true, requiredChecks: ['ci'] }, closeIssue: true });
 });
@@ -69,13 +71,23 @@ test('policy: a key the schema does not name gives no policy, a // comment key p
   assert.deepEqual(commented.policy.merge, { ...DEFAULTS.merge, allowed: true });
 });
 
-test('policy: a tracker without a label gives no policy', () => {
-  for (const [issues, rule] of [[{ repository: 'owner/tracker' }, 'missing-key'], [{ repository: 'owner/tracker', labels: [] }, 'length']]) {
-    const { policy, errors } = effective({ issues }, '6.26.0');
-    assert.equal(policy, null);
-    assert.deepEqual(rules(errors), [[rule, 'issues.labels']]);
-  }
-  assert.deepEqual(effective({ issues: { repository: 'owner/tracker', labels: ['project-a'] } }, '6.26.0').policy.issues, { repository: 'owner/tracker', labels: ['project-a'] });
+test('policy: a file that names another repository is refused and keeps the project repository', () => {
+  const named = effective({ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['project-a'] } }, '6.26.0');
+  assert.deepEqual(named.errors, []);
+  assert.deepEqual(named.policy.issues, { labels: ['project-a'] });
+  assert.deepEqual(rules(named.warnings), [['refused', 'issues.repository']]);
+  assert.match(named.warnings[0].message, /names no other repository; the tracker is the project repository/);
+  // A file that chooses another tracker is still named.
+  assert.deepEqual(rules(effective({ issues: { repository: 'owner/tracker', tracker: 'hub' } }, '6.26.0').errors), [['unknown-key', 'issues.tracker']]);
+});
+
+test('policy: mode is supervised unless the file sets automatic, which takes its hosts from sandbox.allowedDomains', () => {
+  assert.equal(effective({ sandbox: { allowedDomains: ['registry.npmjs.org'] } }, '6.26.0').policy.mode, 'supervised');
+  const automatic = effective({ mode: 'automatic', sandbox: { '//': 'what the tests fetch', allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] } }, '6.26.0');
+  assert.deepEqual(automatic.errors, []);
+  assert.equal(automatic.policy.mode, 'automatic');
+  assert.deepEqual(automatic.policy.sandbox, { allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
+  assert.equal(effective({ mode: 'automatic' }, '6.26.0').policy, null);
 });
 
 test('policy: a schemaVersion the reader does not know gives no policy', () => {
@@ -125,9 +137,8 @@ const REFUSED = [
   ...PATH_LISTS.flatMap(([group, list]) => NO_PATHS.map((path) => [{ [group]: { [list]: [path] } }, 'pattern', `${group}.${list}[0]`])),
   ...NO_PATHS.map((path) => [{ riskyPaths: [path] }, 'pattern', 'riskyPaths[0]']),
   [{ merge: { autoMergeMax: 'high' } }, 'enum', 'merge.autoMergeMax'],
-  ...['owner/tracker/docs', 'owner/tra cker', 'owner/..', 'tracker'].map((repository) => [{ issues: { repository, labels: ['project-a'] } }, 'pattern', 'issues.repository']),
-  [{ issues: { repository: 'owner/tracker', labels: [] } }, 'length', 'issues.labels'],
-  [{ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['go', 'GO'] } }, 'length', 'issues.labels'],
+  // The editor refuses what the reader drops.
+  [{ issues: { repository: 'owner/tracker' } }, 'refused', 'issues.repository'],
   [{ models: { phases: { review: { model: 'some-model-20260101' } } } }, 'enum', 'models.phases.review.model'],
   [{ review: { depth: 'max' } }, 'enum', 'review.depth'],
   [{ review: { sensitiveDepth: 'max' } }, 'enum', 'review.sensitiveDepth'],
@@ -137,6 +148,12 @@ const REFUSED = [
   [{ issuesPerWorker: 17 }, 'range', 'issuesPerWorker'],
   ...['', '--dangerously-skip-permissions', 'opus; id', 'opus fast', `o${'p'.repeat(128)}`].map((model) => [{ models: { worker: { model } } }, 'pattern', 'models.worker.model']),
   [{ later: true }, 'unknown-key', 'later'],
+  ...['auto', 'Automatic', 'bypassPermissions', ''].map((mode) => [{ mode }, 'enum', 'mode']),
+  ...[{}, { sandbox: {} }, { sandbox: { '//': 'none yet' } }].map((rest) => [{ mode: 'automatic', ...rest }, 'required', 'sandbox.allowedDomains']),
+  [{ mode: 'automatic', sandbox: { allowedDomains: [] } }, 'length', 'sandbox.allowedDomains'],
+  // An entry that would open every host, a local service or more than one host name.
+  ...['*', '*.com', 'localhost', 'Example.com', 'example.com:443', 'https://example.com', 'example.com/x', ' example.com', '-x.example.com', '169.254.169.254', '10.0.0.1'].map((host) => [{ sandbox: { allowedDomains: [host] } }, 'pattern', 'sandbox.allowedDomains[0]']),
+  [{ sandbox: { network: { allowedDomains: ['example.com'] } } }, 'unknown-key', 'sandbox.network'],
   [{ models: { phases: { plan: { modle: 'opus' } } } }, 'unknown-key', 'models.phases.plan.modle'],
   [{ models: { sensitive: { implement: { model: 'opus' } } } }, 'unknown-key', 'models.sensitive.implement'],
   [{ models: { sensitive: { independent: { model: 'claude-fable-5-2' } } } }, 'enum', 'models.sensitive.independent.model'],
@@ -151,13 +168,11 @@ test('policy: each refused value is named with its rule and path', () => {
   }
   // The longest name and the characters of a full model name stay allowed.
   for (const model of ['opus[1m]', 'vendor.family-4-5-v1:0', 'team/model@2026-01-01', 'p'.repeat(128)]) assert.deepEqual(validate({ models: { worker: { model } } }), [], model);
-  // A tracker label besides startLabel is the project's own.
-  assert.deepEqual(validate({ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['go', 'project-a'] } }), []);
 });
 
 test('policy: a skill folder copied alone, as for an agent without plugins, checks with its own schema; minPlugin cannot be checked there and gives no policy', async () => {
-  const copy = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'skills', 'orchestrating-projects');
-  cpSync(fileURLToPath(new URL('../skills/orchestrating-projects', import.meta.url)), copy, { recursive: true });
+  const copy = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'skills', 'coordinate');
+  cpSync(fileURLToPath(new URL('../skills/coordinate', import.meta.url)), copy, { recursive: true });
   const copied = await import(pathToFileURL(join(copy, 'policy.mjs')).href);
   assert.equal(copied.effective({ startLabel: 'go', merge: { mode: 'disjoint' } }).policy.merge.mode, 'disjoint');
   assert.deepEqual(rules(copied.effective({ merge: { mode: 'disjont' } }).errors), [['enum', 'merge.mode']]);
@@ -167,7 +182,7 @@ test('policy: a skill folder copied alone, as for an agent without plugins, chec
   // A schema that gains a keyword the check does not implement refuses every file, the valid ones too, instead of passing what the schema refuses.
   const schema = join(copy, 'orchestration.schema.json');
   for (const edit of [(s) => { s.properties.trustedAuthors.maxItems = 1; }, (s) => { s.properties.merge.additionalProperties = true; }, (s) => { s.patternProperties['^//'] = { type: 'string' }; }]) {
-    const edited = JSON.parse(readFileSync(new URL('../skills/orchestrating-projects/orchestration.schema.json', import.meta.url), 'utf8'));
+    const edited = JSON.parse(readFileSync(new URL('../skills/coordinate/orchestration.schema.json', import.meta.url), 'utf8'));
     edit(edited);
     writeFileSync(schema, JSON.stringify(edited));
     assert.throws(() => copied.validate({ startLabel: 'go' }), /does not implement/);
@@ -176,10 +191,10 @@ test('policy: a skill folder copied alone, as for an agent without plugins, chec
 
 test('policy: minPlugin is checked against the version in the plugin manifest two folders above the skill', async () => {
   const plugin = mkdtempSync(join(tmpdir(), 'bk-policy-'));
-  cpSync(fileURLToPath(new URL('../skills/orchestrating-projects', import.meta.url)), join(plugin, 'skills', 'orchestrating-projects'), { recursive: true });
+  cpSync(fileURLToPath(new URL('../skills/coordinate', import.meta.url)), join(plugin, 'skills', 'coordinate'), { recursive: true });
   mkdirSync(join(plugin, '.claude-plugin'));
   writeFileSync(join(plugin, '.claude-plugin', 'plugin.json'), '{ "name": "cedarloom", "version": "2.3.0" }');
-  const copied = await import(pathToFileURL(join(plugin, 'skills', 'orchestrating-projects', 'policy.mjs')).href);
+  const copied = await import(pathToFileURL(join(plugin, 'skills', 'coordinate', 'policy.mjs')).href);
   assert.equal(copied.effective({ startLabel: 'go', minPlugin: '2.3.0' }).policy.minPlugin, '2.3.0');
   assert.deepEqual(rules(copied.effective({ startLabel: 'go', minPlugin: '2.4.0' }).errors), [['range', 'minPlugin']]);
 });
@@ -207,7 +222,7 @@ test('policy: the remote\'s HEAD is fetched into the reader\'s own ref and the f
   assert.equal(moved.policy.merge.allowed, false);
   // A remote that names no commit as its HEAD gives no policy.
   assert.deepEqual(rules(read('/p', (dir, cmd, args) => (args[0] === 'ls-tree' ? 'docs/agents/orchestration.json\n' : args[0] === 'show' ? '{ "merge": { "allowed": true } }' : '')).errors), [['unreadable', '']]);
-  assert.deepEqual(read('/p', remote(null)), { policy: DEFAULTS, errors: [], absent: true });
+  assert.deepEqual(read('/p', remote(null)), { policy: DEFAULTS, errors: [], warnings: [], absent: true });
 });
 
 test('policy: a fetch or a show that fails gives no policy: not the defaults, and not the file an older fetch left', () => {
@@ -305,7 +320,7 @@ test('policy: the command line prints the policy of the default branch and exits
   commit('{ "merge": { "mode": "disjont" } }');
   const project = join(mkdtempSync(join(tmpdir(), 'bk-policy-')), 'project');
   git('clone', '-q', origin, project);
-  const cli = (dir, env = {}) => spawnSync(process.execPath, [fileURLToPath(new URL('../skills/orchestrating-projects/policy.mjs', import.meta.url)), dir], { encoding: 'utf8', env: { ...process.env, ...env } });
+  const cli = (dir, env = {}) => spawnSync(process.execPath, [fileURLToPath(new URL('../skills/coordinate/policy.mjs', import.meta.url)), dir], { encoding: 'utf8', env: { ...process.env, ...env } });
   const rejected = cli(project);
   assert.deepEqual([rejected.status, rejected.stdout], [1, '']);
   assert.match(rejected.stderr, /^enum at merge\.mode: /);

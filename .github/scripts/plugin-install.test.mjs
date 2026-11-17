@@ -15,9 +15,9 @@ const skip = !hasClaude && !process.env.CI;
 
 const EXPECTED = {
   'cl-workflow': ['cl-workflow@cedarloom'],
-  'cl-setup': ['cl-setup@cedarloom'],
+  'cl-repo': ['cl-repo@cedarloom'],
   'cl-orchestration': ['cl-orchestration@cedarloom', 'cl-workflow@cedarloom'],
-  cedarloom: ['cedarloom@cedarloom', 'cl-orchestration@cedarloom', 'cl-setup@cedarloom', 'cl-workflow@cedarloom'],
+  cedarloom: ['cedarloom@cedarloom', 'cl-orchestration@cedarloom', 'cl-repo@cedarloom', 'cl-workflow@cedarloom'],
 };
 
 for (const { name } of marketplace.plugins) {
