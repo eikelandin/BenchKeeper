@@ -1,6 +1,6 @@
 ---
 name: questions
-description: "Asks you the open owner questions (this private repository's issues, then the local queue) in batches with the question tool, records each answer, and keeps the ones you defer out of the queue."
+description: "Asks you the open owner questions (this repository's question issues, then the local queue) in batches with the question tool, records each answer, and keeps the ones you defer out of the queue."
 disable-model-invocation: true
 argument-hint: "[project name | deferred]"
 when: "On request, while you sit at the terminal to answer the open questions; it allows terminal questions for the rest of the session."
@@ -15,7 +15,7 @@ writes: "A comment and new labels on each issue you answer or defer in this repo
 
 Arguments: $ARGUMENTS (Codex: the words after the skill name).
 
-`<repo>` below is the current repository in `owner/name` form. Ask its question issues if `gh repo view --json nameWithOwner,visibility` shows `PRIVATE` or `INTERNAL` (`nameWithOwner` is `<repo>`), then the local queue; where the command fails or shows a public repository, ask only the local queue: a public repository holds no question issues. Where the issue listing of step 1 fails (issues disabled, say), report its error and ask only the local queue.
+`<repo>` below is the current repository in `owner/name` form. Ask its question issues (`gh repo view --json nameWithOwner` shows `<repo>`), then the local queue; where that command fails, ask only the local queue. Where the issue listing of step 1 fails (issues disabled, say), report its error and ask only the local queue.
 
 **Local queue.** `.cedarloom/questions/*.md` here, by name, first line `Status: open` (argument `deferred`: `Status: deferred`; a project name: only `<name>-*`), asked like issues (header: file name). Answer: set `Status: answered`, append `Owner answer (<YYYY-MM-DD>): <option label>. <free text>`. Defer: set `Status: deferred`, append `Deferred by the owner on <YYYY-MM-DD>.` and any free text. Change nothing else.
 

@@ -35,6 +35,12 @@ test('facts: a failing gh call reads unread in its own section only', () => {
   assert.ok(text.includes('| 41 | cedarloom:ready-for-agent | a | 2026-11-13T09:00Z |'));
 });
 
+test('facts: without cswap installed the accounts section reads skipped', () => {
+  const missing = (cmd, args) => { if (cmd === 'cswap') throw Object.assign(new Error('spawnSync cswap ENOENT'), { code: 'ENOENT' }); return fake(COMMANDS)(cmd, args); };
+  const text = facts({ run: RUN, repos: ['octo/app'], accounts: true, now: NOW, exec: missing, alive: (pid) => pid === 4242 });
+  assert.ok(text.includes('## Accounts\n\nSkipped: cswap is not installed.\n\n## Main'));
+});
+
 test('facts: an open question with an answer an agent recorded or the owner commented on GitHub loses cedarloom:needs-human and gains cedarloom:ready-for-agent; one without an answer or with another login\'s keeps its labels', () => {
   const edits = [];
   const exec = (cmd, args) => { if (args[0] === 'issue' && args[1] === 'edit') edits.push(args.join(' ')); return fake(COMMANDS)(cmd, args); };

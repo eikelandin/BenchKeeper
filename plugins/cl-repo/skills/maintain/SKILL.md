@@ -14,7 +14,7 @@ Read only until the findings are approved. Start on a clean tree (`git status --
 - A code audit skill, when installed.
 - Shortcut debt: each `shortcut:` comment is still valid, upgraded, or becomes an issue (a debt-ledger skill lists them, when installed).
 - Dependencies: the package manager's audit.
-- Pins that no update bot covers (`pkg@x.y.z` in docs, scripts, Dockerfiles): compare each with the newest release that is at least 7 days old. List the bumps (package, pinned, newest). Each accepted bump changes every occurrence on a branch. Recorded benchmark or release pins stay.
+- Pins that no update bot covers (`pkg@x.y.z` in docs, scripts, Dockerfiles): compare each with the newest release that is at least 3 days old. List the bumps (package, pinned, newest). Each accepted bump changes every occurrence on a branch. Recorded benchmark or release pins stay.
 - Docs drift: `GLOSSARY.md`, ADRs, `AGENTS.md` and docs against the code (a domain-modeling skill, when installed). Several documents: the docs pass of `cl-workflow:workflow` (the cl-workflow plugin, when installed).
 - Instruction files: the `instructions` audit of this plugin's audit skill: follow [its steps](../audit/SKILL.md) with the target `instructions`. Claude Code: `/skill-doctor` for unused skills and their context cost.
 - Cleanup (duplicated code, unused files, exports and dependencies): run the stack's tools from [tools.md](tools.md), then read each finding in the code.

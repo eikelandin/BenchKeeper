@@ -1,4 +1,4 @@
 # npm installs, such as the pinned Claude Code in .github/claude-code
 node_modules/
-# The Claude Code types a session lays beside a loaded mod (docs/development.md#plugin-mod-types)
+# The Claude Code types a session lays beside a loaded mod
 plugins/*/.claude-plugin/types/

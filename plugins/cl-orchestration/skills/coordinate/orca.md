@@ -124,7 +124,7 @@ A worker settles with one message. The [outcomes](SKILL.md#outcomes) map to Orca
 
 Orca has no separate blocked or replan message type: such a report is a `worker_done` that failed, which settles the dispatch so the coordinator can release it. The handoff block is the message body. The worker's start message carries its own `send` command; the spec only says what to report.
 
-An automatic worker runs no Orca command ([Sandbox on](modes.md#sandbox-on)): from inside the sandbox `ORCA orchestration send` and `ask` fail with `runtime_unavailable` (Orca 1.4.254, Claude Code v2.1.325), since the CLI reads `orca-runtime.json` in the home folder, which the read block closes. Neither that file nor Orca's socket is opened to the worker: the file holds Orca's one auth token, with which `ORCA terminal create --command` runs any command on the host outside the sandbox. So its report is its final answer, its first word the outcome ([spec-template.md](spec-template.md#automatic-mode)). Its turn ends with no `worker_done`, and Orca raises the escalation `Worker stopped without reporting`, which carries that answer as the last output (observed with Orca 1.4.254, not documented); `ORCA orchestration worker-read --dispatch <dispatch id> --json` returns it too, and is the read where the escalation cuts it short. That escalation is the expected end of every automatic worker, not a stall or a miss: the escalation alone starts no retry, and the outcome of the final answer decides. Map its first word to the outcomes as the table does; a final answer without an outcome word is failed. It never asks: a question comes as a BLOCKED report ([Gates](#gates)).
+An automatic worker runs no Orca command ([Sandbox on](modes.md#sandbox-on)): from inside the sandbox `ORCA orchestration send` and `ask` fail with `runtime_unavailable`, since the CLI reads `orca-runtime.json` in the home folder, which the read block closes. Neither that file nor Orca's socket is opened to the worker: the file holds Orca's one auth token, with which `ORCA terminal create --command` runs any command on the host outside the sandbox. So its report is its final answer, its first word the outcome ([spec-template.md](spec-template.md#automatic-mode)). Its turn ends with no `worker_done`, and Orca raises the escalation `Worker stopped without reporting`, which carries that answer as the last output (not documented); `ORCA orchestration worker-read --dispatch <dispatch id> --json` returns it too, and is the read where the escalation cuts it short. That escalation is the expected end of every automatic worker, not a stall or a miss: the escalation alone starts no retry, and the outcome of the final answer decides. Map its first word to the outcomes as the table does; a final answer without an outcome word is failed. It never asks: a question comes as a BLOCKED report ([Gates](#gates)).
 
 A batch also sends one `--type status` message per issue, when that issue's pull request is up (a Claude Code worker: its change committed) or the issue ended another way, with the issue's handoff block as its body; its `worker_done` comes once, after the last issue.
 
@@ -248,7 +248,7 @@ ORCA orchestration worker-read --dispatch <dispatch id> --source terminal --limi
 ORCA terminal send --terminal <terminal> --text $'\x1b'
 ```
 
-Escape declines the call in Claude Code (unverified: observed, not documented).
+Escape declines the call in Claude Code (not documented).
 
 - `$'\x1b'` is the Escape byte in Bash and Zsh only (`ORCA terminal send --help` names the two). A shell without that quoting, dash for example, hands Orca the characters `$\x1b`, and Orca would type them into the dialog.
 - So decline only when the shell that runs your commands is one of the two: `echo "$BASH_VERSION$ZSH_VERSION"`, run the way you run the `send`, prints a version number there, and an empty line or its own text in another shell. From any other shell send nothing: the worker stays blocked for the owner.
@@ -262,7 +262,7 @@ Once the dialog is gone, send the message that names the declined call and tells
 ORCA orchestration send --to dispatch:<dispatch id> --subject "Declined" --body "$(cat <message file>)" --json
 ```
 
-A worker on another agent stays `block` (unverified: which key declines its dialog).
+A worker on another agent stays `block`: the key that declines its dialog is not tested.
 
 ## Resume
 
