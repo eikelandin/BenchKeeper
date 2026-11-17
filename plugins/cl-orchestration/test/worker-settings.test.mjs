@@ -91,7 +91,8 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   assert.match(unexcluded.stderr, /does not list \/\.claude\/settings\.local\.json/);
   assert.equal(run(args, base).status, 0);
   assert.equal(readFileSync(exclude, 'utf8'), '/.claude/settings.local.json\n');
-  for (const content of ['{"permissions":{}}\n', '']) {
+  // The last one is an earlier version's rule file: the deny list without disableBypassPermissionsMode.
+  for (const content of ['{"permissions":{}}\n', '', `${JSON.stringify({ permissions: { deny: permissions.deny } }, null, 2)}\n`]) {
     writeFileSync(file, content);
     const { status, stderr } = run(['--check', ...args], base);
     assert.equal(status, 1);
@@ -141,23 +142,6 @@ test('worker-settings --supervised: writes the worker rules without a host path 
     assert.equal(status, 1, extra.join(' '));
     assert.match(stderr, /settings\.local\.json is a link: not written or read/, extra.join(' '));
   }
-});
-
-test('worker-settings --supervised: refuses a rule file of an earlier version, the deny list without disableBypassPermissionsMode', () => {
-  const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
-  const args = ['--supervised', join(base, 'wt'), join(base, 'main')];
-  const file = join(base, 'wt/.claude/settings.local.json');
-  assert.equal(run(args, base).status, 0);
-  const { deny } = JSON.parse(readFileSync(file, 'utf8')).permissions;
-  const earlier = `${JSON.stringify({ permissions: { deny } }, null, 2)}\n`;
-  writeFileSync(file, earlier);
-  const checked = run(['--check', ...args], base);
-  assert.equal(checked.status, 1);
-  assert.match(checked.stderr, /is not the settings file this script writes/);
-  const rewrite = run(args, base);
-  assert.equal(rewrite.status, 1);
-  assert.match(rewrite.stderr, /exists with other content: not overwritten/);
-  assert.equal(readFileSync(file, 'utf8'), earlier);
 });
 
 test('worker-settings --supervised: writes no rule file when the shared .git cannot take the exclude line', () => {
