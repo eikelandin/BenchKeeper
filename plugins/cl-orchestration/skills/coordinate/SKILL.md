@@ -63,6 +63,7 @@ Every session of a run has one role: the owner, the coordinator (this session), 
 ## Loop
 
 1. **Pick**:
+   - At the start of a run, before the first pick, run the visibility check of [Where it goes](approvals.md#where-it-goes) on each project's repository and give its warning for each public one.
    - The pickable issues are the numbers `node <skill folder>/precheck.mjs <project paths>` prints per project, run once with every project of the run (its head says what counts), never a listing of your own.
    - An issue it prints in a `several projects:` line starts nowhere: list it for the owner.
    - Per project with a free slot, take up to `issuesPerWorker` of its numbers with no worker or outcome yet in this run, oldest first: the lowest. Take one only where `models.worker` at the depth, or `research`, of any of them is `fable` ([Rules](#rules)), or the project runs automatic. They are one worker's batch ([spec-template.md](spec-template.md#batches)).
