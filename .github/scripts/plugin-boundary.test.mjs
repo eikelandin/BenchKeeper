@@ -38,6 +38,20 @@ test('imports must stay inside the plugin or name a Node built-in or the Claude 
   assert.deepEqual(names('a.mjs', "const m = await import(/* chunk */ 'left-pad');"), ['import-outside']);
 });
 
+test('Orca is found in cl-workflow and cl-repo, and passes in cl-orchestration and the cedarloom bundle', () => {
+  const orca = (path, text) => offences(path, text, path.split('/').slice(0, 2).join('/'));
+  assert.deepEqual(orca('plugins/cl-workflow/skills/a/SKILL.md', 'Run `orca task-create --spec-file spec.md`.'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const handle = process.env.ORCA_TERMINAL_HANDLE;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const client = new OrcaClient();'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const handle = process.env.CEDARLOOM_ORCA_HANDLE;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'if (isOrcaWorker()) return;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const useOrca = true; const in_orca = true;'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-repo/hooks/a.mjs', 'const trip = majorca_trip; // Majorca'), []);
+  assert.deepEqual(names('a.md', 'Runs in Orca.'), ['orca-only-orchestration']);
+  assert.deepEqual(orca('plugins/cl-orchestration/skills/coordinate/orca.md', 'Orca opens a terminal; read `$ORCA_TERMINAL_HANDLE`.'), []);
+  assert.deepEqual(orca('plugins/cedarloom/.claude-plugin/plugin.json', '{"description": "Installs cl-orchestration, which runs workers in Orca."}'), []);
+});
+
 test('scan reads tracked files of every folder under plugins, skips binaries and the changelog, and checks matcher prefixes against the plugin name', () => {
   const dir = mkdtempSync(join(tmpdir(), 'bk-boundary-'));
   try {

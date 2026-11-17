@@ -54,7 +54,7 @@ jobs:
         run: node --test .github/scripts/pr-title.test.mjs
       - name: Renamed account
         run: node --test .github/scripts/account-name.test.mjs
-      # A plugin installs as its folder alone: paths outside it, imports of other packages and another plugin's matcher prefix fail.
+      # A plugin installs as its folder alone: paths outside it, imports of other packages and another plugin's matcher prefix fail, and Orca text fails outside cl-orchestration and the cedarloom bundle.
       - name: Plugin boundary
         run: node --test .github/scripts/plugin-boundary.test.mjs && node .github/scripts/plugin-boundary.mjs
       # release.yml never lets a later push cancel the release job.
