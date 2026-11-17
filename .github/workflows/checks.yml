@@ -44,6 +44,13 @@ jobs:
           git grep -nIP '\x{2014}|[\x{1F000}-\x{1FAFF}\x{2300}-\x{23FF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}]|\x{FE0F}' -- . ':!.agents' ':!.claude' ':!*package-lock.json' ':!*.png' || rc=$?
           if [ "$rc" -eq 0 ]; then echo "::error::em dash or emoji found"; exit 1; fi
           if [ "$rc" -ne 1 ]; then echo "::error::git grep failed ($rc)"; exit 1; fi
+      # One minimum Claude Code version, stated in the README's Requirements: any other 2.1.x version fails. Changelogs, tests, lockfiles, workflows (action pin comments) and the CI pin are exempt.
+      - name: Claude Code version
+        run: |
+          rc=0
+          git grep -nIP '(?<![\d.])2\.1\.(?!323(?!\d))\d+' -- . ':!*CHANGELOG.md' ':!.github/claude-code' ':!*.test.*' ':!*/test/*' ':!.agents' ':!.claude' ':!.github/workflows' ':!*package-lock.json' || rc=$?
+          if [ "$rc" -eq 0 ]; then echo "::error::a Claude Code version other than the minimum 2.1.323 found"; exit 1; fi
+          if [ "$rc" -ne 1 ]; then echo "::error::git grep failed ($rc)"; exit 1; fi
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22.23.4
