@@ -74,8 +74,9 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   const written = run(args, base);
   assert.equal(written.status, 0, written.stderr);
   const { permissions } = JSON.parse(readFileSync(file, 'utf8'));
-  // No ask list: where Orca answers the worker's prompts, an ask match runs.
-  assert.deepEqual(Object.keys(permissions), ['deny']);
+  // Deny rules only, beside the key: deny rules hold in auto mode and in Manual, and auto mode drops broad allow rules.
+  assert.deepEqual(Object.keys(permissions), ['deny', 'disableBypassPermissionsMode']);
+  assert.equal(permissions.disableBypassPermissionsMode, 'disable');
   // A rule that ends in :* is a prefix rule, so the : refspec deny must end otherwise.
   assert.ok(permissions.deny.includes('Bash(gh pr merge *)') && permissions.deny.includes('Bash(git push * :**)') && permissions.deny.includes('Read(.env)'));
   assert.ok(permissions.deny.includes('Bash(git push *)') && permissions.deny.includes('Bash(gh pr create *)') && permissions.deny.includes('Bash(gh pr comment *)'));
@@ -140,6 +141,23 @@ test('worker-settings --supervised: writes the worker rules without a host path 
     assert.equal(status, 1, extra.join(' '));
     assert.match(stderr, /settings\.local\.json is a link: not written or read/, extra.join(' '));
   }
+});
+
+test('worker-settings --supervised: refuses a rule file of an earlier version, the deny list without disableBypassPermissionsMode', () => {
+  const base = worktree('wt', (b) => `gitdir: ${b}/main/.git/worktrees/wt\n`);
+  const args = ['--supervised', join(base, 'wt'), join(base, 'main')];
+  const file = join(base, 'wt/.claude/settings.local.json');
+  assert.equal(run(args, base).status, 0);
+  const { deny } = JSON.parse(readFileSync(file, 'utf8')).permissions;
+  const earlier = `${JSON.stringify({ permissions: { deny } }, null, 2)}\n`;
+  writeFileSync(file, earlier);
+  const checked = run(['--check', ...args], base);
+  assert.equal(checked.status, 1);
+  assert.match(checked.stderr, /is not the settings file this script writes/);
+  const rewrite = run(args, base);
+  assert.equal(rewrite.status, 1);
+  assert.match(rewrite.stderr, /exists with other content: not overwritten/);
+  assert.equal(readFileSync(file, 'utf8'), earlier);
 });
 
 test('worker-settings --supervised: writes no rule file when the shared .git cannot take the exclude line', () => {

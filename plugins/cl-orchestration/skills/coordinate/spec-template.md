@@ -115,6 +115,7 @@ A worker of an automatic project ([modes.md](modes.md#modes)) cannot commit, pus
 
 Its rule file refuses `git push`, `gh pr create`, `gh pr comment` and the `gh issue` writes ([Worker rules](modes.md#worker-rules)): it commits, and the coordinator pushes and opens the pull request ([Commit and push](modes.md#commit-and-push)). Only these lines change:
 
+- Agent: "permission mode auto" in place of "permission mode the agent's default".
 - You may: without "push those branches", "open or update one draft pull request", "reply to review threads" and the follow-up issue (name it under Next step instead); "before your next commit" in place of "before your next push".
 - You may not: also "push, or create, change or comment on a pull request or an issue, also where the worker rules say to, and in no other form (`git -C`, `gh api`)"; "start with a flag that bypasses or skips permission prompts" stays.
 - Flow, Every depth: "once the work is committed, report: the coordinator pushes the branch and opens the draft pull request with your body and a title it sets from the one you propose" in place of the push, pull request and checks steps.
@@ -122,6 +123,7 @@ Its rule file refuses `git push`, `gh pr create`, `gh pr comment` and the `gh is
 - Blocked, Needs replan, No change needed and Follow-up: the line of [Automatic mode](#automatic-mode), its refused paths those of [Worker rules](modes.md#worker-rules).
 - Follow-up: commit the fix and answer with its head commit, and with a proposed title or a new body where one was asked.
 - Report: What changed takes the branch, its head commit, and a proposed pull request title and a body that refers to the issue as `<owner/repo>#<number>`, with no closing keyword.
+- A new line after Authority: "An action the auto mode check blocked stays refused: never retry it in another form. When the task needs it, report BLOCKED with the action and why."
 
 ## Batches
 
