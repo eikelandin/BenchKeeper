@@ -11,7 +11,7 @@ Run in the repository root. On a repository that already has devcontainer config
 
 Process: plan first, then apply. Its questions and approvals go to the user in the session only while the user allows terminal questions; otherwise the Read only phase puts them with your recommendations into the plan, and the run stops before Apply.
 - **Read only.** Run every section below up to [Other configuration](#6-other-configuration-ask) as detection and comparison, including their questions (agent selection, stack confirmation, steps marked "ask"). Write, install, and remove nothing. Do not build or start a container.
-- **Plan.** One list of files created, changed, or removed, each with its new text or diff (the block and the policy file among them), packages added to the image, container build or rebuild, integrations enabled or disabled, and skipped steps with the reason. Mark destructive items: overwriting or removing files, config entries, or skills, and removing or rebuilding a container. Ask: apply all, a subset, or cancel.
+- **Plan.** One list of files created, changed, or removed, each with its new text or diff (the block and the policy file among them), packages added to the image, container build or rebuild, integrations enabled or disabled, labels created on the hosted repository, and skipped steps with the reason. Mark destructive items: overwriting or removing files, config entries, or skills, and removing or rebuilding a container. Ask: apply all, a subset, or cancel.
 - **Apply.** Apply only approved items, including container launch and verification. Right before each destructive item, show the diff or list and ask again.
 - **Review and report.** Run [Review](#7-review), then [Report](#8-report).
 
@@ -74,7 +74,7 @@ The coordinator (`cl-orchestration:coordinate`) starts and merges nothing in a p
 
 Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `cl-orchestration:coordinate` (the cl-orchestration plugin, when installed) lists each field and its default.
 
-The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. Read only lists the repository's labels (`gh label list --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> --description "<meaning>"`, naming one it could not create in the report with that command:
+The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. `<owner/repo>` below is the repository `git remote get-url origin` names, so a fork's clone never reaches its upstream. Read only lists the repository's labels (`gh label list -R <owner/repo> --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> -R <owner/repo> --description "<meaning>"`, naming one it could not create in the report with that command:
 - `cl:plan`: CedarLoom may read and plan the issue and ask on it; it does not start work.
 - `cl:ready-for-agent`: the coordinator may start the issue.
 - `cl:needs-human`: a question or approval waits for the owner.
