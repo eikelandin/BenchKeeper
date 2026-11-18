@@ -74,8 +74,9 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   const written = run(args, base);
   assert.equal(written.status, 0, written.stderr);
   const { permissions } = JSON.parse(readFileSync(file, 'utf8'));
-  // No ask list: where Orca answers the worker's prompts, an ask match runs.
-  assert.deepEqual(Object.keys(permissions), ['deny']);
+  // Deny rules only, beside the key: deny rules hold in auto mode and in Manual, and auto mode drops broad allow rules.
+  assert.deepEqual(Object.keys(permissions), ['deny', 'disableBypassPermissionsMode']);
+  assert.equal(permissions.disableBypassPermissionsMode, 'disable');
   // A rule that ends in :* is a prefix rule, so the : refspec deny must end otherwise.
   assert.ok(permissions.deny.includes('Bash(gh pr merge *)') && permissions.deny.includes('Bash(git push * :**)') && permissions.deny.includes('Read(.env)'));
   assert.ok(permissions.deny.includes('Bash(git push *)') && permissions.deny.includes('Bash(gh pr create *)') && permissions.deny.includes('Bash(gh pr comment *)'));
@@ -90,7 +91,8 @@ test('worker-settings --supervised: writes the worker rules without a host path 
   assert.match(unexcluded.stderr, /does not list \/\.claude\/settings\.local\.json/);
   assert.equal(run(args, base).status, 0);
   assert.equal(readFileSync(exclude, 'utf8'), '/.claude/settings.local.json\n');
-  for (const content of ['{"permissions":{}}\n', '']) {
+  // The last one is an earlier version's rule file: the deny list without disableBypassPermissionsMode.
+  for (const content of ['{"permissions":{}}\n', '', `${JSON.stringify({ permissions: { deny: permissions.deny } }, null, 2)}\n`]) {
     writeFileSync(file, content);
     const { status, stderr } = run(['--check', ...args], base);
     assert.equal(status, 1);

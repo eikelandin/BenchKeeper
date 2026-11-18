@@ -1,4 +1,4 @@
-// Usage: node worker-settings.mjs <worktree path> <project path> <settings file> <domain>..., the paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the real path of <project path>/.git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match, an Edit rule as ask. With --supervised <worktree path> <project path> instead, it writes only the rules of worker-rules.json as <worktree path>/.claude/settings.local.json of a linked worktree of that project, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
+// Usage: node worker-settings.mjs <worktree path> <project path> <settings file> <domain>..., the paths absolute. Writes an automatic worker's settings file: automatic-settings.json with //W/ as the worktree, //C/ as the real path of <project path>/.git, each worktrees/* rule also once per folder under the shared .git's worktrees, and the domains (the policy's sandbox.allowedDomains) as the network allow list, plus the rules of worker-rules.json that the template's deny list does not already match, an Edit rule as ask. With --supervised <worktree path> <project path> instead, it writes only the rules of worker-rules.json and disableBypassPermissionsMode set to disable as <worktree path>/.claude/settings.local.json of a linked worktree of that project, never over a file with other content, and lists that path in the shared .git's info/exclude. With --check first, it writes nothing and exits 0 only when the file's text is exactly what it would write now (and, supervised, the exclude line is there). Any other input prints the error, exits 1 and writes nothing.
 import { appendFileSync, closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { errorLine, escaped, isMain, validate } from './policy.mjs';
@@ -86,9 +86,10 @@ function denyRules(rules) {
 }
 
 // In .claude/settings.local.json a rule path that starts with / counts from the session's starting folder, the worktree, so the file names no host path.
+// The key keeps bypass out of the Shift+Tab cycle and out of a resume in a settings file's mode, which the launch's --permission-mode does not reach.
 export function supervisedSettings(rules) {
   const local = (rule) => rule.replace('(//W/', '(/');
-  return { permissions: { deny: denyRules(rules).map(local) } };
+  return { permissions: { deny: denyRules(rules).map(local), disableBypassPermissionsMode: 'disable' } };
 }
 
 // In a --settings file a rule path that starts with / counts from the file's folder, so an absolute path takes a second /.
