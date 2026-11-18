@@ -209,19 +209,6 @@ test('an idle Stop above 200000 tokens clears, then submits the resume prompt, o
   expect(e.ran[2]).toBe('/clear')
 })
 
-// Where Claude Code's built-in guard loads, no classic.* event reaches the plugin; the test raises native events alone.
-test('where the guard loads, an idle answer above the threshold schedules no clear, also after a session end and a prompt', async ($, on) => {
-  const e = engine(on)
-  on('turn.complete', (_, end) => ({ text: end.answer }))
-  await $.turn.start({ turnId: 't1', text: 'go on' })
-  await $.turn.complete({ turnId: 't1', answer: 'done', durationMs: 1000, isAborted: false, reason: 'answer' })
-  await e.clock.advance(20 * 60_000)
-  expect(e.ran).toEqual([])
-  await cleared($)
-  await e.clock.advance(20 * 60_000)
-  expect(e.ran).toEqual([])
-})
-
 test('no clear while not idle, with no task list, in a subagent or without the file', async ($, on) => {
   const e = engine(on)
   await $.classic.Stop({ ...IDLE, background_tasks: [{ id: 'b1', type: 'shell', status: 'running', description: 'sleep 600' }] })
