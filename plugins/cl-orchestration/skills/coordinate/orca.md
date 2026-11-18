@@ -105,8 +105,8 @@ An automatic project whose [Automatic start](modes.md#automatic-start) failed ru
 The acknowledgement is the worker's first heartbeat; an automatic worker sends none ([Worker reports](#worker-reports)). A missing one sends no mail while the worker idles at its prompt, so the coordinator sees it at the timer's wake-up ([Watch](#watch)); a worker that ends a turn, exits or is lost without `worker_done` is mailed as an escalation ([Stops](#stops)). Orca's rule holds: silence, a startup timeout or `unverifiable` liveness proves nothing and authorizes no stop or retry.
 
 - **Still starting**: `worker-show --full` reports the start not ready yet, or the terminal shows the agent loading or working. Keep waiting; it is no miss.
-- **Held at a dialog**: `worker-show --full` reports an `observation.agentWait`, or the terminal shows a dialog. It is the owner's, except a permission dialog with `permissionPrompts` `decline` ([A permission dialog](#a-permission-dialog)).
-- **The mode**: at the acknowledgement of a supervised Claude Code worker, `worker-read --source terminal` ([A permission dialog](#a-permission-dialog)) shows `auto mode on` in its status bar. A start that shows another mode is a Manual start: the report names it so, never as auto mode.
+- **Held at a dialog**: `worker-show --full` reports an `observation.agentWait`, or the terminal shows a dialog. It is the owner's ([A permission dialog](#a-permission-dialog)).
+- **The mode**: at the acknowledgement of a supervised Claude Code worker, `worker-read --source terminal` ([A permission dialog](#a-permission-dialog)) shows `auto mode on` in its status bar. A start that shows another mode is a Manual start: the report names it so, never as auto mode. A start held at a dialog shows no status bar: read its mode once the dialog is gone.
 - **A miss**: at two wake-ups at least 10 minutes apart, `worker-read --source terminal` shows the agent idle at an empty prompt and `worker-read` shows no turn on the task. Then `worker-stop` it. Only when the stop is confirmed, retry once in its worktree, a Claude Code worker with its old terminal closed (`ORCA terminal close --terminal <terminal> --json`) unless the stop reported `processAction` `closed_agent_terminal`, its settings file (supervised: its rule file) written again and read with `--check`, then a new terminal made as at the start:
 
 ```text
@@ -251,36 +251,9 @@ A worker that Orca's own launch starts in a structured (chat) session shows none
 
 In auto mode a single block of the auto mode check refuses one action, and the worker carries on with nothing shown. After 3 blocks in a row or 20 in total auto mode pauses and Claude Code prompts again; approving the prompted action resumes auto mode. A dialog also shows for an ask rule in the user's settings, for the first Read, Grep or Glob call on a path outside the working directories, and for every unlisted action in Manual ([permission modes](https://code.claude.com/docs/en/permission-modes)). With `permissionPrompts` `block`, list the dialog for the owner, and the item waits. Its approval says to answer once ("Yes"), never "Yes, and don't ask again" or another standing answer: that saves an allow rule in `.claude/settings.local.json` at the main checkout's root, which applies to every later worker of the project and to the user's own sessions there ([settings](https://code.claude.com/docs/en/settings#where-claude-code-keeps-the-local-file-in-a-git-repository)), and a narrow allow rule stays in effect in auto mode.
 
-A decline does not resume a paused auto mode, and in Manual every next action prompts again, so a declined worker there can neither work nor report. With `permissionPrompts` `decline`, decline only while the worker's terminal shows `auto mode on` in its status bar; in any other mode, `manual mode on` or a paused auto mode, the dialog is the owner's, as with `block` (unverified: what the status bar shows while auto mode is paused, and whether it shows at all while a permission dialog is open; where it does not, `decline` acts as `block`).
+A supervised Claude Code worker on Orca shows no status bar while a permission dialog is open: the dialog takes the prompt area, so its terminal does not show its mode then (observed in a live run). `permissionPrompts` `decline` is accepted and acts as `block`: no dialog of any worker is declined.
 
-At the stall check, with `permissionPrompts` `decline`, decline a permission dialog of a Claude Code worker in a terminal, only from Bash or Zsh (below), and only when both of these show it:
-
-```text
-ORCA orchestration worker-show --dispatch <dispatch id> --json --full
-ORCA orchestration worker-read --dispatch <dispatch id> --source terminal --limit 50 --json
-```
-
-`worker-show` must report an `observation.agentWait`: Orca saw the worker parked at a prompt only a person can answer. Null means it saw none, and a missing field that it did not look: neither is a dialog. The terminal read is the screen, not the transcript, and must show a tool call waiting for approval, not a trust dialog, a login or a question, and `auto mode on` (above); a read Orca refuses means no terminal, so no decline. Then send one Escape, `<terminal>` being `terminal.handle` of that `worker-show`:
-
-```text
-ORCA terminal send --terminal <terminal> --text $'\x1b'
-```
-
-Escape declines the call in Claude Code (not documented; unverified: this detection and the Escape on a supervised Claude Code worker's dialog).
-
-- `$'\x1b'` is the Escape byte in Bash and Zsh only (`ORCA terminal send --help` names the two). A shell without that quoting, dash for example, hands Orca the characters `$\x1b`, and Orca would type them into the dialog.
-- So decline only when the shell that runs your commands is one of the two: `echo "$BASH_VERSION$ZSH_VERSION"`, run the way you run the `send`, prints a version number there, and an empty line or its own text in another shell. From any other shell send nothing: the worker stays blocked for the owner.
-- The command takes no `--enter`: with it Orca makes the Escape inert.
-- Send nothing else to the terminal, no Enter, letter, number or text.
-- Then read the terminal again with the `worker-read --source terminal` command of this section. While the dialog still shows, send nothing more: the worker is blocked for the owner.
-
-Once the dialog is gone, send the message that names the declined call and tells the worker to change the approach or report BLOCKED (it also restarts a turn the Escape interrupted):
-
-```text
-ORCA orchestration send --to dispatch:<dispatch id> --subject "Declined" --body "$(cat <message file>)" --json
-```
-
-A worker on another agent stays `block`: the key that declines its dialog is not tested.
+Orca also shows such a dialog as an approval of its own. One nobody answers closes after about 90 seconds as "closed without an answer" while the dialog stays open in the worker's terminal, and from then on an approve or deny through Orca no longer reaches the worker (observed, not documented). The coordinator answers neither ([SKILL.md](SKILL.md#rules)): the dialog stays listed for the owner as with `block`, and the item waits.
 
 ## Resume
 
@@ -309,7 +282,7 @@ ORCA worktree rm --worktree path:<worktree path> --run-hooks --json
 
 The second command removes a supervised worker's worktree; an automatic worker's goes as the worktree list below says. Before it, delete a supervised Claude Code worker's rule file, `<worktree path>/.claude/settings.local.json`: the file is ignored, not untracked (unverified: whether an ignored file blocks the removal). Orca does not force the removal: any untracked file blocks it (`Failed to delete worktree at <worktree>. ?? .env`, Orca 1.4.254). Then leave the worktree, never pass `--force` or delete the file, and name the path and the files in the report. `--run-hooks` runs the project's `orca.yaml` archive script before the removal. When the removal fails on that script, remove the containers below first and run it again. After the removal, list what is left (`podman ps -aq --filter label=devcontainer.local_folder=<worktree path>`, or `docker`) and remove those containers with `rm -f`.
 
-A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). It gets no follow-up either: its pull request's findings go to the owner. With Orca, such a worker's `worker-read` output shows input that neither a `send`, a dispatch of the coordinator (the start, a follow-up) nor its `terminal create --command` launch line carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. At the wake-up for each report of a supervised Claude Code worker, `worker-read` it first and run `worker-retain` when it shows such input; once it is released, nothing further is done and its worktree stays. The coordinator's own Escape ([A permission dialog](#a-permission-dialog)) does not make a terminal a person's. Orca's `send` is the coordinator's message command and, with the starts of [Start the run](#start-the-run), the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
+A worker whose terminal a person typed in gets no cleanup ([SKILL.md](SKILL.md#rules) has the rule). It gets no follow-up either: its pull request's findings go to the owner. With Orca, such a worker's `worker-read` output shows input that neither a `send`, a dispatch of the coordinator (the start, a follow-up) nor its `terminal create --command` launch line carried. Keep it with `ORCA orchestration worker-retain --dispatch <dispatch id> --json`: no stop, no release, no worktree removal. At the wake-up for each report of a supervised Claude Code worker, `worker-read` it first and run `worker-retain` when it shows such input; once it is released, nothing further is done and its worktree stays. The owner's answer to a dialog there, in that terminal or through Orca's approval ([A permission dialog](#a-permission-dialog)), leaves the worker the coordinator's; any other text typed there makes it a person's (unverified: whether `worker-read` shows such an answer as input). Orca's `send` is the coordinator's message command and, with the starts of [Start the run](#start-the-run), the only way into a worker terminal ([SKILL.md](SKILL.md#rules) has the rule).
 
 Release:
 
