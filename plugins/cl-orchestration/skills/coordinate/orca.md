@@ -253,7 +253,7 @@ In auto mode a single block of the auto mode check refuses one action, and the w
 
 A decline does not resume a paused auto mode, and in Manual every next action prompts again, so a declined worker there can neither work nor report. With `permissionPrompts` `decline`, decline only while the worker's terminal shows `auto mode on` in its status bar; in any other mode, `manual mode on` or a paused auto mode, the dialog is the owner's, as with `block` (unverified: what the status bar shows while auto mode is paused). A supervised Claude Code worker on Orca shows no status bar while a permission dialog is open: the dialog takes the prompt area, so its terminal never shows `auto mode on` then, and for these workers `decline` acts as `block` (observed in a live run).
 
-Orca also shows such a dialog as an approval of its own. One nobody answers closes after about 90 seconds as "closed without an answer" while the dialog stays open in the worker's terminal (observed, not documented), and from then on an approve or deny through Orca no longer reaches the worker. The coordinator answers neither ([SKILL.md](SKILL.md#rules)): the dialog stays listed for the owner as with `block`, its approval says to answer it in the worker's terminal, and the item waits.
+Orca also shows such a dialog as an approval of its own. One nobody answers closes after about 90 seconds as "closed without an answer" while the dialog stays open in the worker's terminal (observed, not documented), and from then on an approve or deny through Orca no longer reaches the worker. The coordinator answers neither ([SKILL.md](SKILL.md#rules)): the dialog stays listed for the owner as with `block`, and the item waits.
 
 At the stall check, with `permissionPrompts` `decline`, decline a permission dialog of a Claude Code worker in a terminal, only from Bash or Zsh (below), and only when both of these show it:
 
@@ -268,7 +268,7 @@ ORCA orchestration worker-read --dispatch <dispatch id> --source terminal --limi
 ORCA terminal send --terminal <terminal> --text $'\x1b'
 ```
 
-Escape declines the call in Claude Code, which tells the model "The user did not allow ..." (not documented; observed in a live run on a supervised Claude Code worker's dialog).
+Escape declines the call in Claude Code, which tells the model "The user did not allow ..." (not documented; observed in a live run on a supervised Claude Code worker's dialog; unverified: this detection).
 
 - `$'\x1b'` is the Escape byte in Bash and Zsh only (`ORCA terminal send --help` names the two). A shell without that quoting, dash for example, hands Orca the characters `$\x1b`, and Orca would type them into the dialog.
 - So decline only when the shell that runs your commands is one of the two: `echo "$BASH_VERSION$ZSH_VERSION"`, run the way you run the `send`, prints a version number there, and an empty line or its own text in another shell. From any other shell send nothing: the worker stays blocked for the owner.
