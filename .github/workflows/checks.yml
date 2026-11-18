@@ -14,6 +14,7 @@ concurrency:
 
 jobs:
   checks-core:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
@@ -36,13 +37,20 @@ jobs:
           version: 1.31.1
           advanced-security: false
           inputs: .github
-      # Em dash and emoji in tracked text files; vendored skills and lockfiles excluded.
+      # Em dash and emoji in tracked text files; lockfiles, PNG files and the generated changelogs (release-please's breaking-changes heading has U+26A0) excluded.
       - name: Forbidden characters
         run: |
           # git grep: 0 match, 1 no match, anything else an error (for example a pattern PCRE rejects).
           rc=0
-          git grep -nIP '\x{2014}|[\x{1F000}-\x{1FAFF}\x{2300}-\x{23FF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}]|\x{FE0F}' -- . ':!.agents' ':!.claude' ':!*package-lock.json' ':!*.png' || rc=$?
+          git grep -nIP '\x{2014}|[\x{1F000}-\x{1FAFF}\x{2300}-\x{23FF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}]|\x{FE0F}' -- . ':!*package-lock.json' ':!*.png' ':!*CHANGELOG.md' || rc=$?
           if [ "$rc" -eq 0 ]; then echo "::error::em dash or emoji found"; exit 1; fi
+          if [ "$rc" -ne 1 ]; then echo "::error::git grep failed ($rc)"; exit 1; fi
+      # One minimum Claude Code version, stated in the README's Requirements: any other 2.1.x version fails. Changelogs, tests, package manifests and lockfiles, workflows (action pin comments) and the CI pin are exempt.
+      - name: Claude Code version
+        run: |
+          rc=0
+          git grep -nIP '(?<![\d.])2\.1\.(?!323(?!\d))\d+' -- . ':!*CHANGELOG.md' ':!.github/claude-code' ':!*.test.*' ':!*/test/*' ':!.github/workflows' ':!*package-lock.json' ':!*package.json' || rc=$?
+          if [ "$rc" -eq 0 ]; then echo "::error::a Claude Code version other than the minimum 2.1.323 found"; exit 1; fi
           if [ "$rc" -ne 1 ]; then echo "::error::git grep failed ($rc)"; exit 1; fi
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -52,9 +60,7 @@ jobs:
         run: node --test .github/scripts/skill-lint.test.mjs && node .github/scripts/skill-lint.mjs
       - name: PR title pattern
         run: node --test .github/scripts/pr-title.test.mjs
-      - name: Renamed account
-        run: node --test .github/scripts/account-name.test.mjs
-      # A plugin installs as its folder alone: paths outside it, imports of other packages and another plugin's matcher prefix fail.
+      # A plugin installs as its folder alone: paths outside it, imports of other packages and another plugin's matcher prefix fail, and Orca text fails outside cl-orchestration and the cedarloom bundle.
       - name: Plugin boundary
         run: node --test .github/scripts/plugin-boundary.test.mjs && node .github/scripts/plugin-boundary.mjs
       # release.yml never lets a later push cancel the release job.
@@ -72,6 +78,7 @@ jobs:
 
   # Each plugin as Claude Code reads it: manifest and skill front matter (strict), the marketplace file, the mod tests, an install of each plugin. Claude Code is pinned by `.github/claude-code/package-lock.json` (the `stable` tag of its npm package); bump it by hand.
   plugin-checks:
+    if: github.repository == 'CedarLoom/cedarloom'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -110,10 +117,12 @@ jobs:
 
   # The plugins' scripts and hooks under Node.js alone: no app and no install.
   plugin-tests:
+    if: github.repository == 'CedarLoom/cedarloom'
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # macOS runs on pull requests once the repository is public; while it is private, on pushes to main only.
+        os: ${{ fromJSON((github.event_name == 'push' || !github.event.repository.private) && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 8
     permissions:
@@ -134,7 +143,7 @@ jobs:
 
   # Required check: passes when all parallel jobs pass.
   checks:
-    if: always()
+    if: always() && github.repository == 'CedarLoom/cedarloom'
     needs: [checks-core, plugin-checks, plugin-tests]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -148,7 +157,7 @@ jobs:
           done
 
   dependency-review:
-    if: github.event_name == 'pull_request'
+    if: github.repository == 'CedarLoom/cedarloom' && github.event_name == 'pull_request' && !github.event.repository.private
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

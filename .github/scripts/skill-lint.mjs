@@ -1,4 +1,4 @@
-// Structural checks for BenchKeeper's own skills (plugin skills) and the plugin's agents.
+// Structural checks for CedarLoom's plugin skills and the plugin's agents.
 // Usage: node .github/scripts/skill-lint.mjs [skill folders...]   (default: every own skill and agent), exit 1 on any error.
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';

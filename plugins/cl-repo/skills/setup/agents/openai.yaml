@@ -1,0 +1,5 @@
+interface:
+  display_name: "Setup"
+  short_description: "Rules block, coordinator policy, devcontainer, AGENTS.md"
+policy:
+  allow_implicit_invocation: false

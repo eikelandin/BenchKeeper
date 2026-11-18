@@ -21,9 +21,11 @@ test('the when column comes from the field, else from the description after its 
   const agent = skillEntry(skill(['name: a', 'description: "Does a. Use when b."', 'writes: "c"']));
   assert.deepEqual([agent.purpose, agent.when, agent.writes], ['Does a.', 'Use when b.', 'c']);
   assert.match(agent.start, /^the agent/);
-  const user = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'when: "On request."', 'writes: "x"']), 'cl-setup');
+  const user = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'when: "On request."', 'writes: "x"']), 'cl-repo');
   assert.equal(user.when, 'On request.');
-  assert.equal(user.start, 'you: `/cl-setup:u` (Codex `$cl-setup:u`)');
+  assert.equal(user.start, 'you: `/cl-repo:u` (Codex `$cl-repo:u`)');
+  const claudeOnly = skillEntry(skill(['name: u', 'description: "Does u."', 'disable-model-invocation: true', 'codex: false', 'when: "On request."', 'writes: "x"']), 'cl-orchestration');
+  assert.equal(claudeOnly.start, 'you: `/cl-orchestration:u`');
 });
 test('the first sentence ends where the earlier /^(.*?\.)(?:\s+(.*))?$/ ended it', () => {
   const FIRST = /^(.*?\.)(?:\s+(.*))?$/;

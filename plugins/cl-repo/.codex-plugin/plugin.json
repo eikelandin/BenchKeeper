@@ -1,0 +1,11 @@
+{
+  "name": "cl-repo",
+  "version": "0.0.0",
+  "description": "Preview for Codex: the skills. Sets up and maintains a repository: its agent setup, audits, fixes and maintenance passes.",
+  "author": {
+    "name": "CedarLoom",
+    "url": "https://github.com/CedarLoom"
+  },
+  "license": "ISC",
+  "skills": "./skills/"
+}

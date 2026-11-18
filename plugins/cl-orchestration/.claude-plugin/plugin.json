@@ -1,12 +1,14 @@
 {
   "name": "cl-orchestration",
   "displayName": "CedarLoom orchestration",
-  "version": "6.27.0",
+  "version": "0.0.0",
   "description": "Coordinates the issues of several projects from one session: worker jobs started through Orca, reviews and merge checks, and a handoff file that a cleared or compacted coordinator resumes from.",
   "author": {
-    "name": "eikelandin",
-    "url": "https://github.com/eikelandin"
+    "name": "CedarLoom",
+    "url": "https://github.com/CedarLoom"
   },
+  "homepage": "https://github.com/CedarLoom/cedarloom#readme",
+  "repository": "https://github.com/CedarLoom/cedarloom",
   "license": "ISC",
   "dependencies": ["cl-workflow"],
   "hooks": "./hooks/claude-code.json",
@@ -14,30 +16,17 @@
     "rotateAtTokens": {
       "type": "number",
       "title": "Clear an idle coordinator above this many context tokens",
-      "description": "200000 by default; 0 turns it off while rotateAtPercent is also 0. Applies only to a session whose project folder (where Claude Code started) holds the handoff file of /cl-orchestration:orchestrating-projects (.cedarloom/runs/handoff.md) and whose file names that session's id (a Session: line). When such a coordinator ends a turn with no background task running and its context is above this size, the plugin clears it with /clear and submits a prompt that resumes it from the file; after a clear or compaction it hands the file back. At most one clear every 10 minutes. Without the file nothing happens.",
+      "description": "200000 by default; 0 turns it off while rotateAtPercent is also 0. Applies only to a session whose project folder (where Claude Code started) holds the handoff file of /cl-orchestration:coordinate (.cedarloom/runs/handoff.md) and whose file names that session's id (a Session: line). When such a coordinator ends a turn with no background task running and its context is above this size, the plugin clears it with /clear and submits a prompt that resumes it from the file; after a clear or compaction it hands the file back. At most one clear every 10 minutes. Without the file nothing happens.",
       "default": 200000,
       "min": 0
     },
     "rotateAtPercent": {
       "type": "number",
       "title": "Clear an idle coordinator above this percent of the context window",
-      "description": "0 (default) is off and rotateAtTokens applies. Above 0, an idle coordinator that keeps the handoff file of /cl-orchestration:orchestrating-projects is cleared with /clear and resumed from the file once its context fills this percent of the model's context window, in place of rotateAtTokens.",
+      "description": "0 (default) is off and rotateAtTokens applies. Above 0, an idle coordinator that keeps the handoff file of /cl-orchestration:coordinate is cleared with /clear and resumed from the file once its context fills this percent of the model's context window, in place of rotateAtTokens.",
       "default": 0,
       "min": 0,
       "max": 100
-    },
-    "hub": {
-      "type": "string",
-      "title": "Hub repository for questions and issues (owner/name)",
-      "description": "Empty by default: no hub. Set the same value as cl-workflow's hub option: a GitHub repository, best a private one. The coordinator files a question in the project's tracker when that is private, else in the hub, else in the local queue; with issuesIn hub, work items live in the hub too.",
-      "default": ""
-    },
-    "issuesIn": {
-      "type": "string",
-      "title": "Where project issues live: repo or hub",
-      "description": "repo by default: each project's work items, follow-up issues and questions live in its own repository (questions never in a public one). hub: in the hub repository, labeled project:<name>. A project's policy file can choose the other with issues.tracker. Without a hub, repo applies.",
-      "options": ["repo", "hub"],
-      "default": "repo"
     }
   }
 }

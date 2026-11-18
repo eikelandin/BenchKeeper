@@ -1,8 +1,8 @@
-// Coordinator context rotation (orchestrating-projects): when the session's project root holds the coordinator's handoff
+// Coordinator context rotation (cl-orchestration:coordinate): when the session's project root holds the coordinator's handoff
 // file and the file names this session's id, an idle Stop above the plugin's threshold clears the context with /clear and
 // submits a resume prompt, and the first prompt after a clear hands the file back to the model, with the git drift since
 // the coordinator wrote it (restore.mjs, a SessionStart command hook, does so after a compaction). Otherwise every hook
-// here passes. It reads and writes that one file, reads git, and sends nothing.
+// here passes. It writes only that file, reads git, and makes no network request of its own.
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import { FILE, RUNS, STATUS, STATUS_ARGS, TOP_ARGS, changedPaths, claimed, commitArgs, drift, editedAt, fingerprint, mine, restored, stamped, statusBlock } from './handoff.mjs'

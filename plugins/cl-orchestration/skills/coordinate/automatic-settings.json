@@ -1,0 +1,46 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "disableBypassPermissionsMode": "disable",
+    "blockWritesOutsideWorkingDirectories": true,
+    "blockReadsOutsideWorkingDirectories": true,
+    "allow": ["Edit(//W/**)"],
+    "deny": [
+      "Edit(//W/.claude/**)", "Edit(//W/.mcp.json)", "Edit(//W/.vscode/**)", "Edit(//W/.idea/**)",
+      "Edit(//W/.bashrc)", "Edit(//W/.zshrc)", "Edit(//W/.gitconfig)",
+      "Edit(//W/.envrc)", "Edit(//W/.npmrc)", "Edit(//W/.husky/**)",
+      "Edit(//C/commondir)", "Edit(//C/config.worktree)", "Edit(//C/worktrees/*/commondir)", "Edit(//C/worktrees/*/config.worktree)",
+      "WebFetch", "WebSearch", "mcp__*", "Bash(gh *)", "Bash(git push *)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "allowAppleEvents": false,
+    "allowNestedUserNamespaces": false,
+    "enableWeakerNestedSandbox": false,
+    "enableWeakerNetworkIsolation": false,
+    "network": { "strictAllowlist": true, "allowLocalBinding": false, "allowedDomains": ["registry.npmjs.org"] },
+    "filesystem": { "disabled": false, "denyWrite": ["//W/.git"] },
+    "credentials": {
+      "files": [
+        { "path": "~/.ssh", "mode": "deny" },
+        { "path": "~/.aws", "mode": "deny" },
+        { "path": "~/.azure", "mode": "deny" },
+        { "path": "~/.config/gcloud", "mode": "deny" },
+        { "path": "~/.kube", "mode": "deny" },
+        { "path": "~/.docker/config.json", "mode": "deny" },
+        { "path": "~/.netrc", "mode": "deny" },
+        { "path": "~/.gnupg", "mode": "deny" }
+      ],
+      "envVars": [
+        { "name": "GH_TOKEN", "mode": "deny" }, { "name": "GITHUB_TOKEN", "mode": "deny" },
+        { "name": "NPM_TOKEN", "mode": "deny" }, { "name": "NODE_AUTH_TOKEN", "mode": "deny" },
+        { "name": "ORCA_PAIRING_CODE", "mode": "deny" }, { "name": "ORCA_REMOTE_PAIRING", "mode": "deny" },
+        { "name": "ORCA_AGENT_SESSION_SPAWN_TOKEN", "mode": "deny" }
+      ]
+    }
+  }
+}

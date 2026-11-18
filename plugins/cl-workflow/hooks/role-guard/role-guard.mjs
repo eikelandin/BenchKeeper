@@ -45,7 +45,7 @@ const CONFIG_READ = /^(--get(-all|-regexp|-urlmatch|-color|colorbool)?|-l|--list
 const CONFIG_WRITE = /^(--(unset|unset-all|add|replace-all|rename-section|remove-section|edit)|-e|set|unset|rename-section|remove-section|edit)$/;
 // git takes any unique prefix of a long option (gitcli, "Abbreviating long options"), so a prefix of these is denied too.
 const PUSH_OPTIONS = [['tags', 'a tag push'], ['follow-tags', 'a tag push'], ['mirror', 'a mirror push'], ['all', 'a push of every branch'], ['branches', 'a push of every branch']];
-// A release tag name such as v1.2.0, app-v6.27.0 or setup-v6.27; branch names with a folder (dependabot/npm/x-1.2.3) are not read as tags.
+// A release tag name such as v1.2.0, cedarloom-v0.1.0 or cedarloom-repo-v0.1.0; branch names with a folder (dependabot/npm/x-1.2.3) are not read as tags.
 const VERSION = /(^|[-_@])v?\d+(\.\d+)+/;
 // Bare mode runs no hooks (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
 const BARE = '--bare';
@@ -412,7 +412,7 @@ function queue({ tool_name: tool, tool_input: toolInput, agent_id: agent }, cwd)
   return hits(QUEUE) ? 'a write into the local question queue (.cedarloom/questions/), or a command that names it,' : null;
 }
 
-// Exit 2 refuses the call on every Claude Code version; onFailure "block" needs 2.1.295 or later.
+// Exit 2 refuses the call; onFailure "block" also refuses it when the hook cannot start.
 const refuse = (what) => {
   process.stderr.write(`CedarLoom role guard: ${what}, so the call is refused.\n`);
   process.exitCode = 2;

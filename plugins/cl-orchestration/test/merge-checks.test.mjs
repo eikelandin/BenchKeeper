@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { both, next, ownerOnly, pin, riskClass, risky, sensitive, unsafe } from '../skills/orchestrating-projects/merge-checks.mjs';
-import { effective } from '../skills/orchestrating-projects/policy.mjs';
-import { facts as riskFacts } from '../skills/orchestrating-projects/risk-facts.mjs';
+import { both, next, ownerOnly, pin, riskClass, risky, sensitive, unsafe } from '../skills/coordinate/merge-checks.mjs';
+import { effective } from '../skills/coordinate/policy.mjs';
+import { facts as riskFacts } from '../skills/coordinate/risk-facts.mjs';
 import { initRepo } from './git-repo.mjs';
 
 // By code point, so that no editor or tool recomposes them: e with acute in one character, the combining acute, the long s, Escape and the line separator.
@@ -114,9 +114,9 @@ test('merge checks: a file under riskyPaths raises a low class to medium and low
   assert.equal(riskClass('low', []), 'low');
 });
 
-const SCRIPT = fileURLToPath(new URL('../skills/orchestrating-projects/merge-checks.mjs', import.meta.url));
+const SCRIPT = fileURLToPath(new URL('../skills/coordinate/merge-checks.mjs', import.meta.url));
 const cli = (...args) => spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
-const folder = () => mkdtempSync(join(tmpdir(), 'bk-merge-'));
+const folder = () => mkdtempSync(join(tmpdir(), 'cl-merge-'));
 
 // An origin whose first commit holds these files. clones() gives the project's checkout and the scratch clone, once every head is on a branch.
 function world(files) {
@@ -271,7 +271,7 @@ test('risk facts: risky files set the floor, and manifests, migrations and code 
   assert.deepEqual(riskFacts({ riskyPaths: [] }, changes.slice(-1), tracked), { lines: 2, files: 1, risky: [], floor: null, dependencies: [], migrations: [], untested: [] });
 });
 
-const FACTS = fileURLToPath(new URL('../skills/orchestrating-projects/risk-facts.mjs', import.meta.url));
+const FACTS = fileURLToPath(new URL('../skills/coordinate/risk-facts.mjs', import.meta.url));
 const factsCli = (...args) => spawnSync(process.execPath, [FACTS, ...args], { encoding: 'utf8' });
 
 test('risk facts: the command line reads the diff of a clone and the policy of its origin, and exits 2 on a bad argument', () => {

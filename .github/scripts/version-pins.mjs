@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { isMain } from './main.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-// Recorded history and benchmark arms keep the versions they name; text under plugins/ ships inside the release it would name.
-export const SKIP = /^(bench\/|evaluations\/|CHANGELOG\.md|plugins\/)|package-lock\.json$/;
+// Text under plugins/ ships inside the release it would name.
+export const SKIP = /^plugins\/|package-lock\.json$/;
 
 export function pins(text, version) {
   return text.replace(/([#@])cedarloom-v\d+\.\d+\.\d+/g, `$1cedarloom-v${version}`);

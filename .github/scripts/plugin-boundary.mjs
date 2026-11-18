@@ -1,4 +1,4 @@
-// A plugin installs as its folder alone: no file of a folder under plugins/ reaches outside that folder or keeps another plugin's matcher prefix.
+// A plugin installs as its folder alone: no file of a folder under plugins/ reaches outside that folder or keeps another plugin's matcher prefix, and only the Orca-only cl-orchestration and the bundle that installs it name Orca.
 // Usage: node .github/scripts/plugin-boundary.mjs   (exit 1 on any such file, listed with its rule names)
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
@@ -23,6 +23,9 @@ const ABOVE_ROOT = /CLAUDE_PLUGIN_ROOT\}?\/\.\.(?![\w.])/;
 const HOOKS = /^plugins\/[^/]+\/hooks\/[^/]+\.json$/;
 const PREFIX = /^\^([\w-]+):/;
 const MANIFEST = '.claude-plugin/plugin.json';
+// Orca's name as a word or inside an identifier (`orca`, `OrcaClient`, `ORCA_*`, `CEDARLOOM_ORCA_HANDLE`, `isOrcaWorker`, `in_orca`) but not inside a plain word (`Majorca`), and the plugin folders that may hold it: cl-workflow and cl-repo work without Orca.
+const ORCA = /(?<![A-Za-z])orca|(?<![A-Z])Orca|(?<![A-Z])ORCA/;
+const ORCA_PLUGINS = new Set(['plugins/cl-orchestration', 'plugins/cedarloom']);
 
 const GENERATED = /(?:^|\/)CHANGELOG\.md$/;
 
@@ -50,6 +53,7 @@ function blanked(text) {
 // Rule names that match in `text` of the file `path` (relative to the repository root), `plugin` being the plugin's folder and `name` its manifest name.
 export function offences(path, text, plugin, name) {
   const found = new Set();
+  if (!ORCA_PLUGINS.has(plugin) && ORCA.test(text)) found.add('orca-only-orchestration');
   const outside = (spec) => {
     const target = posix.join(posix.dirname(path), spec);
     return target !== plugin && !target.startsWith(`${plugin}/`);

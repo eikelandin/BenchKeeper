@@ -1,12 +1,14 @@
 {
   "name": "cl-workflow",
   "displayName": "CedarLoom workflow",
-  "version": "6.27.0",
+  "version": "0.0.0",
   "description": "Chooses how much checking a task gets (a software change, a docs pass or research) and starts the planning, review and research agents it needs. Works next to other skill packs and plugins when they are installed.",
   "author": {
-    "name": "eikelandin",
-    "url": "https://github.com/eikelandin"
+    "name": "CedarLoom",
+    "url": "https://github.com/CedarLoom"
   },
+  "homepage": "https://github.com/CedarLoom/cedarloom#readme",
+  "repository": "https://github.com/CedarLoom/cedarloom",
   "license": "ISC",
   "hooks": "./hooks/claude-code.json",
   "types": "./types/index.d.ts",
@@ -14,14 +16,8 @@
     "tierBand": {
       "type": "boolean",
       "title": "Status band above the prompt (terminal and desktop app)",
-      "description": "Off by default. Adds two rows above the prompt in the Claude Code terminal and desktop app: project, branch and Ponytail's level when it is installed, then the last test run and lint or type check, and ASK while terminal questions are allowed. It reads your working folder, git, one Ponytail flag file and the commands and edits of the main loop; it stores and sends nothing. Turn it off by setting this option to false. The VS Code extension does not draw it.",
+      "description": "Off by default. Adds two rows above the prompt in the Claude Code terminal and desktop app: project, branch and Ponytail's level (only when Ponytail is installed; CedarLoom does not install it), then the last test run and lint or type check, and ASK while terminal questions are allowed. It reads your working folder, the current git branch, one Ponytail flag file and the commands and edits of the main loop; it writes no file and makes no network request. Turn it off by setting this option to false. The VS Code extension does not draw it.",
       "default": false
-    },
-    "hub": {
-      "type": "string",
-      "title": "Hub repository for questions and issues (owner/name)",
-      "description": "Empty by default: no hub. One GitHub repository, best a private one, for the owner questions of projects whose own repository is public, and for work items where cl-orchestration's issuesIn or a project's policy chooses the hub. Set the same value in cl-orchestration's hub option. /cl-workflow:questions asks the hub's question issues, then this private repository's, then the local queue.",
-      "default": ""
     }
   }
 }

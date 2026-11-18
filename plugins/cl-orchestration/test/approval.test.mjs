@@ -5,20 +5,32 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { answer, missing } from '../skills/orchestrating-projects/approval.mjs';
+import { answer, missing } from '../skills/coordinate/approval.mjs';
 
-const SKILL = '../skills/orchestrating-projects/';
+const SKILL = '../skills/coordinate/';
 const WHAT = 'What: Approve the design of the streamed export (plan: docs/plans/export.md).';
 const MERGES = '| Merges | the coordinator after green checks; .github stays for the owner |';
 const COST = '| Cost | 2 worker sessions, about 3 hours (unverified) |';
 const STREAM = '| (a) Stream the export (Recommended) | Both PRs start | More code to review |';
 const HOLD = '| (b) Hold | Nothing changes | The export stays slow |';
+const RECOMMENDED = 'Recommended: (a) Stream the export, because its memory use stays flat for any row count';
 const WHY = 'Why now: issue 12 waits on it.';
 const FILLED = `${WHAT}
 
+Context: Exports of more than 200,000 rows fail, as the export builds the whole file in memory.
+
+| Option | Impact | Trade-off |
+|---|---|---|
+${STREAM}
+${HOLD}
+
+${RECOMMENDED}
+Source: docs/plans/export.md
+Confidence: high
+${WHY}
+
 | Approval | |
 |---|---|
-| Recommended | (a) Stream the export, confidence high |
 | Work if approved | 2 PRs, each under 1,000 lines, in owner/project; the reader first |
 | Runs on | opus xhigh; phases: plan opus high, implement opus high, test sonnet high, review opus high, depth xhigh |
 | Review | fresh reviewer per PR at xhigh, plus the security review |
@@ -26,20 +38,14 @@ ${MERGES}
 | Owner steps | none |
 ${COST}
 | Undo | revert each PR |
-| Answer | comment "a", "b" or free text, or run /cl-workflow:questions |
 
-| Option | What happens | Trade-off |
-|---|---|---|
-${STREAM}
-${HOLD}
-
-${WHY}
+Answer: comment "a", "b" or free text, or run /cl-workflow:questions
 `;
 
 // A variant must differ from the filled text, or its case would pass on the text that passes.
 const swap = (from, to) => { assert.ok(FILLED.includes(from), from); return FILLED.replace(from, to); };
 const NO_COST = swap(`${COST}\n`, '');
-const APPROVAL = FILLED.slice(FILLED.indexOf('| Approval | |'), FILLED.indexOf('\n\n| Option'));
+const APPROVAL = FILLED.slice(FILLED.indexOf('| Approval | |'), FILLED.indexOf('\n\nAnswer:'));
 
 const CASES = [
   ['the filled text', FILLED, []],
@@ -64,8 +70,14 @@ const CASES = [
   ['a deferral as a link text whose target holds a bracket', swap(COST, '| Cost | [TBD](x]y) |'), ['Cost']],
   ['a deferral after a zero-width space', swap(COST, '| Cost | ​TBD |'), ['Cost']],
   ['the Approval table inside a multi-line HTML comment', swap(APPROVAL, `<!--\n${APPROVAL}\n-->`),
-    ['Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer']],
-  ['a Recommended row that names another option than the first', swap('| Recommended | (a) Stream the export, confidence high |', '| Recommended | (b) Hold, confidence high |'), ['Recommended']],
+    ['Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo']],
+  ['a Recommended line that names another option than the first', swap(RECOMMENDED, 'Recommended: (b) Hold, because nothing else changes'), ['Recommended']],
+  ['a second Recommended line that names another option', swap(RECOMMENDED, `${RECOMMENDED}\nRecommended: (b) Hold, because nothing else changes`), ['Recommended']],
+  ['no Recommended line', swap(`${RECOMMENDED}\n`, ''), ['Recommended']],
+  ['no Context line', swap('Context: Exports', 'Exports'), ['Context']],
+  ['no Source line', swap('Source: docs/plans/export.md\n', ''), ['Source']],
+  ['a placeholder as Confidence', swap('Confidence: high', 'Confidence: <high, medium or low>'), ['Confidence']],
+  ['no Answer line', swap('Answer: comment', 'Comment'), ['Answer']],
   ['a second Approval table with an empty row', `${FILLED}\n| Approval | |\n|---|---|\n| Cost | |\n`, ['Cost']],
   ['a row twice, once empty', swap(COST, `| Cost | |\n${COST}`), ['Cost']],
   ['no What line', swap(`${WHAT}\n`, ''), ['What']],
@@ -77,14 +89,15 @@ const CASES = [
   ['the marked option not first', swap(`${STREAM}\n${HOLD}`, `${HOLD}\n${STREAM}`), ['Options']],
   ['two options marked', swap('| (b) Hold |', '| (b) Hold (Recommended) |'), ['Options']],
   ['a placeholder in the options table', swap('| More code to review |', '| <trade-off> |'), ['Options']],
-  ['an option without What happens', swap(HOLD, '| (b) Hold | | The export stays slow |'), ['Options']],
+  ['an option without Impact', swap(HOLD, '| (b) Hold | | The export stays slow |'), ['Options']],
+  ['an option without Trade-off', swap(HOLD, '| (b) Hold | Nothing changes | |'), ['Options']],
   ['two options with one label', swap('| (b) Hold |', '| (a) Hold |'), ['Options']],
   ['two options with one label in two cases', swap('| (b) Hold |', '| (A) Hold |'), ['Options']],
   ['an option without a label', swap('| (b) Hold |', '| Hold |'), ['Options']],
-  ['front matter left in', `---\nlabels: question, ready-for-human\n---\n\n${FILLED}`, ['Front matter']],
-  // Every part of the template holds a placeholder: the Answer row depends on where the issue lands.
+  ['front matter left in', `---\nlabels: cl:needs-human\n---\n\n${FILLED}`, ['Front matter']],
+  // Every part of the template holds a placeholder: the Answer line depends on where the issue lands.
   ['the unfilled template', readFileSync(new URL(`${SKILL}approval-template.md`, import.meta.url), 'utf8'),
-    ['Front matter', 'What', 'Recommended', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Answer', 'Options', 'Why now']],
+    ['What', 'Context', 'Recommended', 'Source', 'Confidence', 'Work if approved', 'Runs on', 'Review', 'Merges', 'Owner steps', 'Cost', 'Undo', 'Options', 'Why now', 'Answer']],
 ];
 
 // A comment as `gh issue view --json comments` prints it.
@@ -94,7 +107,7 @@ for (const [name, text, expected] of CASES) test(`approval: ${name} lacks ${expe
 
 test('approval: the command line exits 0 for a filled approval and 1 with the missing row on stderr', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   const run = (name, text, ...mode) => { writeFileSync(join(dir, '.cedarloom/runs/r1', name), text); return spawnSync(process.execPath, [script, ...mode, `.cedarloom/runs/r1/${name}`], { cwd: dir, encoding: 'utf8' }); };
   assert.equal(run('filled.md', FILLED).status, 0);
@@ -151,13 +164,13 @@ const ANSWERS = [
   ['free text that is no label is none', [said('a, go ahead', '2026-11-11T10:00:00Z'), said('(a', '2026-11-11T10:30:00Z'), said('Looks good', '2026-11-11T11:00:00Z')], null],
   ['an option without a full stop is cut at 200 characters', [said(`Owner answer (2026-11-11): ${'x'.repeat(300)}`, '2026-11-11T10:00:00Z')], { option: 'x'.repeat(200), text: '', at: '2026-11-11T10:00:00Z' }],
 ];
-for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'question' }], author: { login: 'owner' }, body, comments }, writes), expected));
+for (const [name, comments, expected, body = FILLED, writes] of ANSWERS) test(`approval: ${name}`, () => assert.deepEqual(answer({ labels: [{ name: 'cl:needs-human' }], author: { login: 'owner' }, body, comments }, writes), expected));
 
 test('approval: the command line counts a member\'s answer only with write access to the repository the issue URL names', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
-  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
+  const bin = mkdtempSync(join(tmpdir(), 'cl-approval-bin-'));
   const run = (permission, issue) => {
     writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$@" > '${bin}/log'\necho '{"permission":"${permission}"}'\n`, { mode: 0o755 });
     writeFileSync(join(dir, '.cedarloom/runs/r1/issue.json'), JSON.stringify({ body: FILLED, comments: [{ ...SECOND, authorAssociation: 'MEMBER' }], ...issue }));
@@ -178,10 +191,10 @@ test('approval: the command line counts a member\'s answer only with write acces
   assert.equal(readFileSync(join(bin, 'log'), 'utf8'), '');
 });
 
-test('approval: apply moves a question the owner answered to ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
+test('approval: apply moves a question the owner answered to cl:ready-for-agent, an approval only out of the queue, and leaves one without the owner\'s answer as it is', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const bin = mkdtempSync(join(tmpdir(), 'bk-approval-bin-'));
-  const labels = [{ name: 'question' }, { name: 'ready-for-human' }, { name: 'Deferred' }, { name: 'project:app' }];
+  const bin = mkdtempSync(join(tmpdir(), 'cl-approval-bin-'));
+  const labels = [{ name: 'cl:needs-human' }, { name: 'CL:Deferred' }, { name: 'bug' }];
   const run = (comments, { body = 'Which export format?', tags = labels, args = [] } = {}) => {
     writeFileSync(join(bin, 'issue.json'), JSON.stringify({ number: 12, labels: tags, author: { login: 'coordinator' }, body, comments }));
     writeFileSync(join(bin, 'log'), '');
@@ -192,17 +205,17 @@ test('approval: apply moves a question the owner answered to ready-for-agent, an
   // The answer the questions skill has just posted.
   const answered = run([SECOND]);
   assert.equal(answered.status, 0, answered.stderr);
-  assert.deepEqual(JSON.parse(answered.stdout), { ...GO, labels: ['project:app', 'ready-for-agent'] });
-  assert.deepEqual(answered.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-human --remove-label Deferred --add-label ready-for-agent']);
+  assert.deepEqual(JSON.parse(answered.stdout), { ...GO, labels: ['bug', 'cl:ready-for-agent'] });
+  assert.deepEqual(answered.edits, ['issue edit 12 -R owner/tracker --remove-label cl:needs-human --remove-label CL:Deferred --add-label cl:ready-for-agent']);
   // An approval's work lives in what it names: it gets no start label.
   const approval = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED });
   assert.equal(approval.status, 0, approval.stderr);
-  assert.deepEqual(approval.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-human --remove-label Deferred']);
+  assert.deepEqual(approval.edits, ['issue edit 12 -R owner/tracker --remove-label cl:needs-human --remove-label CL:Deferred']);
   // An approval that carries the start label loses it, or the precheck lists it as work to start.
-  const started = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED, tags: [{ name: 'question' }, { name: 'ready-for-agent' }, { name: 'project:app' }] });
+  const started = run([said('a', '2026-11-11T10:00:00Z')], { body: FILLED, tags: [{ name: 'cl:needs-human' }, { name: 'cl:ready-for-agent' }, { name: 'bug' }] });
   assert.equal(started.status, 0, started.stderr);
-  assert.deepEqual(JSON.parse(started.stdout), { option: 'a', text: '', at: '2026-11-11T10:00:00Z', labels: ['project:app'] });
-  assert.deepEqual(started.edits, ['issue edit 12 -R owner/tracker --remove-label question --remove-label ready-for-agent']);
+  assert.deepEqual(JSON.parse(started.stdout), { option: 'a', text: '', at: '2026-11-11T10:00:00Z', labels: ['bug'] });
+  assert.deepEqual(started.edits, ['issue edit 12 -R owner/tracker --remove-label cl:needs-human --remove-label cl:ready-for-agent']);
   for (const comments of [[], [{ ...SECOND, authorAssociation: 'COLLABORATOR' }], [{ ...SECOND, authorAssociation: 'MEMBER' }]]) {
     const open = run(comments);
     assert.deepEqual([open.status, open.stdout, open.edits], [1, '', []]);
@@ -215,7 +228,7 @@ test('approval: apply moves a question the owner answered to ready-for-agent, an
 
 test('approval: the command line refuses a file outside the run folder with exit 2', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
-  const dir = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const dir = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
   writeFileSync(join(dir, 'filled.md'), FILLED);
   symlinkSync(join(dir, 'filled.md'), join(dir, '.cedarloom/runs/r1/link.md'));
@@ -225,22 +238,22 @@ test('approval: the command line refuses a file outside the run folder with exit
   assert.equal(refused.stderr.trim().split('\n').length, 1);
   assert.equal(status(dir, '.cedarloom/runs/r1/link.md'), 2);
   // A linked .cedarloom or runs folder leads out of the project, so even a filled approval under it is refused.
-  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  const out = mkdtempSync(join(tmpdir(), 'cl-approval-out-'));
   mkdirSync(join(out, 'runs/r1'), { recursive: true });
   writeFileSync(join(out, 'runs/r1/filled.md'), FILLED);
-  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const linkedDot = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   symlinkSync(out, join(linkedDot, '.cedarloom'));
   assert.equal(status(linkedDot, '.cedarloom/runs/r1/filled.md'), 2);
-  const linkedRuns = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const linkedRuns = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   mkdirSync(join(linkedRuns, '.cedarloom'));
   symlinkSync(join(out, 'runs'), join(linkedRuns, '.cedarloom/runs'));
   assert.equal(status(linkedRuns, '.cedarloom/runs/r1/filled.md'), 2);
 });
 
-test('approval: without a hub or a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
+test('approval: without a private tracker, the question goes into the local queue, and the coordinator reads its answer there', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   // The working folder of the coordinator can be a subfolder of a repository.
-  const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const repo = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   execFileSync('git', ['init', '-q'], { cwd: repo });
   const dir = join(repo, 'work');
   mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
@@ -273,7 +286,7 @@ test('approval: without a hub or a private tracker, the question goes into the l
 test('approval: the local queue refuses links, existing files and planted answers, and reports a file it cannot read', () => {
   const script = fileURLToPath(new URL(`${SKILL}approval.mjs`, import.meta.url));
   const project = (sub = '.') => {
-    const repo = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+    const repo = mkdtempSync(join(tmpdir(), 'cl-approval-'));
     execFileSync('git', ['init', '-q'], { cwd: repo });
     const dir = join(repo, sub);
     mkdirSync(join(dir, '.cedarloom/runs/r1'), { recursive: true });
@@ -282,7 +295,7 @@ test('approval: the local queue refuses links, existing files and planted answer
   };
   const answered = `Status: answered\n\n${FILLED}\nOwner answer (2026-11-15): b. Hold it for now.\n`;
   // A linked queue folder leads out of the project: nothing is filed or read there.
-  const out = mkdtempSync(join(tmpdir(), 'bk-approval-out-'));
+  const out = mkdtempSync(join(tmpdir(), 'cl-approval-out-'));
   mkdirSync(join(out, 'questions'));
   writeFileSync(join(out, 'questions/project-1.md'), answered);
   const linkedQueue = project();
@@ -290,7 +303,7 @@ test('approval: the local queue refuses links, existing files and planted answer
   assert.equal(linkedQueue.run('file', '.cedarloom/runs/r1/filled.md', 'project').status, 2);
   assert.deepEqual(readdirSync(join(out, 'questions')), ['project-1.md']);
   assert.equal(linkedQueue.run('queue').status, 2);
-  const linkedDot = mkdtempSync(join(tmpdir(), 'bk-approval-'));
+  const linkedDot = mkdtempSync(join(tmpdir(), 'cl-approval-'));
   symlinkSync(out, join(linkedDot, '.cedarloom'));
   assert.equal(spawnSync(process.execPath, [script, 'queue'], { cwd: linkedDot, encoding: 'utf8' }).status, 2);
   // A file of the next number's name is never overwritten.

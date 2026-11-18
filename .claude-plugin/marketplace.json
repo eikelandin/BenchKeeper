@@ -1,12 +1,12 @@
 {
   "name": "cedarloom",
-  "owner": { "name": "eikelandin", "url": "https://github.com/eikelandin" },
-  "description": "CedarLoom: the cl-workflow, cl-setup and cl-orchestration plugins for Claude Code and Codex, and the cedarloom bundle that installs all three.",
+  "owner": { "name": "CedarLoom", "url": "https://github.com/CedarLoom" },
+  "description": "CedarLoom: the cl-workflow, cl-repo and cl-orchestration plugins for Claude Code and Codex, and the cedarloom bundle that installs all three.",
   "plugins": [
     {
       "name": "cedarloom",
       "source": "./plugins/cedarloom",
-      "description": "Installs the CedarLoom plugins cl-workflow, cl-setup and cl-orchestration together.",
+      "description": "Installs the CedarLoom plugins cl-workflow, cl-repo and cl-orchestration together.",
       "category": "development"
     },
     {
@@ -16,9 +16,9 @@
       "category": "development"
     },
     {
-      "name": "cl-setup",
-      "source": "./plugins/cl-setup",
-      "description": "Sets up and maintains projects: agent instructions and dev container per repository, a maintenance pass and a review of the rules files.",
+      "name": "cl-repo",
+      "source": "./plugins/cl-repo",
+      "description": "Sets up and maintains a repository: its agent setup, audits, fixes and maintenance passes.",
       "category": "development"
     },
     {

@@ -1,13 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
-  "bootstrap-sha": "4bf56b9d969b938adac099d9608a95daae280138",
   "group-pull-request-title-pattern": "chore${scope}: release cedarloom",
   "bump-minor-pre-major": true,
   "plugins": [
     {
       "type": "linked-versions",
       "groupName": "cedarloom plugins",
-      "components": ["cedarloom", "cedarloom-workflow", "cedarloom-setup", "cedarloom-orchestration"],
+      "components": ["cedarloom", "cedarloom-workflow", "cedarloom-repo", "cedarloom-orchestration"],
       "merge": false
     }
   ],
@@ -29,9 +28,9 @@
         { "type": "json", "path": ".codex-plugin/plugin.json", "jsonpath": "$.version" }
       ]
     },
-    "plugins/cl-setup": {
+    "plugins/cl-repo": {
       "release-type": "simple",
-      "component": "cedarloom-setup",
+      "component": "cedarloom-repo",
       "include-component-in-tag": true,
       "release-as": "0.1.0",
       "extra-files": [
