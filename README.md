@@ -79,7 +79,7 @@ For other agents, follow its own README.
 4. Per issue, with the coordinator (needs `cl-orchestration`):
    - Label the issues with the `startLabel` (`cl:ready-for-agent` by default).
    - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:coordinate <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/coordinate/orca.md) and a fresh reviewer per pull request. Releases and tags stay yours.
-   - Its questions go to the project's repository as issues, else to a local queue; `/cl-workflow:questions` asks them. Where they go, the labels and why a private repository is recommended: [owner questions](docs/plugins.md#owner-questions).
+   - Its questions go to the project's repository as issues when it has issues on, else to a local queue; `/cl-workflow:questions` asks them. Where they go, the labels and why a private repository is recommended: [owner questions](docs/plugins.md#owner-questions).
 
 ## Update
 

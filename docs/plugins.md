@@ -1,6 +1,6 @@
 # The plugins
 
-What the CedarLoom plugins add to a Claude Code session besides their skills: hooks and their settings, Code Mode, and untrusted input. Install, update and uninstall steps are in the [README](../README.md); the skills are in [Skills](skills.md).
+What the CedarLoom plugins add to a Claude Code session besides their skills: hooks and their settings, Code Mode, and how the coordinator filters untrusted issue and pull request text. Install, update and uninstall steps are in the [README](../README.md); the skills are in [Skills](skills.md).
 
 | Plugin | Hooks | Settings |
 |---|---|---|
