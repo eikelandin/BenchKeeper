@@ -55,7 +55,7 @@ The coordinator of `/cl-orchestration:coordinate` files an owner question in the
 | `cl:in-progress` | a worker holds the issue, so it never starts twice; a label left after its worker ended without a pull request (a host restart) holds the issue until you take it off: `gh issue edit <number> -R <owner/repo> --remove-label cl:in-progress` |
 | `cl:deferred` | the owner parked it: it does not start and the question queue skips it |
 | `cl:follow-up` | found during other work; workers, reviewers and jobs report it, and the coordinator files it sized for one pull request at the run's close; you choose whether it starts |
-| `cl:triage` | filed through the issue form; read it before any other label |
+| `cl:triage` | filed through the issue template; read it before adding another label |
 
 Rejected work is closed as not planned, with no label. `/cl-repo:setup` lists the labels the repository lacks and creates the ones you approve.
 

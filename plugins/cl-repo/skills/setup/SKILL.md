@@ -69,19 +69,19 @@ The coordinator (`cl-orchestration:coordinate`) starts and merges nothing in a p
 
 - `startLabel`: the label that lets the coordinator start an issue, `cl:ready-for-agent` unless the user names another.
 - `merge.allowed`: `false`, the user merges; `true` lets the coordinator merge a reviewed pull request. With `true`, `merge.requiredChecks` lists check names that run on pull requests, taken from a recent one (`gh pr checks <n> --json name --jq '.[].name'`), never a job that runs only on pushes to the default branch, and only those the user keeps.
-- `closeIssue`: `true`, the coordinator closes an issue after its pull request merged; `false` leaves that to the user.
+- `closeIssue`: `true`, a worker's pull request closes its issue when merged, by anyone, and the coordinator closes one left open; `false` leaves that to the user.
 - `trustedAuthors`: none, or the review bots the user names whose comments workers may follow.
 
 Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `cl-orchestration:coordinate` (the cl-orchestration plugin, when installed) lists each field and its default.
 
-The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. Read only lists the repository's labels (`gh label list --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> --description "<meaning>"`:
+The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. Read only lists the repository's labels (`gh label list --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> --description "<meaning>"`, naming one it could not create in the report with that command:
 - `cl:plan`: CedarLoom may read and plan the issue and ask on it; it does not start work.
 - `cl:ready-for-agent`: the coordinator may start the issue.
 - `cl:needs-human`: a question or approval waits for the owner.
 - `cl:in-progress`: a worker holds the issue, so it never starts twice.
 - `cl:deferred`: the owner parked it: it does not start and the question queue skips it.
 - `cl:follow-up`: found during other work; the coordinator files it sized for one pull request, and the owner chooses whether it starts.
-- `cl:triage`: filed through the issue form; the owner reads it before any other label.
+- `cl:triage`: filed through the issue template; the owner reads it before adding another label.
 - Rejected work is closed as not planned, with no label.
 
 Where the repository has no `.github/ISSUE_TEMPLATE` folder and its owner has no default issue templates (`gh api repos/<owner>/.github/contents/.github/ISSUE_TEMPLATE` answers 404), propose [issue-templates/work.md](issue-templates/work.md) as `.github/ISSUE_TEMPLATE/work.md` as a plan item (the policy's, where that one is proposed), committed. It labels a new issue `cl:triage`, never `startLabel`: on a public repository anyone can file through it.
