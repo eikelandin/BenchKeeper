@@ -33,7 +33,7 @@ test('precheck: an issue needs every issues.labels entry', () => {
 });
 
 test('precheck: an issue that waits for the owner, that a worker holds or that the owner parked does not start, also once it carries the start label', () => {
-  const issues = [issue(1), issue(2, { labels: [{ name: 'agent-ready' }, { name: 'CedarLoom:Needs-Human' }] }), issue(3, { labels: [{ name: 'cedarloom:needs-human' }, { name: 'agent-ready' }] }), issue(4, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:in-progress' }] }), issue(5, { labels: [{ name: 'agent-ready' }, { name: 'cedarloom:deferred' }] })];
+  const issues = [issue(1), issue(2, { labels: [{ name: 'agent-ready' }, { name: 'CL:Needs-Human' }] }), issue(3, { labels: [{ name: 'cl:needs-human' }, { name: 'agent-ready' }] }), issue(4, { labels: [{ name: 'agent-ready' }, { name: 'cl:in-progress' }] }), issue(5, { labels: [{ name: 'agent-ready' }, { name: 'cl:deferred' }] })];
   assert.deepEqual(pickable(POLICY, issues, []), [1]);
 });
 
