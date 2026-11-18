@@ -1,10 +1,8 @@
 # Skills
 
-What each skill does, who starts it, when it runs and what it writes, so you can pick one without reading its `SKILL.md`. The table comes from each skill's front matter; CI fails when this page differs from it (`node .github/scripts/skills-doc.mjs` rewrites it).
+What each skill does, who starts it, when it runs and what it writes, so you can pick one without reading its `SKILL.md`. The plugins `cl-workflow`, `cl-repo` and `cl-orchestration` ([install](../README.md#install)) bring these skills to Claude Code and Codex. A skill that "you" start never starts on its own.
 
-## CedarLoom's skills
-
-The plugins `cl-workflow`, `cl-repo` and `cl-orchestration` ([install](../README.md#install)) bring these skills to Claude Code and Codex. A skill that "you" start never starts on its own.
+The table comes from each skill's front matter; CI fails when this page differs from it (`node .github/scripts/skills-doc.mjs` rewrites it).
 
 <!-- generated:skills -->
 | Skill | What it is for | Started by | When it runs | What it writes |
