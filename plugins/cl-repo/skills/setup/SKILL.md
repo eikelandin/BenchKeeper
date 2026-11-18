@@ -74,13 +74,13 @@ The coordinator (`cl-orchestration:coordinate`) starts and merges nothing in a p
 
 Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `cl-orchestration:coordinate` (the cl-orchestration plugin, when installed) lists each field and its default.
 
-The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. `<owner/repo>` below is the repository `git remote get-url origin` names, so a fork's clone never reaches its upstream. Read only lists the repository's labels (`gh label list -R <owner/repo> --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> -R <owner/repo> --description "<meaning>"`, naming one it could not create in the report with that command:
+The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. `<owner/repo>` below is the repository `git remote get-url origin` names, so a fork's clone never reaches its upstream. Read only lists the repository's labels (`gh label list -R <owner/repo> --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> -R <owner/repo> --description "<meaning>"` (GitHub takes 100 characters or fewer: [create a label](https://docs.github.com/rest/issues/labels#create-a-label)), naming one it could not create in the report with that command:
 - `cl:plan`: CedarLoom may read and plan the issue and ask on it; it does not start work.
 - `cl:ready-for-agent`: the coordinator may start the issue.
 - `cl:needs-human`: a question or approval waits for the owner.
 - `cl:in-progress`: a worker holds the issue, so it never starts twice.
 - `cl:deferred`: the owner parked it: it does not start and the question queue skips it.
-- `cl:follow-up`: found during other work; the coordinator files it sized for one pull request, and the owner chooses whether it starts.
+- `cl:follow-up`: found during other work, sized for one pull request; the owner chooses whether it starts.
 - `cl:triage`: filed through the issue template; the owner reads it before adding another label.
 - Rejected work is closed as not planned, with no label.
 
