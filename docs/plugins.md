@@ -14,7 +14,7 @@ Every hook runs `node`, so Node.js must be on the PATH. Set a plugin's options w
 
 Two rows of text above the prompt in the Claude Code terminal and desktop app (not the VS Code extension), off by default.
 
-- Top row: the project folder, its git branch, and the level of [Ponytail](../README.md#optional-ponytail), when installed.
+- Top row: the project folder, its git branch, and the level of [Ponytail](../README.md#recommended-add-on-ponytail), when installed.
 - Checks row: the last test run and the last lint or type check of the main loop, each `passed`, `failed`, `not run` or `stale (N edits since)`, then `ASK until <time>` (or `ASK for this session`) while [terminal questions](#terminal-questions) are allowed, and the button `?`, which shows a short version of this text.
   - Test runs: `npm test`, `pnpm test`, `yarn test`, `bun test` (also with `run` and as `npm run test:<name>`), `node --test`, `playwright test`, `pytest`, `go test`, `cargo test`, `vitest` or `jest`.
   - Lint or type checks: `eslint`, `npm run lint`, `tsc`, `ruff`, `mypy`, `pyright`, `go vet`, `cargo clippy` or `biome`.

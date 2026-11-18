@@ -45,67 +45,67 @@ const remote = (file, calls = []) => bare((dir, cmd, args) => {
 }, calls);
 
 test('policy: a version 1 file, or one without schemaVersion, keeps its fields and gets every default', () => {
-  assert.deepEqual(effective({}, '6.26.0'), { policy: DEFAULTS, errors: [], warnings: [] });
+  assert.deepEqual(effective({}, '0.1.0'), { policy: DEFAULTS, errors: [], warnings: [] });
   const file = { schemaVersion: 1, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { allowed: true, requiredChecks: ['ci'] }, closeIssue: true };
-  assert.deepEqual(effective(file, '6.26.0').policy, { ...DEFAULTS, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { ...DEFAULTS.merge, allowed: true, requiredChecks: ['ci'] }, closeIssue: true });
+  assert.deepEqual(effective(file, '0.1.0').policy, { ...DEFAULTS, startLabel: 'agent-ready', trustedAuthors: ['review-bot[bot]'], hostWorkerLimit: 3, merge: { ...DEFAULTS.merge, allowed: true, requiredChecks: ['ci'] }, closeIssue: true });
 });
 
 test('policy: a value the schema rejects gives no policy, not the default', () => {
-  const { policy, errors } = effective({ schemaVersion: 2, merge: { mode: 'disjont' } }, '6.26.0');
+  const { policy, errors } = effective({ schemaVersion: 2, merge: { mode: 'disjont' } }, '0.1.0');
   assert.equal(policy, null);
   assert.deepEqual(rules(errors), [['enum', 'merge.mode']]);
 });
 
 test('policy: the built-in owner-only paths stay first, whatever the file lists and whatever its schemaVersion', () => {
-  const paths = (ownerOnlyPaths) => effective({ schemaVersion: 1, merge: { ownerOnlyPaths } }, '6.26.0').policy.merge.ownerOnlyPaths;
+  const paths = (ownerOnlyPaths) => effective({ schemaVersion: 1, merge: { ownerOnlyPaths } }, '0.1.0').policy.merge.ownerOnlyPaths;
   assert.deepEqual(paths([]), BUILT_IN);
   assert.deepEqual(paths(['infra', '.github']), [...BUILT_IN, 'infra']);
 });
 
 test('policy: a key the schema does not name gives no policy, a // comment key passes', () => {
-  const misspelled = effective({ merge: { ownerOnlyPath: ['infra'] } }, '6.26.0');
+  const misspelled = effective({ merge: { ownerOnlyPath: ['infra'] } }, '0.1.0');
   assert.equal(misspelled.policy, null);
   assert.deepEqual(rules(misspelled.errors), [['unknown-key', 'merge.ownerOnlyPath']]);
-  const commented = effective({ '//': 'note', merge: { '//why': 'the owner merges', allowed: true } }, '6.26.0');
+  const commented = effective({ '//': 'note', merge: { '//why': 'the owner merges', allowed: true } }, '0.1.0');
   assert.deepEqual(commented.errors, []);
   assert.deepEqual(commented.policy.merge, { ...DEFAULTS.merge, allowed: true });
 });
 
 test('policy: a file that names another repository is refused and keeps the project repository', () => {
-  const named = effective({ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['project-a'] } }, '6.26.0');
+  const named = effective({ startLabel: 'go', issues: { repository: 'owner/tracker', labels: ['project-a'] } }, '0.1.0');
   assert.deepEqual(named.errors, []);
   assert.deepEqual(named.policy.issues, { labels: ['project-a'] });
   assert.deepEqual(rules(named.warnings), [['refused', 'issues.repository']]);
   assert.match(named.warnings[0].message, /names no other repository; the tracker is the project repository/);
   // A file that chooses another tracker is still named.
-  assert.deepEqual(rules(effective({ issues: { repository: 'owner/tracker', tracker: 'hub' } }, '6.26.0').errors), [['unknown-key', 'issues.tracker']]);
+  assert.deepEqual(rules(effective({ issues: { repository: 'owner/tracker', tracker: 'hub' } }, '0.1.0').errors), [['unknown-key', 'issues.tracker']]);
 });
 
 test('policy: mode is supervised unless the file sets automatic, which takes its hosts from sandbox.allowedDomains', () => {
-  assert.equal(effective({ sandbox: { allowedDomains: ['registry.npmjs.org'] } }, '6.26.0').policy.mode, 'supervised');
-  const automatic = effective({ mode: 'automatic', sandbox: { '//': 'what the tests fetch', allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] } }, '6.26.0');
+  assert.equal(effective({ sandbox: { allowedDomains: ['registry.npmjs.org'] } }, '0.1.0').policy.mode, 'supervised');
+  const automatic = effective({ mode: 'automatic', sandbox: { '//': 'what the tests fetch', allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] } }, '0.1.0');
   assert.deepEqual(automatic.errors, []);
   assert.equal(automatic.policy.mode, 'automatic');
   assert.deepEqual(automatic.policy.sandbox, { allowedDomains: ['registry.npmjs.org', '*.pythonhosted.org'] });
-  assert.equal(effective({ mode: 'automatic' }, '6.26.0').policy, null);
+  assert.equal(effective({ mode: 'automatic' }, '0.1.0').policy, null);
 });
 
 test('policy: a schemaVersion the reader does not know gives no policy', () => {
-  const { policy, errors } = effective({ schemaVersion: 3 }, '6.26.0');
+  const { policy, errors } = effective({ schemaVersion: 3 }, '0.1.0');
   assert.equal(policy, null);
   assert.deepEqual(rules(errors), [['enum', 'schemaVersion']]);
 });
 
 test('policy: minPlugin newer than the plugin gives no policy, and versions compare by number', () => {
-  const newer = effective({ minPlugin: '6.10.0' }, '6.9.0');
+  const newer = effective({ minPlugin: '0.10.0' }, '0.9.0');
   assert.equal(newer.policy, null);
   assert.deepEqual(rules(newer.errors), [['range', 'minPlugin']]);
-  assert.equal(effective({ minPlugin: '6.9.0' }, '6.9.0').policy.minPlugin, '6.9.0');
-  assert.equal(effective({ minPlugin: '6.9.0' }, '6.10.0').policy.minPlugin, '6.9.0');
+  assert.equal(effective({ minPlugin: '0.9.0' }, '0.9.0').policy.minPlugin, '0.9.0');
+  assert.equal(effective({ minPlugin: '0.9.0' }, '0.10.0').policy.minPlugin, '0.9.0');
 });
 
 test('policy: models.worker replaces the model of every depth and keeps the depth\'s effort; phases hold only what the file names', () => {
-  assert.deepEqual(effective({ models: { '//': 'note', worker: { model: 'fable' }, phases: { '//': 'note', review: { model: 'inherit', effort: 'max' } } } }, '6.26.0').policy.models, {
+  assert.deepEqual(effective({ models: { '//': 'note', worker: { model: 'fable' }, phases: { '//': 'note', review: { model: 'inherit', effort: 'max' } } } }, '0.1.0').policy.models, {
     worker: { quick: { model: 'fable', effort: 'high' }, standard: { model: 'fable', effort: 'high' }, deep: { model: 'fable', effort: 'high' }, research: { model: 'fable', effort: 'high' } },
     phases: { review: { model: 'inherit', effort: 'max' } },
     sensitive: DEFAULTS.models.sensitive,
@@ -113,7 +113,7 @@ test('policy: models.worker replaces the model of every depth and keeps the dept
 });
 
 test('policy: models.sensitive fills each entry and field it does not name', () => {
-  assert.deepEqual(effective({ schemaVersion: 2, models: { sensitive: { '//': 'no fable on this account', security: { model: 'opus' }, plan: { effort: 'medium' } } } }, '6.26.0').policy.models.sensitive, {
+  assert.deepEqual(effective({ schemaVersion: 2, models: { sensitive: { '//': 'no fable on this account', security: { model: 'opus' }, plan: { effort: 'medium' } } } }, '0.1.0').policy.models.sensitive, {
     plan: { model: 'fable', effort: 'medium' },
     review: { model: 'fable', effort: 'high' },
     independent: { model: 'fable', effort: 'high' },
@@ -122,12 +122,12 @@ test('policy: models.sensitive fills each entry and field it does not name', () 
 });
 
 test('policy: a path entry that leaves the repository, starts at its root or holds a glob is rejected', () => {
-  const { policy, errors } = effective({ schemaVersion: 2, merge: { ownerOnlyPaths: ['../x', '/x', 'a/*'] } }, '6.26.0');
+  const { policy, errors } = effective({ schemaVersion: 2, merge: { ownerOnlyPaths: ['../x', '/x', 'a/*'] } }, '0.1.0');
   assert.equal(policy, null);
   assert.deepEqual(rules(errors), [['pattern', 'merge.ownerOnlyPaths[0]'], ['pattern', 'merge.ownerOnlyPaths[1]'], ['pattern', 'merge.ownerOnlyPaths[2]']]);
   // A folder with a closing slash, a file below a folder, names that start with dots and a name with a space inside are paths.
   const paths = ['schemas/', 'docs/registry.json', '..cache', '.claude', '.github/workflows', 'docs/release notes.md'];
-  assert.deepEqual(effective({ merge: { additivePaths: paths } }, '6.26.0').policy.merge.additivePaths, paths);
+  assert.deepEqual(effective({ merge: { additivePaths: paths } }, '0.1.0').policy.merge.additivePaths, paths);
 });
 
 const PATH_LISTS = [['merge', 'ownerOnlyPaths'], ['merge', 'additivePaths'], ['review', 'sensitivePaths']];
@@ -142,8 +142,8 @@ const REFUSED = [
   [{ models: { phases: { review: { model: 'some-model-20260101' } } } }, 'enum', 'models.phases.review.model'],
   [{ review: { depth: 'max' } }, 'enum', 'review.depth'],
   [{ review: { sensitiveDepth: 'max' } }, 'enum', 'review.sensitiveDepth'],
-  [{ minPlugin: '6.26' }, 'pattern', 'minPlugin'],
-  [{ minPlugin: 'v6.26.0' }, 'pattern', 'minPlugin'],
+  [{ minPlugin: '0.1' }, 'pattern', 'minPlugin'],
+  [{ minPlugin: 'v0.1.0' }, 'pattern', 'minPlugin'],
   [{ issuesPerWorker: 0 }, 'range', 'issuesPerWorker'],
   [{ issuesPerWorker: 17 }, 'range', 'issuesPerWorker'],
   ...['', '--dangerously-skip-permissions', 'opus; id', 'opus fast', `o${'p'.repeat(128)}`].map((model) => [{ models: { worker: { model } } }, 'pattern', 'models.worker.model']),

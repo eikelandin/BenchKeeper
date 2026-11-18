@@ -1,6 +1,6 @@
 // Optional status band (userConfig tierBand, off by default): a row with the project, its branch and Ponytail's level (only
-// when Ponytail is installed), and a row with the last test run and the last lint or type check, ASK while /cl-workflow:ask or
-// /cl-workflow:questions allows terminal questions.
+// when Ponytail is installed: a recommended add-on, installed separately), and a row with the last test run and the last lint
+// or type check, ASK while /cl-workflow:ask or /cl-workflow:questions allows terminal questions.
 // It reads the working folder, the git branch, one flag file of Ponytail and the commands and edits of the main loop; it
 // writes no file and makes no network request.
 import { atom, read, update } from 'claude-code'
@@ -63,7 +63,7 @@ async function refresh($: EngineInterface) {
   await update($, where, () => ({ project: cwd.split(/[\\/]/).filter(Boolean).pop() || cwd, branch: branch || null, ponytail: /^[a-z-]{1,12}$/.test(level) ? level : null }))
 }
 
-const HELP = 'CedarLoom band. Top row: project, branch, Ponytail level (only when Ponytail is installed). Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/cl-workflow:ask, /cl-workflow:questions). The band writes no file and makes no network request. Turn off: set the status band option to false in the plugin options.'
+const HELP = 'CedarLoom band. Top row: project, branch, Ponytail level (only when Ponytail is installed: a recommended add-on, installed separately). Second row: last test run and lint or type check, stale after an edit. ASK until a time or for this session: terminal questions are allowed until then (/cl-workflow:ask, /cl-workflow:questions). The band writes no file and makes no network request. Turn off: set the status band option to false in the plugin options.'
 
 export const register: Register = (on, options) => {
   // Off: no hook at all, so tool calls and prompts pass the band by. Changing the option reloads the module.
