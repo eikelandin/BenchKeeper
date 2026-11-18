@@ -56,7 +56,7 @@ The hooks of `cl-workflow` do not run in Codex ([The plugins](docs/plugins.md)).
 | `cl-repo` | Skills that set up and maintain a repository: agent instructions, the dev container, the coordinator's policy file, a maintenance pass and audits of rule files, docs and code. Each change is a plan item you approve first. | `/cl-repo:setup`, `/cl-repo:maintain`, `/cl-repo:audit`, `/cl-repo:improve`, `/cl-repo:debloat` |
 | `cl-orchestration` | A coordinator that works labeled issues of several projects in parallel with worker jobs, has a fresh reviewer check each pull request, merges only where the repository's written policy allows, and resumes from a handoff file after a clear or compaction. | `/cl-orchestration:coordinate` with the project paths |
 
-The role guard is a hook, not a boundary: a command written to get around it can pass, so rulesets on the default branch and a token without those rights stay the binding layer. Start only the coordinator's session with `CEDARLOOM_ROLE=coordinator`, for example `CEDARLOOM_ROLE=coordinator claude` ([The plugins](docs/plugins.md#role-guard)).
+The role guard is a hook, not a boundary: a command written to get around it can pass, so rulesets on the default branch and a token without those rights stay the binding layer ([The plugins](docs/plugins.md#role-guard)).
 
 ## Optional: Ponytail
 
@@ -79,7 +79,7 @@ For other agents, follow its own README.
 4. Per issue, with the coordinator (needs `cl-orchestration`):
    - Label the issues with the `startLabel` (`cl:ready-for-agent` by default).
    - In a terminal (an Orca terminal for Orca workers), run `CEDARLOOM_ROLE=coordinator claude` in the default permission mode, then `/cl-orchestration:coordinate <project paths>`. It starts a worker per issue through [Orca](plugins/cl-orchestration/skills/coordinate/orca.md) and a fresh reviewer per pull request. Releases and tags stay yours.
-   - Its questions go to the project's repository as issues when issues are on there, else to the local queue `.cedarloom/questions/`. A private repository is recommended, as question issues on a public one are public. `/cl-workflow:questions` asks them; labels: [owner questions](docs/plugins.md#owner-questions).
+   - Its questions go to the project's repository as issues, else to a local queue; `/cl-workflow:questions` asks them. Where they go, the labels and why a private repository is recommended: [owner questions](docs/plugins.md#owner-questions).
 
 ## Update
 

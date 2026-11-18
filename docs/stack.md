@@ -1,6 +1,6 @@
 # Stack
 
-CedarLoom ships as plugins for Claude Code and Codex: [workflow](../plugins/cl-workflow), [repo](../plugins/cl-repo) and [orchestration](../plugins/cl-orchestration), installed together by the [cedarloom](../plugins/cedarloom) bundle. Install steps: [README](../README.md#install). What each skill does: [Skills](skills.md).
+CedarLoom ships as plugins for Claude Code and Codex: [workflow](../plugins/cl-workflow), [repo](../plugins/cl-repo) and [orchestration](../plugins/cl-orchestration), installed together by the [cedarloom](../plugins/cedarloom) bundle. Install steps: [README](../README.md#install).
 
 ## Components
 
@@ -17,7 +17,7 @@ CedarLoom ships as plugins for Claude Code and Codex: [workflow](../plugins/cl-w
 | [.claude-plugin/marketplace.json](../.claude-plugin/marketplace.json) | the marketplace, read by Claude Code and Codex | `$HOME/.claude/plugins/`, `$HOME/.codex/plugins/` |
 | [plugins/cl-repo/rules/project.md](../plugins/cl-repo/rules/project.md) | repository rules (standard level and up) | the CedarLoom block `setup` writes |
 | [plugins/cl-orchestration/rules/worker.md](../plugins/cl-orchestration/rules/worker.md) | conduct rules for the workers of a coordinator run | text in every worker spec and subagent brief of `coordinate`; no setup installs it as a rule file |
-| `plugins/*/skills/<name>` | the skills, described in [Skills](skills.md) | plugin skills `cl-workflow:<name>`, `cl-repo:<name>` and `cl-orchestration:<name>` |
+| `plugins/*/skills/<name>` | the skills, described in [Skills](skills.md); the finding layout of [audit](../plugins/cl-repo/skills/audit/SKILL.md#report), the before-and-after evidence of [improve](../plugins/cl-repo/skills/improve/SKILL.md#steps) and the code steps of [debloat](../plugins/cl-repo/skills/debloat/SKILL.md#steps-code) are in their own files | plugin skills `cl-workflow:<name>`, `cl-repo:<name>` and `cl-orchestration:<name>` |
 | [plugins/cl-workflow/agents](../plugins/cl-workflow/agents) | the phase agents the workflow starts at standard and deep (plan, implement, test, review) and per item when research runs items in parallel, each with its effort and tools; the workflow skill passes the model in the call | Claude Code plugin agents `cl-workflow:<role>`; Codex uses general subagents |
 | [plugins/cl-workflow/hooks/tier](../plugins/cl-workflow/hooks/tier/register.tsx) | the optional status band ([plugins](plugins.md#the-status-band)) | Claude Code plugin option `tierBand`, off by default |
 | [plugins/cl-orchestration/hooks/rotation](../plugins/cl-orchestration/hooks/rotation/register.ts) | clears an idle coordinator above a context threshold and hands its handoff file back after a clear or compaction ([plugins](plugins.md#coordinator-context-rotation)) | Claude Code plugin options `rotateAtTokens` (200000) and `rotateAtPercent` (off); the restore after a compaction as a `SessionStart` command hook (Claude Code and Codex) |

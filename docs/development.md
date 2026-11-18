@@ -20,5 +20,5 @@ How the checks and the workflows of this repository work.
   - holds a path that leaves its plugin folder (a `../` path resolved from the file's folder, `${CLAUDE_PLUGIN_ROOT}/..`),
   - imports a package that is neither a `node:` module nor `claude-code`,
   - has a hook matcher in `hooks/*.json` whose `^<prefix>:` is not the plugin's name in `.claude-plugin/plugin.json`,
-  - breaks rule `orca-only-orchestration`: the name `orca` as a word or inside an identifier (`ORCA_*` and `CEDARLOOM_ORCA_HANDLE` variables, `OrcaClient`, `isOrcaWorker`, `in_orca`; not inside a plain word such as `Majorca`) fails in every plugin folder but `plugins/cl-orchestration`, which runs only on Orca, and `plugins/cedarloom`, the bundle that installs it.
+  - breaks rule `orca-only-orchestration`: the name `orca` as a word or inside an identifier (`ORCA_*` and `CEDARLOOM_ORCA_HANDLE` variables, `OrcaClient`, `isOrcaWorker`, `in_orca`; not inside a plain word such as `Majorca`) fails in every plugin folder but `plugins/cl-orchestration`, which runs only on Orca, and `plugins/cedarloom`, the bundle that installs it; `cl-workflow` and `cl-repo` work without Orca.
 - Actions are pinned to commit SHAs with a version comment. Dependabot (`.github/dependabot.yml`) updates the `uses:` pins weekly.

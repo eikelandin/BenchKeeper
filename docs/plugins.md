@@ -1,6 +1,6 @@
 # The plugins
 
-The hooks the CedarLoom plugins add to a Claude Code session besides their skills, and the settings that control them. Install, update and uninstall steps are in the [README](../README.md); the skills are in [Skills](skills.md).
+What the CedarLoom plugins add to a Claude Code session besides their skills: hooks and their settings, Code Mode, and untrusted input. Install, update and uninstall steps are in the [README](../README.md); the skills are in [Skills](skills.md).
 
 | Plugin | Hooks | Settings |
 |---|---|---|
@@ -23,7 +23,7 @@ Two rows of text above the prompt in the Claude Code terminal and desktop app (n
   - Redirections (`> test.log`, `2>&1`, `&> test.log`) are ignored, and one `sh -c '<script>'` (also `sh -lc`, as in `devcontainer exec ... sh -lc 'cd app && npm test'`) counts as its script.
   - `not run`: a chain with `||`, `;`, `|` or `&`, a quoted name, a background run, or a failed chain that is not the check alone.
 
-Set `tierBand` to `true` (off: `false`) for `cl-workflow@cedarloom` in the plugin's options or under `pluginConfigs` in `$HOME/.claude/settings.json`, then start a new session. The band reads the working folder, the current git branch (`git branch --show-current`), Ponytail's flag file `.ponytail-active` in the Claude Code configuration folder, and the commands and edits of the main loop; it writes no file and makes no network request.
+Set `tierBand` to `true` (off: `false`) for `cl-workflow@cedarloom`, as described at the top of this page. The band reads the working folder, the current git branch (`git branch --show-current`), Ponytail's flag file `.ponytail-active` in the Claude Code configuration folder, and the commands and edits of the main loop; it writes no file and makes no network request.
 
 ## Terminal questions
 
@@ -34,7 +34,7 @@ In a Claude Code session with the cl-workflow plugin on, a hook refuses the ques
 - `/cl-workflow:ask` allows both for 30 minutes, `for <n>m` or `for <n>h`, or `until HH:MM` (local time); `off` ends the window early.
 - `/cl-workflow:questions` (the question queue) allows both for the rest of the session, as running it means you sit at the terminal; `/cl-workflow:ask off` or a timed `/cl-workflow:ask` replaces that. It asks the open [owner questions](#owner-questions).
 - A window ends at its time or when Claude Code quits. `/clear`, compaction and a fork keep it; a new Claude Code process or a resumed conversation starts with questions off.
-- A `UserPromptExpansion` hook sets the window; that event fires only when a typed command expands ([hooks reference](https://code.claude.com/docs/en/hooks#userpromptexpansion)). The same text in a scheduled task, a `/loop` iteration or a message from another session sets nothing; the skill is user-only.
+- A `UserPromptExpansion` hook sets the window; that event fires only when a typed command expands ([hooks reference](https://code.claude.com/docs/en/hooks#userpromptexpansion)). The same text in a scheduled task sets nothing, and by that reference neither does a `/loop` iteration or a message from another session; the skill is user-only.
 - The window is one file per Claude Code process in the plugin's data folder (`ask/<CLAUDE_PID>.json`, the window's end). `CLAUDE_PID` is set in the Bash tool too, so a model that writes that file opens the window: the hooks stop a model that forgets the rule, not one that works around it.
 - When the refusal hook cannot start, both stay refused ([`onFailure: "block"`](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails)).
 - On Windows (untested) the hooks start `node` without a shell, so `node.exe` itself must be on the PATH: with only a `.cmd` or `.bat` shim the refusal holds but `/cl-workflow:ask` cannot open the window.
@@ -43,7 +43,7 @@ In a Claude Code session with the cl-workflow plugin on, a hook refuses the ques
 
 ## Owner questions
 
-The coordinator of `/cl-orchestration:coordinate` files an owner question, in the approval layout, as an issue labeled `cl:needs-human` in the project's repository when it has issues on, else in the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A private repository is recommended: on a public one the question is public, and the coordinator warns in the session before it files the first one and again in its report.
+The coordinator of `/cl-orchestration:coordinate` files an owner question, in the approval layout, as an issue labeled `cl:needs-human` in the project's repository when it has issues on, else in the local queue, `.cedarloom/questions/<project>-<n>.md` in the coordinator's folder, kept out of git. A private repository is recommended: on a public one the question is public, and the coordinator warns in the session when the run starts and again in its report.
 
 | Label | Meaning |
 | --- | --- |
@@ -74,12 +74,12 @@ The role guard leaves merges, releases and shared repository state to the coordi
 - `git config` except its `--get` and `--list` forms, `git -c`, and `git stash`
 - `claude --bare`: hooks do not run in bare mode, this one included, even for a plugin loaded with a flag ([headless mode](https://code.claude.com/docs/en/headless#start-faster-with-bare-mode)). No line in a plugin starts `claude` with `--bare`, as a command line or as a spawn call with its argument list (skill lint). Bare mode is announced as the future default for `-p`; once it is, a `-p` launch from a guarded session runs unguarded unless the hook covers it too.
 
-Start the coordinator's session with `CEDARLOOM_ROLE=coordinator claude` and nowhere else: a variable in your shell profile or the `env` of user settings reaches every session, workers included. Every other session with the plugin on is guarded, as is one started from a guarded one while it runs hooks.
+Only the coordinator's session runs with `CEDARLOOM_ROLE=coordinator` ([how to start it](../README.md#typical-flow)): a variable in your shell profile or the `env` of user settings reaches every session, workers included. Every other session with the plugin on is guarded, as is one started from a guarded one while it runs hooks.
 
 - Subagents inherit the coordinator's environment, so the hook guards every call that names one (`agent_id`, [hooks reference](https://code.claude.com/docs/en/hooks)). Start a session from the coordinator's shell without the variable: `env -u CEDARLOOM_ROLE claude -p "<prompt>"`.
 - The hook reads the command as the shell splits it, with the backslash as escape character for Bash and Monitor and the backtick for PowerShell: line continuations join, quoted words stay whole, and the text of each quoted word is read again as commands, so `bash -c "gh pr merge 1"` is denied, and so is a commit message or comment text that names such a command: put that text in a file (`-F`, `--body-file`).
 - Git questions (the current branch, tags, the remote's default branch) go to the session's folder, to the existing folder a `cd`, `pushd` or `Set-Location` at the start of the command moves to, or to `git -C <dir>`. A push from the repository `GIT_DIR` (set anywhere in the command) or `git --git-dir` names is denied: push from its folder with `git -C <dir>`. After any other folder change git's folder is unknown: a target that is a variable, a substitution, a missing folder or a `~` path, `cd -`, `popd`, `Pop-Location`, and a `cd` later in the command, after a keyword, in parentheses, braces, a pipeline, quoted text, a comment or a here-document. A push then names its branch (`git push origin <branch>`; none or `HEAD` is denied), checked in the session's folder and each folder the command names, each needing a readable `refs/remotes/<remote>/HEAD`. A push without a refspec is denied where no current branch can be read (`git -C` to a missing folder, a detached HEAD), and every push without git on the hook's PATH.
-- The hook asks git for the current branch before the command runs, so a push after a switch to the default branch in the same line passes (`git checkout main && git merge feat/x && git push`; the hook's tests list such known passes).
+- The hook asks git for the current branch before the command runs, so a push of the current branch after a switch to the default branch in the same line passes (`git checkout main && git merge feat/x && git push`; the hook's tests list such known passes).
 - It stops a model that forgets its role, not one that works around it (a variable as the command, a git or gh alias, a script, `node -e`, an MCP tool). The binding layer is a GitHub token without those rights and rulesets on the default branch (pull requests required) and release tags, which you set up.
 - Input the hook cannot read exits 2, which refuses the call; so does a hook that cannot start ([`onFailure: "block"`](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails)). The hook is not tested in `bypassPermissions` mode.
 - Codex runs no such hook.
