@@ -7,7 +7,7 @@ CedarLoom ships as plugins for Claude Code and Codex: [workflow](../plugins/cl-w
 | Component | Scope | Purpose |
 |---|---|---|
 | [Dev Containers](https://code.visualstudio.com/docs/devcontainers/devcontainer-cli) | tooling on host, configuration per repo | project commands run in the container, whose configuration `setup` writes |
-| [Ponytail](../README.md#optional-ponytail) | optional, separate plugin | implementation simplicity |
+| [Ponytail](../README.md#recommended-add-on-ponytail) | recommended add-on, separate plugin | implementation simplicity |
 | [workflow](../plugins/cl-workflow/skills/workflow/SKILL.md) | global, Claude + Codex | task kind (software change, docs pass, research) and depth (quick, standard, deep), pre-push correctness review, security review for risky changes; uses installed skills that match a step |
 
 ## Contents
