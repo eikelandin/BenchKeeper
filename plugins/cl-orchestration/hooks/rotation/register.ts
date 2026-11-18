@@ -107,8 +107,7 @@ async function drifted($: EngineInterface, text: string) {
   }
 }
 // After a clear: moves the file to the new session id and returns the text that hands it back, or null. A prompt that
-// arrives while it awaits during the plugin's own clear (unverified that the engine submits one there) gets no file; the
-// resume prompt queued behind it carries it.
+// arrives during the plugin's own clear gets no file; the resume prompt behind it carries it.
 async function handBack($: EngineInterface) {
   cleared = false
   await takeOver($).catch(() => undefined)
