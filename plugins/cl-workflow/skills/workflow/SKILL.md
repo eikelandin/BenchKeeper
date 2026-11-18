@@ -35,7 +35,7 @@ Every depth:
    - Software change at quick depth: this file is the whole playbook (the steps below, [Change types](#change-types), [Verify](#verify)).
    - Standard and deep, and any risky change: also [software.md](software.md), deep also [deep.md](deep.md).
    - Docs pass: [docs.md](docs.md). Research: [research.md](research.md).
-   - Branches, commits and pull requests follow the project's own convention (`AGENTS.md`, a contributing guide, the history).
+   - Branches, commits and pull requests follow the project's own convention (`AGENTS.md`, a contributing guide, the history). Where it names none, commit subjects and pull request titles follow [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/): a squash merge makes the title the commit subject.
    - A pull request body opens with one or two sentences on what changes and why, then holds the key decisions (structure, storage, deployment, rejected options) and the sections Testing (commands and results), Risk (as [risk.md](risk.md) says, then what could break, who is affected) and How to revert.
    - Two or more independent items that each need more than a few files or searches: one subagent per item in parallel, then one merged report. Smaller items run in this session.
 

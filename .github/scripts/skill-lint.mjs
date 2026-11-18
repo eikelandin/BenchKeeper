@@ -111,18 +111,86 @@ const pluginParts = (part) => readdirSync(join(root, 'plugins')).map((p) => join
 // Claude Code loads a plugin's agents from agents/ and its subfolders.
 export const ownAgents = () => pluginParts('agents').flatMap(markdownFiles);
 
+// A command's words, split at spaces, quotes, commas, brackets and shell operators; and the index of its claude word, or -1.
+const commandWords = (line) => line.split(/[\s'"`,()[\]{};|&<>]+/);
+const claudeAt = (words) => words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+
 // Hooks do not run in bare mode, the role guard's included (https://code.claude.com/docs/en/headless#start-faster-with-bare-mode).
-// A line (continuations joined) whose words, split at spaces, quotes, commas, brackets and shell operators, hold claude and
-// after it --bare: a command line, or a spawn or execFile call with its argument list.
+// A line (continuations joined) whose words hold claude and after it --bare: a command line, or a spawn or execFile call
+// with its argument list.
 const bareLaunch = (text) =>
   text.replace(/[\\`]\r?\n/g, ' ').split('\n').some((line) => {
-    const words = line.split(/[\s'"`,()[\]{};|&<>]+/);
-    const at = words.findIndex((w) => /^claude(\.exe)?$/i.test(w.split(/[/\\]/).pop()));
+    const words = commandWords(line);
+    const at = claudeAt(words);
     return at >= 0 && words.includes('--bare', at + 1);
   });
 
 export const bareLaunches = (files) =>
   files.filter((file) => bareLaunch(readFileSync(file, 'utf8'))).map((file) => `${file}: starts claude with --bare, which runs no hooks (the role guard's included)`);
+
+// A Claude Code worker starts in a terminal whose --command line sets its mode, never through Orca's own launch, which adds
+// the flag of Orca's agent permission setting (bypass under full access). The flag wins over every settings file's defaultMode
+// (https://code.claude.com/docs/en/permission-modes).
+const LAUNCH_MODES = ['auto', 'dontAsk'];
+
+// The role guard's launcher names and their normalization (plugins/cl-workflow/hooks/role-guard/role-guard.mjs, LAUNCHERS and
+// launcher), copied: that hook reads its input from stdin when imported. A test keeps the two lists equal.
+export const LAUNCHERS = new Set(['claude', 'claude-code']);
+const launcher = (word) => word.split(/[/\\]/).pop().toLowerCase().replace(/\.exe$/, '').replace(/@[^@]*$/, '').replace(/\.(cmd|ps1|bat)$/, '');
+
+// The words after a command's first launcher, or null when it starts no claude; and the first of them naming a dangerously flag.
+const launchArgs = (command) => {
+  const words = commandWords(command);
+  const at = words.findIndex((w) => LAUNCHERS.has(launcher(w)));
+  return at < 0 ? null : words.slice(at + 1);
+};
+const dangerousWord = (rest) => rest.find((w) => /dangerously/i.test(w));
+
+// Why a command that starts claude does not start it in auto or dontAsk mode; null when it does or starts no claude.
+// shortcut: words inside a quoted argument of claude count as its flags, so claude -p 'use --permission-mode auto' passes;
+// a shell word parser would close this.
+function launchMode(command) {
+  const rest = launchArgs(command);
+  if (!rest) return null;
+  const dangerous = dangerousWord(rest);
+  if (dangerous) return dangerous;
+  // --permission-mode='auto' splits into "--permission-mode=" and "auto".
+  const modes = rest.flatMap((w, i) => {
+    const flag = /^--permission-mode(?:=(.*))?$/.exec(w);
+    return flag ? [flag[1] || rest[i + 1] || ''] : [];
+  });
+  if (modes.length > 1) return '--permission-mode twice';
+  if (!modes.length) return 'no --permission-mode';
+  if (!modes[0]) return '--permission-mode without a value';
+  return LAUNCH_MODES.includes(modes[0]) ? null : `--permission-mode ${modes[0]}`;
+}
+
+// Each --command "..." or '...' string, after spaces, = or \ continuations; a double-quoted one may hold escaped quotes.
+// Either quote crosses a line only after a \ continuation (LF or CRLF), so an unclosed quote in prose does not hide the
+// launch on a later line.
+// shortcut: a bare line break inside the quotes (after && or in a "$(cat <<EOF ...)" heredoc) ends the read there, and an
+// operator inside a quoted argument of claude or a redirect (2>&1) splits the string, so a second --permission-mode after
+// it goes unread; a shell parser would close both. A dangerously word anywhere after the first launcher is still caught.
+export const launchCommands = (text) =>
+  [...text.matchAll(/--command[\s=\\]+(?:"((?:[^"\\\n]|\\(?:\r\n|[\s\S]))*)"|'((?:\\\r?\n|[^'\n])*)')/g)].map((m) => ({ index: m.index, command: m[1] ?? m[2] }));
+
+export function launchModes(files) {
+  return files.flatMap((file) => {
+    const text = readFileSync(file, 'utf8');
+    const at = (index) => `${file}:${text.slice(0, index).split('\n').length}`;
+    const commands = launchCommands(text).flatMap(({ index, command }) => {
+      // Continuations joined. The whole string first: a quoted operator or a redirect (2>&1) splits off the flags after it.
+      // Then each command of the string: a claude after && or || needs its own mode.
+      const joined = command.replace(/\\\r?\n/g, ' ');
+      const why = dangerousWord(launchArgs(joined) ?? []) ?? joined.split(/&&|\|\||[;|&\n]/).map(launchMode).find(Boolean);
+      return why ? [`${at(index)}: --command starts claude with ${why}; it takes one --permission-mode, auto or dontAsk`] : [];
+    });
+    // Anywhere in the text: a command line, a continuation line, an argument list, or a sentence that tells the coordinator to use it.
+    const orca = [...text.matchAll(/--agent[\s=\\'"`,]+claude(?![\w-])/gi)]
+      .map((m) => `${at(m.index)}: --agent claude starts the worker through Orca's own launch, which takes Orca's agent permission setting; start a Claude Code worker in its own terminal`);
+    return [...commands, ...orca];
+  });
+}
 
 // The files every plugin ships; its tests name commands the hooks deny.
 export function pluginFiles() {
@@ -138,7 +206,8 @@ export function ownSkills() {
 if (isMain(import.meta.url)) {
   const dirs = process.argv.length > 2 ? process.argv.slice(2).map((d) => resolve(d)) : ownSkills();
   const agents = process.argv.length > 2 ? [] : ownAgents();
-  const launches = process.argv.length > 2 ? [] : bareLaunches(pluginFiles());
+  const files = process.argv.length > 2 ? [] : pluginFiles();
+  const launches = [...bareLaunches(files), ...launchModes(files)];
   const errors = [...dirs.flatMap(lintSkill), ...agents.flatMap(lintAgent), ...launches];
   for (const e of errors) console.log(`::error::${e.replace(root + '/', '')}`);
   console.log(`${agents.length} agents, ${dirs.length} skills checked, ${errors.length} errors`);
