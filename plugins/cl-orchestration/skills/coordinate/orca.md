@@ -261,6 +261,7 @@ The CedarLoom plugin hands the handoff file back after a `/clear` or compaction 
 
 - When that Claude Code coordinator ends a turn idle (no background task; a session cron does not count) above the plugin option `rotateAtTokens`, 200,000 tokens by default, the plugin clears it with `/clear` and submits a prompt to run the Resume steps.
 - `rotateAtPercent` above 0 sets a percent of the context window instead, and both at 0 turn it off.
+- Where Claude Code's built-in guard loads, there is no idle clear, only the hand-back, and the context grows until auto-compaction.
 - Without the file, or for another session, the plugin neither hands it back nor clears.
 
 The file's Resume section holds these steps, in this order, with the run id and the absolute path of this skill's folder filled in:

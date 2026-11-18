@@ -237,6 +237,8 @@ export const register: Register = (on, options) => {
     return next(e)
   }).catch(($, e, next) => next(e))
 
+  // The only hook that schedules a clear. Where Claude Code's built-in guard loads it never runs, so there no clear comes
+  // and the context grows until auto-compaction; keep the clear off native events, which carry no background-task list.
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
     // A background task, a Stop hook's re-prompt or a hook that blocked the stop means the turn is not idle. Session crons

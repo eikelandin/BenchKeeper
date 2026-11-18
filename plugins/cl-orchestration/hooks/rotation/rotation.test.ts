@@ -66,6 +66,7 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, sessionId = 's1', sto
     if (e.origin.kind !== 'composer') ran.push(e.text)
     return drop === undefined ? { text: e.text, context: e.context } : { drop }
   })
+  on('turn.complete', (_, e) => ({ text: e.answer }))
   on('classic.Stop', () => stop)
   on('classic.PreCompact', () => ({}))
   return { clock, session, files, mtimes, ran, id }
@@ -207,6 +208,17 @@ test('an idle Stop above 200000 tokens clears, then submits the resume prompt, o
   await e.clock.advance(1000)
   expect(e.ran.length).toBe(4)
   expect(e.ran[2]).toBe('/clear')
+})
+
+// Where Claude Code's built-in guard loads, no classic.* event reaches the plugin; the test raises native events alone.
+test('where the guard loads, an idle answer above the threshold clears nothing and a /clear still hands the file back', async ($, on) => {
+  const e = engine(on)
+  await $.turn.start({ turnId: 't1', text: 'go on' })
+  await $.turn.complete({ turnId: 't1', answer: 'done', durationMs: 1000, isAborted: false, reason: 'answer' })
+  await e.clock.advance(20 * 60_000)
+  expect(e.ran).toEqual([])
+  e.id.value = 's2'
+  expect((await cleared($))[1]).toContain('\nrun r1\nSession: s2\n\n## Next\nwatch #12\n')
 })
 
 test('no clear while not idle, with no task list, in a subagent or without the file', async ($, on) => {
