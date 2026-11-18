@@ -87,7 +87,7 @@ Every git command of yours in `<W>`, below and in Clean up, runs as `git --no-re
    - `gitW cat-file commit <commit sha>` has exactly one `parent` line, the step 1 sha (in a merge round two: that sha, then the merged sha). Read the raw commit, never `rev-list` or `log`: a grafts file the worker wrote changes the parents they show.
    - `gitW diff --no-renames --name-only <step 1 sha> <commit sha>` (in a merge round, against the merged sha) prints the list step 2 accepted.
 
-   Anything else makes the item BLOCKED, and nothing is pushed. Then `gitW push origin <commit sha>:refs/heads/<branch>`. First round: `gh pr create -R <owner/repo> --draft --base <default branch> --head <branch> --title "<your own words>" --body-file <file>`. A new title or body the worker answers with is the coordinator's to set.
+   Anything else makes the item BLOCKED, and nothing is pushed. Then `gitW push origin <commit sha>:refs/heads/<branch>`. First round: `gh pr create -R <owner/repo> --draft --base <default branch> --head <branch> --title "<your own words>" --body-file <file>`, the file holding the commit message and, where the spec's `<closing>` names a `Closes` line ([spec-template.md](spec-template.md)), that line. A new title or body the worker answers with is the coordinator's to set.
 4. Before a follow-up, `gitW fetch origin <branch>` and `gitW merge --ff-only <sha>`, the sha `gitW ls-remote origin refs/heads/<branch>` prints: `gh pr update-branch` moves the branch on origin.
 5. A conflict with the default branch: the same with `<default branch>` and `merge --no-commit` in place of `--ff-only`, then the follow-up. The worker resolves and stages, and step 3's commit is the merge.
 

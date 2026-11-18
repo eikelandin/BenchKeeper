@@ -25,13 +25,13 @@ Before the first Claude Code start of a run, `env which claude` prints `<claude 
 The launch unsets `CEDARLOOM_ROLE`, and each supervised Claude Code worker still measures it: a worker that inherits the variable passes the role guard as the coordinator. Its spec takes this line after `Acknowledge:`:
 
 ```text
-Role check: right after the heartbeat, before any other command, run `printenv CEDARLOOM_ROLE` yourself, in your main session, never through a subagent. It passes when the CedarLoom role guard refuses it as a command that names the variable, since the guard lets such a command run only in the main session with the coordinator's role, and when it prints nothing. A value it prints, and any other result, is Blocked (below): name the variable and the output in the report.
+Role check: right after the heartbeat, before any other command, run `printenv CEDARLOOM_ROLE` yourself, in your main session, never through a subagent. It passes when the CedarLoom role guard refuses it as a command that names the variable, since the guard lets such a command run only in the main session with the coordinator's role, and when it prints nothing. A value it prints, and any other result, is Blocked (below): report the role check as failed and quote its output, with `the role variable` in place of the variable's name wherever the output holds it, since the role guard refuses a command whose text names the variable, a report's `send` included.
 ```
 
 A follow-up file (below) takes it in this form, after the Chat name line:
 
 ```text
-Role check: right after the chat name, before any other command, run `printenv CEDARLOOM_ROLE` yourself, in your main session, never through a subagent. It passes when the CedarLoom role guard refuses it as a command that names the variable, since the guard lets such a command run only in the main session with the coordinator's role, and when it prints nothing. A value it prints, and any other result, ends this follow-up: change nothing, report BLOCKED with the variable and the output, and end.
+Role check: right after the chat name, before any other command, run `printenv CEDARLOOM_ROLE` yourself, in your main session, never through a subagent. It passes when the CedarLoom role guard refuses it as a command that names the variable, since the guard lets such a command run only in the main session with the coordinator's role, and when it prints nothing. A value it prints, and any other result, ends this follow-up: change nothing, report BLOCKED with the role check failed and its output quoted, with `the role variable` in place of the variable's name wherever the output holds it, since the role guard refuses a command whose text names the variable, a report's `send` included, and end.
 ```
 
 After such a report, start no further supervised Claude Code worker in the run, send none that reported a follow-up, and tell the owner: `CEDARLOOM_ROLE` goes on the coordinator's launch line only (`CEDARLOOM_ROLE=coordinator claude`).

@@ -1,6 +1,7 @@
 ---
 name: Work item
 about: A change to make or a question to research.
+labels: cl:triage
 ---
 
 <!-- First line: the outcome wanted, or the question to answer, in one sentence. -->
