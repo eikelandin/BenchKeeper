@@ -21,7 +21,7 @@ Take each project's policy from the reader, never from the JSON file: `node <ski
 | `merge.mode` | `strict` or `disjoint`: whether the head that merges must contain the default branch's tip ([review-and-merge.md](review-and-merge.md#merge)); in `disjoint`, a `trial` verdict at Merge step 3 reads [trial-merge.md](trial-merge.md) | `strict` |
 | `merge.additivePaths` | paths the PR and the default branch may both have changed in `disjoint` mode | none |
 | `merge.ownerOnlyPaths`, `merge.ownerOnlyNames` | the paths and names the reader prints: a PR that touches one is left for the owner, and so does a file named like a container file or a lefthook config ([Owner-only](review-and-merge.md#owner-only)). A policy adds paths only: names are built-in | the built-in ones |
-| `closeIssue` | the coordinator may close an issue after its PR merged or after a verified no-change finding | no close |
+| `closeIssue` | a worker's PR carries `Closes #<number>`, so GitHub closes its issue at any merge of it, the owner's too; the coordinator closes one left open after its PR merged or after a verified no-change finding | no close |
 | `deleteMergedBranch` | the owner allows deleting a branch whose PR is merged | no deletion |
 | `issuesPerWorker` | pickable issues of the project that one worker takes as its batch | 1 |
 | `keepRunning` | the run stays open for this project and picks up issues labeled later | false |

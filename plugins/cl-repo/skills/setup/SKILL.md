@@ -2,7 +2,7 @@
 name: setup
 description: "Sets up or updates a repository's agent setup for Claude Code and Codex: the CedarLoom rules block, the coordinator policy file, the devcontainer configuration and where the agent runs, the project parts of AGENTS.md, other project configuration to remove. Use when the user asks to set up, onboard, update, or audit a project's agent setup."
 disable-model-invocation: true
-writes: "After you approve its plan: the CedarLoom block (repository rules, where commands run) in `AGENTS.md`, or in `CLAUDE.local.md` for a local setup; `AGENTS.md` (commands, first-class targets, footgun docs, pointers) and `CLAUDE.md` with only `@AGENTS.md`, both committed, where `AGENTS.md` is new or holds the block (into a committed `AGENTS.md` without the block, only the parts you pick, and `CLAUDE.md` stays as it is); when absent, the coordinator's `docs/agents/orchestration.json` and an empty `docs/agents/worker-rules.md`, committed; `.github/ISSUE_TEMPLATE/work.md` where the repository has no issue templates; the dev container configuration; short footgun docs under `docs/agents/`; and the removals you confirm when the skill lists other agent configuration: skills, plugin and marketplace entries, MCP servers, hooks, other agent rules files and tool folders."
+writes: "After you approve its plan: the CedarLoom block (repository rules, where commands run) in `AGENTS.md`, or in `CLAUDE.local.md` for a local setup; `AGENTS.md` (commands, first-class targets, footgun docs, pointers) and `CLAUDE.md` with only `@AGENTS.md`, both committed, where `AGENTS.md` is new or holds the block (into a committed `AGENTS.md` without the block, only the parts you pick, and `CLAUDE.md` stays as it is); when absent, the coordinator's `docs/agents/orchestration.json` and an empty `docs/agents/worker-rules.md`, committed; the CedarLoom labels the repository lacks; `.github/ISSUE_TEMPLATE/work.md` where the repository has no issue templates; the dev container configuration; short footgun docs under `docs/agents/`; and the removals you confirm when the skill lists other agent configuration: skills, plugin and marketplace entries, MCP servers, hooks, other agent rules files and tool folders."
 ---
 
 # Setting up projects
@@ -11,7 +11,7 @@ Run in the repository root. On a repository that already has devcontainer config
 
 Process: plan first, then apply. Its questions and approvals go to the user in the session only while the user allows terminal questions; otherwise the Read only phase puts them with your recommendations into the plan, and the run stops before Apply.
 - **Read only.** Run every section below up to [Other configuration](#6-other-configuration-ask) as detection and comparison, including their questions (agent selection, stack confirmation, steps marked "ask"). Write, install, and remove nothing. Do not build or start a container.
-- **Plan.** One list of files created, changed, or removed, each with its new text or diff (the block and the policy file among them), packages added to the image, container build or rebuild, integrations enabled or disabled, and skipped steps with the reason. Mark destructive items: overwriting or removing files, config entries, or skills, and removing or rebuilding a container. Ask: apply all, a subset, or cancel.
+- **Plan.** One list of files created, changed, or removed, each with its new text or diff (the block and the policy file among them), packages added to the image, container build or rebuild, integrations enabled or disabled, labels created on the hosted repository, and skipped steps with the reason. Mark destructive items: overwriting or removing files, config entries, or skills, and removing or rebuilding a container. Ask: apply all, a subset, or cancel.
 - **Apply.** Apply only approved items, including container launch and verification. Right before each destructive item, show the diff or list and ask again.
 - **Review and report.** Run [Review](#7-review), then [Report](#8-report).
 
@@ -54,7 +54,7 @@ A repository without an `AGENTS.md`, or whose `AGENTS.md` holds the block, gets 
 3. `## Every change considers`: the first-class targets every change keeps working (platforms, runtimes, entry points such as a CLI, a server or a UI, browsers or devices, languages), then one link per risky area to a short footgun doc (for example git and child processes, platform paths). Link an existing doc; write a missing one under `docs/agents/`, a few lines on what goes wrong and how to avoid it, only for a risk the code shows.
 4. `## Pointers`: `docs/agents/` (domain, issue tracker, triage labels), the styleguide and design tokens of a project with a UI, and other docs an agent needs. Link deeper docs instead of copying them.
 
-Conventions found in the code that differ from the stack defaults go in one line each under Commands or Pointers. No project summary or layout. Update: compare each part, fix failing or changed commands, and after asking remove a project summary or layout section and hand-written lines that repeat or contradict a rule of the block. The workflow skill reads a `Depth minimum:` line and no `Default tier:` line: after asking, turn a hand-written `Default tier: <tier>` line into `Depth minimum: <depth>` outside the block, with `full` as `deep`.
+Conventions found in the code that differ from the stack defaults go in one line each under Commands or Pointers. One line under Pointers names the convention for commit subjects and pull request titles: the project's own (a contributing guide, the history), else [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/). No project summary or layout. Update: compare each part, fix failing or changed commands, and after asking remove a project summary or layout section and hand-written lines that repeat or contradict a rule of the block. The workflow skill reads a `Depth minimum:` line and no `Default tier:` line: after asking, turn a hand-written `Default tier: <tier>` line into `Depth minimum: <depth>` outside the block, with `full` as `deep`.
 
 `CLAUDE.md` beside that `AGENTS.md`, when Claude Code is selected: exactly `@AGENTS.md`. Claude Code reads `AGENTS.md` on its own only without a `CLAUDE.md`, and the import keeps one source of instructions (https://code.claude.com/docs/en/memory). Move any other content into `AGENTS.md` first, after asking.
 
@@ -67,21 +67,24 @@ A repository that commits an `AGENTS.md` without the block: merge nothing into i
 
 The coordinator (`cl-orchestration:coordinate`) starts and merges nothing in a project without `docs/agents/orchestration.json` on its default branch. When the file is absent, propose it as a plan item with these answers (ask, recommending the first value named), and an empty `docs/agents/worker-rules.md` (extra rules for the coordinator's workers) when that is absent too. Both are committed in a shared and in a local setup, and from then on both are the owner's to edit: never propose a change to an existing one.
 
-- `startLabel`: the label that lets the coordinator start an issue, `cl:ready-for-agent` unless the user names another. The label set: a label that does not exist yet is the user's to create, give the commands (`gh label create <name> --description "<meaning>"`):
-  - `cl:plan`: CedarLoom may read and plan the issue and ask on it; it does not start work.
-  - `cl:ready-for-agent`: the coordinator may start the issue.
-  - `cl:needs-human`: a question or approval waits for the owner.
-  - `cl:in-progress`: a worker holds the issue, so it never starts twice.
-  - `cl:deferred`: the owner parked it: it does not start and the question queue skips it.
-  - `cl:follow-up`: found during other work; sorted into sized issues by the owner.
-  - Rejected work is closed as not planned, with no label.
+- `startLabel`: the label that lets the coordinator start an issue, `cl:ready-for-agent` unless the user names another.
 - `merge.allowed`: `false`, the user merges; `true` lets the coordinator merge a reviewed pull request. With `true`, `merge.requiredChecks` lists check names that run on pull requests, taken from a recent one (`gh pr checks <n> --json name --jq '.[].name'`), never a job that runs only on pushes to the default branch, and only those the user keeps.
-- `closeIssue`: `true`, the coordinator closes an issue after its pull request merged; `false` leaves that to the user.
+- `closeIssue`: `true`, a worker's pull request closes its issue when merged, by anyone, and the coordinator closes one left open; `false` leaves that to the user.
 - `trustedAuthors`: none, or the review bots the user names whose comments workers may follow.
 
 Write `{"schemaVersion": 2}` with these fields, two-space indented and with a final newline, and leave every other field to its default: the Policy section of `cl-orchestration:coordinate` (the cl-orchestration plugin, when installed) lists each field and its default.
 
-Where the repository has no `.github/ISSUE_TEMPLATE` folder and its owner has no default issue templates (`gh api repos/<owner>/.github/contents/.github/ISSUE_TEMPLATE` answers 404), propose [issue-templates/work.md](issue-templates/work.md) as `.github/ISSUE_TEMPLATE/work.md` as a plan item (the policy's, where that one is proposed), committed.
+The label set, with the policy's `startLabel` (an existing file's, else the answer above) in place of `cl:ready-for-agent`. `<owner/repo>` below is the repository `git remote get-url origin` names, so a fork's clone never reaches its upstream. Read only lists the repository's labels (`gh label list -R <owner/repo> --limit 1000 --json name`); each missing one is a plan item, and Apply creates the approved ones with `gh label create <name> -R <owner/repo> --description "<meaning>"` (GitHub takes 100 characters or fewer: [create a label](https://docs.github.com/rest/issues/labels#create-a-label)), naming one it could not create in the report with that command:
+- `cl:plan`: CedarLoom may read and plan the issue and ask on it; it does not start work.
+- `cl:ready-for-agent`: the coordinator may start the issue.
+- `cl:needs-human`: a question or approval waits for the owner.
+- `cl:in-progress`: a worker holds the issue, so it never starts twice.
+- `cl:deferred`: the owner parked it: it does not start and the question queue skips it.
+- `cl:follow-up`: found during other work, sized for one pull request; the owner chooses whether it starts.
+- `cl:triage`: filed through the issue template; the owner reads it before adding another label.
+- Rejected work is closed as not planned, with no label.
+
+Where the repository has no `.github/ISSUE_TEMPLATE` folder and its owner has no default issue templates (`gh api repos/<owner>/.github/contents/.github/ISSUE_TEMPLATE` answers 404), propose [issue-templates/work.md](issue-templates/work.md) as `.github/ISSUE_TEMPLATE/work.md` as a plan item (the policy's, where that one is proposed), committed. It labels a new issue `cl:triage`, never `startLabel`: on a public repository anyone can file through it.
 
 ## 6. Other configuration (ask)
 
