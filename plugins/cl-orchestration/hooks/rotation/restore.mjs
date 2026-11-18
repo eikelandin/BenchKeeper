@@ -1,6 +1,7 @@
-// Codex SessionStart after a clear or compaction: hands the coordinator's handoff file back with the git drift since the
-// coordinator wrote it, as the Claude Code module does, when the file names the session of the hook input. A Codex clear
-// starts a new session id and this hook keeps no state between runs, so in practice it serves compaction.
+// SessionStart after a compaction (Claude Code and Codex) or a Codex clear: hands the coordinator's handoff file back with
+// the git drift since the coordinator wrote it, when the file names the session of the hook input. A clear starts a new
+// session id and this hook keeps no state between runs, so in practice it serves compaction; the Claude Code module
+// restores after a clear.
 import { execFileSync } from 'node:child_process';
 import { constants, fstatSync, openSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,7 +14,7 @@ const tracked = (cwd) => {
   const program = git();
   if (!program) return true;
   try {
-    return execFileSync(program, ['-c', 'core.fsmonitor=false', 'ls-files', '--', RUNS], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }) !== '';
+    return execFileSync(program, ['-c', 'core.fsmonitor=false', 'ls-files', '--', RUNS], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000, killSignal: 'SIGKILL' }) !== '';
   } catch {
     return true;
   }
@@ -40,17 +41,21 @@ let handoff;
 let drifting;
 try {
   const { cwd, session_id: session } = JSON.parse(await text(process.stdin));
-  const path = join(cwd, FILE);
-  // Opened without following a link where the platform can (Windows cannot), read through that handle, and refused unless
-  // its real path is the one under the real working folder, so a committed file or a link on the way is never read.
-  const handle = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-  if (!fstatSync(handle).isFile() || realpathSync(path) !== join(realpathSync(cwd), FILE)) process.exit(0);
+  // Claude Code's project folder, never a folder a shell cd moved to; Codex sets no such variable. The module's root follows
+  // a /cd or worktree move; this variable may not.
+  const root = process.env.CLAUDE_PROJECT_DIR || cwd;
+  const path = join(root, FILE);
+  // Opened without following a link or waiting on a FIFO where the platform can (Windows cannot), read through that handle,
+  // and refused unless its real path is the one under the real project folder, so a committed file or a link is never read.
+  const handle = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+  if (!fstatSync(handle).isFile() || realpathSync(path) !== join(realpathSync(root), FILE)) process.exit(0);
   handoff = readFileSync(handle, 'utf8');
-  if (!mine(handoff, session) || tracked(cwd)) process.exit(0);
-  drifting = drifted(cwd, handle, handoff);
+  // A claude -p run that resumed the coordinator's session passes too.
+  if (!mine(handoff, session) || tracked(root)) process.exit(0);
+  drifting = drifted(root, handle, handoff);
 } catch {
   process.exit(0);
 }
-// As additionalContext, which codex.json lets through whole (additionalContextLimit 0): restored() caps it below 10,000
-// characters, while Codex would cut plain stdout past about 2,500 tokens to a preview.
+// As additionalContext, which codex.json lets through whole (additionalContextLimit 0) and Claude Code up to 10,000
+// characters: restored() stays below that, while Codex would cut plain stdout past about 2,500 tokens to a preview.
 process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: restored(handoff, drifting) } }));

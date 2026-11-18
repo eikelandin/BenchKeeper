@@ -1,12 +1,13 @@
 // Coordinator context rotation (cl-orchestration:coordinate): when the session's project root holds the coordinator's handoff
 // file and the file names this session's id, an idle Stop above the plugin's threshold clears the context with /clear and
-// submits a resume prompt, and a clear or compaction hands the file back to the model, with the git drift since the
-// coordinator wrote it. Otherwise every hook here passes. It writes only that file, reads git, and makes no network request of its own.
+// submits a resume prompt, and the first prompt after a clear hands the file back to the model, with the git drift since
+// the coordinator wrote it (restore.mjs, a SessionStart command hook, does so after a compaction). Otherwise every hook
+// here passes. It writes only that file, reads git, and makes no network request of its own.
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import { FILE, RUNS, STATUS, STATUS_ARGS, TOP_ARGS, changedPaths, claimed, commitArgs, drift, editedAt, fingerprint, mine, restored, stamped, statusBlock } from './handoff.mjs'
 
-// A second /clear while the restore hook of the first still runs cuts that hook off and loses its context.
+// A second /clear before the resume prompt of the first has carried the file back would start over an empty context.
 const GAP_MS = 10 * 60 * 1000
 // Longer than the gap, so a slow clear still resumes; past it, a clear that never settles no longer holds rotation off.
 const WATCHDOG_MS = 15 * 60 * 1000
@@ -20,8 +21,11 @@ let lastEnd: number | null = null
 let noted = false
 // Main-loop turns started in this process: a turn that starts between the decision and the clear makes it stale.
 let turns = 0
-// This process's session id at its last main-loop turn: a clear starts a new id, which takes the file over from this one.
-let previous: string | null = null
+// The id the first /clear of a row ended, kept across a second /clear: the next prompt or turn under another id moves a
+// file that names it there. Any other session end, or that one use, disarms it.
+let armed: string | null = null
+// Set by a /clear until the next prompt that is no slash command carries the file back.
+let cleared = false
 
 // The text with its status block holding only this line, the block appended when the text has none.
 export function withStatus(text: string, line: string): string {
@@ -71,18 +75,20 @@ const vetted = async ($: EngineInterface) => {
   const text = await own($)
   return text !== null && (await safe($)) ? text : null
 }
-// After a clear or compaction gave this process a new session id: a file that still names the id it had moves to the new
-// one. A file another session took over, one this process never owned, or a run on no surface (a -p run) leaves it as it is.
+// After a /clear gave this process a new session id: a file that names the id the clear ended moves to the new one, also
+// in a process that ran no turn yet. A compaction keeps the id. A file another session took over, a run on no surface (a -p
+// run), or a /clear whose session.end never reached this module leaves it as it is.
 async function takeOver($: EngineInterface) {
-  if ((await $.session.surfaces()).length === 0) return
+  if (armed === null || (await $.session.surfaces()).length === 0) return
   const id = await $.session.id()
-  if (previous === null || !id || id === previous) return
+  if (!id || id === armed) return
+  const from = armed
+  armed = null
   const text = await $.fs.read(await handoff($)).catch(() => null)
-  if (text !== null && mine(String(text), previous) && (await safe($))) {
+  if (text !== null && mine(String(text), from) && (await safe($))) {
     const usage = await $.session.usage().catch(() => null)
     await status($, claimed(String(text), id), 'moved to a new session id', usage?.context.tokens)
   }
-  previous = id
 }
 // The drift since the coordinator last wrote the file: the time the status line carries, else the file's mtime. Any
 // failure of git or a stat means no drift, never a failed restore.
@@ -99,6 +105,14 @@ async function drifted($: EngineInterface, text: string) {
   } catch {
     return ''
   }
+}
+// After a clear: moves the file to the new session id and returns the text that hands it back, or null. A prompt that
+// arrives during the plugin's own clear gets no file; the resume prompt behind it carries it.
+async function handBack($: EngineInterface) {
+  cleared = false
+  await takeOver($).catch(() => undefined)
+  const text = await vetted($)
+  return text === null ? null : restored(text, await drifted($, text))
 }
 const stamp = (ms: number) => new Date(ms).toISOString()
 
@@ -130,8 +144,13 @@ async function rotate($: EngineInterface, why: string, now: number, seen: number
     const clearing = async () => {
       await $.command.run({ command: 'clear' })
       if (expired) return
-      const submitted = await $.prompt.submit({ text: resume(why) })
-      if (submitted.drop !== undefined) throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
+      // A plugin's own prompt takes no context, and on some versions its prompt.submit hook does not see it: the text carries the file.
+      const back = await handBack($)
+      const submitted = await $.prompt.submit({ text: back === null ? resume(why) : `${resume(why)}\n\n${back}` })
+      if (submitted.drop !== undefined) {
+        cleared = true
+        throw new Error(`the resume prompt was dropped: ${submitted.drop}`)
+      }
     }
     const late = new Promise<never>((_, fail) => {
       watchdog = $.clock.after(WATCHDOG_MS, () => {
@@ -185,17 +204,28 @@ export const register: Register = (on, options) => {
   on('turn.start', async ($, e, next) => {
     if (!e.agentId) {
       turns++
-      previous = (await $.session.id()) || null
+      // A turn after a /clear that no prompt carried the file to (a cron wake, a task notification).
+      await takeOver($).catch(() => undefined)
     }
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('classic.SessionStart', { source: ['clear', 'compact'] }, async ($, e, next) => {
-    const result = await next(e)
-    await takeOver($).catch(() => undefined)
-    const text = await vetted($)
-    if (text === null) return result
-    return { ...result, additionalContext: [...(result.additionalContext ?? []), restored(text, await drifted($, text))] }
+  // No $ calls: all session.end hooks share 1.5 s. Any other reason (a /resume) disarms the takeover.
+  on('session.end', ($, e, next) => {
+    cleared = e.reason === 'clear'
+    armed = cleared ? (armed ?? (e.sessionId || null)) : null
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  // A slash command's context may never reach the model, so the file waits for the next prompt.
+  on('prompt.submit', async ($, e, next) => {
+    if (!cleared || e.command) return next(e)
+    const back = await handBack($)
+    if (back === null) return next(e)
+    const result = await next({ ...e, context: [...(e.context ?? []), back] })
+    // A dropped prompt never reaches the model, so the next one carries the file.
+    if (result.drop !== undefined) cleared = true
+    return result
   }).catch(($, e, next) => next(e))
 
   on('classic.PreCompact', async ($, e, next) => {
