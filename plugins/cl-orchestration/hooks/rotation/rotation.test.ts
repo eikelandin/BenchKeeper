@@ -66,7 +66,6 @@ function engine(on: On, { file = HANDOFF, tokens = 250000, sessionId = 's1', sto
     if (e.origin.kind !== 'composer') ran.push(e.text)
     return drop === undefined ? { text: e.text, context: e.context } : { drop }
   })
-  on('turn.complete', (_, e) => ({ text: e.answer }))
   on('classic.Stop', () => stop)
   on('classic.PreCompact', () => ({}))
   return { clock, session, files, mtimes, ran, id }
@@ -213,6 +212,7 @@ test('an idle Stop above 200000 tokens clears, then submits the resume prompt, o
 // Where Claude Code's built-in guard loads, no classic.* event reaches the plugin; the test raises native events alone.
 test('where the guard loads, an idle answer above the threshold clears nothing and a /clear still hands the file back', async ($, on) => {
   const e = engine(on)
+  on('turn.complete', (_, end) => ({ text: end.answer }))
   await $.turn.start({ turnId: 't1', text: 'go on' })
   await $.turn.complete({ turnId: 't1', answer: 'done', durationMs: 1000, isAborted: false, reason: 'answer' })
   await e.clock.advance(20 * 60_000)
