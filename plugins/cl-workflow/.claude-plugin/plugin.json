@@ -16,7 +16,7 @@
     "tierBand": {
       "type": "boolean",
       "title": "Status band above the prompt (terminal and desktop app)",
-      "description": "Off by default. Adds two rows above the prompt in the Claude Code terminal and desktop app: project, branch and Ponytail's level (only when Ponytail, a recommended add-on that CedarLoom does not install, is installed), then the last test run and lint or type check, and ASK while terminal questions are allowed. It reads your working folder, the current git branch, one Ponytail flag file and the commands and edits of the main loop; it writes no file and makes no network request. Turn it off by setting this option to false. The VS Code extension does not draw it.",
+      "description": "Off by default. Adds two rows above the prompt in the Claude Code terminal and desktop app: project, branch and Ponytail's level (only when Ponytail is installed: a recommended add-on, installed separately), then the last test run and lint or type check, and ASK while terminal questions are allowed. It reads your working folder, the current git branch, one Ponytail flag file and the commands and edits of the main loop; it writes no file and makes no network request. Turn it off by setting this option to false. The VS Code extension does not draw it.",
       "default": false
     }
   }
