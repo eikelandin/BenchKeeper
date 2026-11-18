@@ -117,7 +117,7 @@ function pullSection(repo, list, exec) {
 // Per repository, its open questions and the issues answered in the last 24 hours, found by the answer comment whatever their labels; each open question with an answer gets its label edit, as approval.mjs apply makes it.
 function approvalSection(repo, exec, now) {
   const fields = ['--limit', '200', '--json', 'number,state,labels,comments,author,body'];
-  const open = data(read(exec, 'gh', ['issue', 'list', '-R', repo, '--state', 'open', '--label', 'cedarloom:needs-human', ...fields]));
+  const open = data(read(exec, 'gh', ['issue', 'list', '-R', repo, '--state', 'open', '--label', 'cl:needs-human', ...fields]));
   const recent = data(read(exec, 'gh', ['issue', 'list', '-R', repo, '--state', 'all', '--search', `updated:>=${new Date(now - DAY).toISOString().slice(0, 10)}`, ...fields]));
   if (!Array.isArray(open) || !Array.isArray(recent)) return [`### ${repo}`, '', UNREAD];
   // A member's answer counts with write access to the repository, as approval.mjs reads it; a failed lookup reads unread.
